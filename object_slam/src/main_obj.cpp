@@ -351,6 +351,7 @@ void incremental_build_graph(Eigen::MatrixXd& offline_pred_frame_objects, Eigen:
     int total_frame_number = truth_frame_poses.rows();
 
     // detect all frames' cuboids.
+	// ANDY: Instantiate detect_3d_cuboid class
     detect_3d_cuboid detect_cuboid_obj;
     detect_cuboid_obj.whether_plot_detail_images = false;
     detect_cuboid_obj.whether_plot_final_images = false;
@@ -360,7 +361,8 @@ void incremental_build_graph(Eigen::MatrixXd& offline_pred_frame_objects, Eigen:
     detect_cuboid_obj.nominal_skew_ratio = 2;
     detect_cuboid_obj.whether_save_final_images = true;
     
-
+	// ANDY: Instantiate line descriptor
+	// ANDY: https://docs.opencv.org/master/dc/ddd/group__line__descriptor.html
     line_lbd_detect line_lbd_obj;
     line_lbd_obj.use_LSD = true;
     line_lbd_obj.line_length_thres = 15;  // remove short edges
@@ -398,6 +400,7 @@ void incremental_build_graph(Eigen::MatrixXd& offline_pred_frame_objects, Eigen:
 		curr_cam_pose_Twc = fixed_init_cam_pose_Twc;
 	  else
 	  {
+		// ANDY: take the last pointer to a frame and extract its cam_pose_Tcw value
 		g2o::SE3Quat prev_pose_Tcw = all_frames[frame_index-1]->cam_pose_Tcw;
 		if (frame_index>1)  // from third frame, use constant motion model to initialize camera.
 		{
