@@ -240,8 +240,8 @@ Vector2d EdgeDynamicPointCuboidCamera::computeError_debug()
 
 void EdgeObjectMotion::computeError()
 {
-    // ANDY: cuboidVertexfrom = pointer to cuboid vertex of past frame
-    // ANDY: cuboidVertexTo = pointer to cuboid vertex of current frame
+    // AC: cuboidVertexfrom = pointer to cuboid vertex of past frame
+    // AC: cuboidVertexTo = pointer to cuboid vertex of current frame
     const VertexCuboidFixScale *cuboidVertexfrom = dynamic_cast<const VertexCuboidFixScale *>(_vertices[0]);   // object to world pose
     const VertexCuboidFixScale *cuboidVertexto = dynamic_cast<const VertexCuboidFixScale *>(_vertices[1]);     // object to world pose
     const VelocityPlanarVelocity *velocityVertex = dynamic_cast<const VelocityPlanarVelocity *>(_vertices[2]); // object to world pose
