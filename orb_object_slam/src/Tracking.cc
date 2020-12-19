@@ -69,6 +69,8 @@ using namespace std;
 namespace ORB_SLAM2
 {
 
+// AC: is being called in System.cc
+// AC: pMap is a Map.h instance
 Tracking::Tracking(System *pSys, ORBVocabulary *pVoc, FrameDrawer *pFrameDrawer, MapDrawer *pMapDrawer, Map *pMap, KeyFrameDatabase *pKFDB,
 				   const string &strSettingPath, const int sensor) : mState(NO_IMAGES_YET), mSensor(sensor), mbOnlyTracking(false), mbVO(false), mpORBVocabulary(pVoc),
 																	 mpKeyFrameDB(pKFDB), mpInitializer(static_cast<Initializer *>(NULL)), mpSystem(pSys),
@@ -389,6 +391,11 @@ cv::Mat Tracking::GrabImageRGBD(const cv::Mat &imRGB, const cv::Mat &imD, const 
 
 	mCurrentFrame = Frame(mImGray, imDepth, timestamp, mpORBextractorLeft, mpORBVocabulary, mK, mDistCoef, mbf, mThDepth);
 
+	// AC: The filtering of keypoints should be done here as in DS-SLAM...
+	
+
+	// AC: whether_detect_object flag is set in mono.launch
+	// AC: I guess here the image is being copied in an array to be used for the object detectiong
 	if (whether_detect_object)
 		mCurrentFrame.raw_img = mImGray.clone();
 
@@ -1415,6 +1422,7 @@ bool Tracking::TrackLocalMap()
 		return true;
 }
 
+// AC: decision whether a new key frame is needed...
 bool Tracking::NeedNewKeyFrame()
 {
 	if (mbOnlyTracking)
