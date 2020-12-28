@@ -33,21 +33,28 @@ using namespace std;
 // using namespace cv;
 using namespace Eigen;
 
+// LL: Copy the camera intrisic matrix and its invers
 void detect_3d_cuboid::set_calibration(const Matrix3d &Kalib)
 {
 	cam_pose.Kalib = Kalib;
 	cam_pose.invK = Kalib.inverse();
 }
 
+// LL: Setting up the camera's transformation matrices
 void detect_3d_cuboid::set_cam_pose(const Matrix4d &transToWolrd)
 {
 	cam_pose.transToWolrd = transToWolrd;
+	// LL: Matrix4d.topLeftCorner(3,3) returns the submatrix x_ij with i,j element 0-2
 	cam_pose.rotationToWorld = transToWolrd.topLeftCorner<3, 3>();
 	Vector3d euler_angles;
+	// LL Transform the rotational quaternion to euler representation
 	quat_to_euler_zyx(Quaterniond(cam_pose.rotationToWorld), euler_angles(0), euler_angles(1), euler_angles(2));
 	cam_pose.euler_angle = euler_angles;
 	cam_pose.invR = cam_pose.rotationToWorld.inverse();
+	// LL: Calculate projection matrix K * [R|t]^-1 for the projection of the world coordinates to the camera coordinates
+	// LL: We use the inverser as the argument passed to the function is transToWorld and we need transToCamera
 	cam_pose.projectionMatrix = cam_pose.Kalib * transToWolrd.inverse().topRows<3>(); // project world coordinate to camera
+	// LL: K * R^-1
 	cam_pose.KinvR = cam_pose.Kalib * cam_pose.invR;
 	cam_pose.camera_yaw = cam_pose.euler_angle(2);
 	//TODO relative measure? not good... then need to change transToWolrd.
@@ -56,9 +63,11 @@ void detect_3d_cuboid::set_cam_pose(const Matrix4d &transToWolrd)
 void detect_3d_cuboid::detect_cuboid(const cv::Mat &rgb_img, const Matrix4d &transToWolrd, const MatrixXd &obj_bbox_coors,
 									 MatrixXd all_lines_raw, std::vector<ObjectSet> &all_object_cuboids)
 {
+	// LL: Given the transformation matrix camera to world calibrate the camera
 	set_cam_pose(transToWolrd);
 	cam_pose_raw = cam_pose;
 
+	// LL: Convert the image to gray image
 	cv::Mat gray_img;
 	if (rgb_img.channels() == 3)
 		cv::cvtColor(rgb_img, gray_img, CV_BGR2GRAY);
@@ -104,6 +113,7 @@ void detect_3d_cuboid::detect_cuboid(const cv::Mat &rgb_img, const Matrix4d &tra
 	{
 		// 	  std::cout<<"object id  "<<object_id<<std::endl;
 		ca::Profiler::tictoc("One 3D object total time");
+		// LL: Retrive the relevant information from the object bbox cores for object "object_id"
 		int left_x_raw = obj_bbox_coors(object_id, 0);
 		int top_y_raw = obj_bbox_coors(object_id, 1);
 		int obj_width_raw = obj_bbox_coors(object_id, 2);
@@ -113,6 +123,8 @@ void detect_3d_cuboid::detect_cuboid(const cv::Mat &rgb_img, const Matrix4d &tra
 
 		std::vector<int> down_expand_sample_all;
 		down_expand_sample_all.push_back(0);
+
+		// LL: Calculate the bounding box hight based on raw detection (inancurate -> default value for whether_sample_bbox_height=false)
 		if (whether_sample_bbox_height) // 2D object detection might not be accurate
 		{
 			int down_expand_sample_ranges = max(min(20, obj_height_raw - 90), 20);
@@ -190,6 +202,7 @@ void detect_3d_cuboid::detect_cuboid(const cv::Mat &rgb_img, const Matrix4d &tra
 				edge_mid_pts.row(i).head<2>() = (all_lines_merge_inobj.row(i).head<2>() + all_lines_merge_inobj.row(i).tail<2>()) / 2;
 			}
 
+			// LL: Canny is an edge dector
 			// TODO could canny or distance map outside sampling height to speed up!!!!   Then only need to compute canny onces.
 			// detect canny edges and compute distance transform  NOTE opencv canny maybe different from matlab. but roughly same
 			cv::Rect object_bbox = cv::Rect(left_x_expan_distmap, top_y_expan_distmap, width_expan_distmap, height_expan_distmap); //
@@ -489,7 +502,7 @@ void detect_3d_cuboid::detect_cuboid(const cv::Mat &rgb_img, const Matrix4d &tra
 				cuboid *sample_obj = new cuboid();
 				change_2d_corner_to_3d_object(all_box_corners_2d_one_objH.block(2 * raw_cube_ind, 0, 2, 8), all_configs_error_one_objH.row(raw_cube_ind).head<3>(),
 											  ground_plane_sensor, cam_pose.transToWolrd, cam_pose.invK, cam_pose.projectionMatrix, *sample_obj);
-				// 		  sample_obj->print_cuboid();
+				// sample_obj->print_cuboid();
 				if ((sample_obj->scale.array() < 0).any())
 					continue; // scale should be positive
 				sample_obj->rect_detect_2d = Vector4d(left_x_raw, top_y_raw, obj_width_raw, obj_height_raw);

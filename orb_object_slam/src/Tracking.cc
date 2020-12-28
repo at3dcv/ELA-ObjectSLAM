@@ -1550,6 +1550,14 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 	std::vector<double> all_box_confidence;
 	vector<int> truth_tracklet_ids;
 
+	// LL: Differentiate between offline and online (loading from file or detection with e.g. YOLO)
+	// LL: - Offline: We used ReadAllObjecttxt of the file Tracking_util.cc to read all the all object proposels and saved them to all_offline_object_cubes
+	// LL: - Offline: We the information of all_offline_object_cubes line by line an use it to initalizen new cuboid instances and in addition ad the relevant info to all_obj2d_bbox
+	// LL: - Offline: The new cuboid instances are then pushed to all_obj_cubes
+	// LL: - Online: Given the path to the folder (data_yolo_obj_dir) uses the read_obj_detection_txt function of matrix_util.cc to write all the detections to raw_all_obj2d_bbox
+	// LL: - Online: Filtering out all boxes to close to the images boundaries saving the filterd bunch to all_obj2d_bbox_infov_mat and all_obj2d_bbox
+	// LL: - Online: all_obj2d_bbox_infov_mat is then in turn passed to the detect_cuboid function of the detect_3d_cuboid class from the box_proposal_detail.cc
+	// LL: - Online: The detect_cuboid function then writes the object cuboids the all_obj_cubes vector that was passed to the function.
 	if (whether_read_offline_cuboidtxt) // saved object txt usually is usually poped in local ground frame, not the global ground frame.
 	{
 		if (all_offline_object_cubes.size() == 0)
@@ -1625,11 +1633,13 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 		detect_cuboid_obj->detect_cuboid(pKF->raw_img, cam_transToGround.cast<double>(), all_obj2d_bbox_infov_mat, all_lines_raw, all_obj_cubes);
 	}
 
+	// LL: Going through the all_obj_cubes vector holding the object proposels and converting a to a class instance of type MapObject.
+	// LL: The newly created map objects are then passed to the key frames local_cuboids vector: pKF->local_cuboids.push_back(newcuboid);
 	// copy and analyze results. change to g2o cuboid.
 	pKF->local_cuboids.clear();
 	g2o::SE3Quat frame_pose_to_init = Converter::toSE3Quat(pKF->GetPoseInverse()); // camera to init, not always ground.
 	g2o::SE3Quat InitToGround_se3 = Converter::toSE3Quat(InitToGround);
-	for (int ii = 0; ii < (int)all_obj_cubes.size(); ii++)
+	for (int ii = 0; ii < (int)all_obj_cubes.size(); ii++) // LL: Loop over all cuboids detected in the key frame
 	{
 		if (all_obj_cubes[ii].size() > 0) // if has detected 3d Cuboid
 		{
@@ -1697,6 +1707,7 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 	std::cout << "created local object num   " << pKF->local_cuboids.size() << std::endl;
 	std::cout << "Detect cuboid for pKF id: " << pKF->mnId << "  total id: " << pKF->mnFrameId << "  numObj: " << pKF->local_cuboids.size() << std::endl;
 
+	// LL: If set to true saves the online deteced cuboids
 	if (whether_save_online_detected_cuboids)
 	{
 		for (int ii = 0; ii < (int)all_obj_cubes.size(); ii++)
@@ -1713,6 +1724,7 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 		}
 	}
 
+	// LL: Test if a feautre point lies with in an object or not
 	if (associate_point_with_object)
 	{
 		if (!whether_dynamic_object) //for old non-dynamic object, associate based on 2d overlap... could also use instance segmentation
