@@ -1,0 +1,32 @@
+sudo docker build -t at3dcv_2020 .
+
+sudo docker run -it --rm -p 6080:80 -v /Users/ezgicakir/Documents/TUM20/Praktikum/docker-ubuntu-vnc-desktop-master/:/mnt at3dcv_2020:latest
+
+Browse to http://127.0.0.1:6080/
+
+mkdir -p mrcnn/src
+
+cd mrcnn/src
+
+git clone https://github.com/akio/mask_rcnn_ros
+
+catkin_init_workspace
+
+cd ..
+
+catkin_make
+
+cd /src/mask_rcnn_ros/examples
+
+./download_example_bag.sh
+
+cd ../../.. (you should be in /mnt/mrcnn)
+
+source devel/setup.sh
+
+cd src/mask_rcnn_ros/examples
+
+roslaunch example.launch
+
+when you start the roslaunch for the first time the rviz should start. after a few moments you will see on the command line that the pretrained weights are being downloaded. Wait until finished. then cancel the execution and run the last command again. 
+
