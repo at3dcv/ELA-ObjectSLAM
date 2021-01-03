@@ -17,6 +17,9 @@ class cuboid // matlab cuboid struct. cuboid on ground. only has yaw, no obj rol
     public:
       Eigen::Vector3d pos;
       Eigen::Vector3d scale;
+      // LL: Added by Leander
+      Eigen::Vector3d yolo_obj_scale;
+      // LL: Added by Leander
       double rotY;
 
       Eigen::Vector2d box_config_type;       // configurations, vp1 left/right
@@ -60,7 +63,7 @@ class detect_3d_cuboid
 
       // object detector needs image, camera pose, and 2D bounding boxes(n*5, each row: xywh+prob)  long edges: n*4.  all number start from 0
       void detect_cuboid(const cv::Mat &rgb_img, const Eigen::Matrix4d &transToWolrd, const Eigen::MatrixXd &obj_bbox_coors, Eigen::MatrixXd edges,
-                         std::vector<ObjectSet> &all_object_cuboids);
+                         std::vector<ObjectSet> &all_object_cuboids, std::vector<std::string> yolo_obj_class);
 
       bool whether_plot_detail_images = false;
       bool whether_plot_final_images = false;

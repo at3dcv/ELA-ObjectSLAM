@@ -1552,7 +1552,7 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 
 	// LL: Differentiate between offline and online (loading from file or detection with e.g. YOLO)
 	// LL: - Offline: We used ReadAllObjecttxt of the file Tracking_util.cc to read all the all object proposels and saved them to all_offline_object_cubes
-	// LL: - Offline: We the information of all_offline_object_cubes line by line an use it to initalizen new cuboid instances and in addition ad the relevant info to all_obj2d_bbox
+	// LL: - Offline: We read the information of all_offline_object_cubes line by line an use it to initalizen new cuboid instances and in addition add the relevant info to all_obj2d_bbox
 	// LL: - Offline: The new cuboid instances are then pushed to all_obj_cubes
 	// LL: - Online: Given the path to the folder (data_yolo_obj_dir) uses the read_obj_detection_txt function of matrix_util.cc to write all the detections to raw_all_obj2d_bbox
 	// LL: - Online: Filtering out all boxes to close to the images boundaries saving the filterd bunch to all_obj2d_bbox_infov_mat and all_obj2d_bbox
@@ -1575,6 +1575,12 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 			raw_cuboid->pos = pred_frame_objects.row(i).head(3);
 			raw_cuboid->rotY = pred_frame_objects(i, 3);
 			raw_cuboid->scale = Vector3d(pred_frame_objects(i, 4), pred_frame_objects(i, 5), pred_frame_objects(i, 6));
+			// LL: Added by Leander
+			// LL: To read from file add values to the end of the rows and read as:
+			// LL: raw_cuboid->yolo_obj_scale =  Vector3d(pred_frame_objects(i, 4), pred_frame_objects(i, 5), pred_frame_objects(i, 6));
+			// LL: But carful with "use_truth_trackid" which is possibly written to postion 13 (12 in cpp) -> see 7 lines below
+			raw_cuboid->yolo_obj_scale = Eigen::Vector3d(1.9999, 0.9999, 0.8888);
+			// LL: Added by Leander
 			raw_cuboid->rect_detect_2d = pred_frame_objects.row(i).segment<4>(7);
 			raw_cuboid->box_config_type = Vector2d(1, 1); // randomly given unless provided. for latter visualization
 			all_obj2d_bbox.push_back(raw_cuboid->rect_detect_2d);
@@ -1630,7 +1636,8 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 
 		pop_pose_to_ground = frame_pose_to_ground;
 		Eigen::Matrix4f cam_transToGround = Converter::toMatrix4f(pop_pose_to_ground);
-		detect_cuboid_obj->detect_cuboid(pKF->raw_img, cam_transToGround.cast<double>(), all_obj2d_bbox_infov_mat, all_lines_raw, all_obj_cubes);
+		// LL: Added by Leander: Carfull!! I added `object_classes` to this function
+		detect_cuboid_obj->detect_cuboid(pKF->raw_img, cam_transToGround.cast<double>(), all_obj2d_bbox_infov_mat, all_lines_raw, all_obj_cubes, object_classes);
 	}
 
 	// LL: Going through the all_obj_cubes vector holding the object proposels and converting a to a class instance of type MapObject.
@@ -1655,6 +1662,10 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 			MapObject *newcuboid = new MapObject(mpMap);
 			g2o::cuboid cube_local_meas = cube_ground_value.transform_to(Converter::toSE3Quat(pop_pose_to_ground));
 			newcuboid->cube_meas = cube_local_meas;
+			// LL: Added by Leander
+			newcuboid-> yolo_map_obj_scale = raw_cuboid-> yolo_obj_scale;
+			// LL: Added by Leander		
+
 			newcuboid->bbox_2d = cv::Rect(raw_cuboid->rect_detect_2d[0], raw_cuboid->rect_detect_2d[1], raw_cuboid->rect_detect_2d[2], raw_cuboid->rect_detect_2d[3]);
 			newcuboid->bbox_vec = Vector4d((double)newcuboid->bbox_2d.x + (double)newcuboid->bbox_2d.width / 2, (double)newcuboid->bbox_2d.y + (double)newcuboid->bbox_2d.height / 2,
 										   (double)newcuboid->bbox_2d.width, (double)newcuboid->bbox_2d.height);

@@ -1022,8 +1022,16 @@ void Optimizer::LocalBACameraPointObjects(KeyFrame *pKF, bool *pbStopFlag, Map *
         g2o_object_vertex *vObject = new g2o_object_vertex();
 
 #ifdef ObjectFixScale
+
         if (scene_unique_id == kitti)
+        {
             vObject->fixedscale = Eigen::Vector3d(1.9420, 0.8143, 0.7631);
+            // LL: Added by Leander
+            // Overwrite vObject->fixedscale with pMObject->yolo_map_obj_scale at this point.
+            // cout << pMObject->yolo_map_obj_scale << "\n";      
+            // LL: Added by Leander
+
+        }
         else
             ROS_ERROR_STREAM("Please see cuboid scale!!!, otherwise use VertexCuboid()");
 
