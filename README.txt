@@ -1,6 +1,9 @@
 This branch server for object detection and segmentation using Mask RCNN.
 
-In order to run the dockerfile, please follow the instructions in "docker_img_mrcnn/late_building_commands.txt".
+For the first time to run the dockerfile and build the Mask RCNN node, please follow the instructions in 
+"docker_img_mrcnn/fromstart_docker_commands_mrcnn.txt".
+
+After creating a docker image, if you would like to re-connect to the same docker image, please follow the instructions in "docker_img_mrcnn/late_building_commands.txt".
 
 After a succesfull run, images will be segmented and objects will be identified in it.
 

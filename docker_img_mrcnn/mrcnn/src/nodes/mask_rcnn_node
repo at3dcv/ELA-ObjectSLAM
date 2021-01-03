@@ -16,6 +16,7 @@ from mask_rcnn_ros import utils
 from mask_rcnn_ros import model as modellib
 from mask_rcnn_ros import visualize
 from mask_rcnn_ros.msg import Result
+import numpy as np
 
 
 # Local path to trained weights file
@@ -84,6 +85,7 @@ class MaskRCNNNode(object):
                                self._image_callback, queue_size=1)
 
         rate = rospy.Rate(self._publish_rate)
+        i = 0
         while not rospy.is_shutdown():
             if self._msg_lock.acquire(False):
                 msg = self._last_msg
@@ -99,7 +101,7 @@ class MaskRCNNNode(object):
                 # Run detection
                 results = self._model.detect([np_image], verbose=0)
                 result = results[0]
-                result_msg = self._build_result_msg(msg, result)
+                result_msg = self._build_result_msg(msg, result,i)
                 self._result_pub.publish(result_msg)
 
                 # Visualize results
@@ -111,11 +113,22 @@ class MaskRCNNNode(object):
                     vis_pub.publish(image_msg)
 
             rate.sleep()
+            
 
-    def _build_result_msg(self, msg, result):
+    def _build_result_msg(self, msg, result,i):
         result_msg = Result()
         result_msg.header = msg.header
+        dir_= os.path.dirname(os.path.abspath(__file__)) #dir that script being run
+        #d2= os.path.abspath(os.getcwd()) #current working dir
+        file_dir = "/".join(dir_.split('/')[:-1]) + "/results/"
+        
+        nsecs = msg.header.stamp.nsecs * (10 ** -9 )
+        nsecs = int(round(nsecs, 6) * (10**6))
+        name = str(msg.header.stamp.secs) + "." + str(nsecs)
+        f = open( file_dir+'/'+name + ".txt" ,"w+")
+        
         for i, (y1, x1, y2, x2) in enumerate(result['rois']):
+            out_per_obj = ''
             box = RegionOfInterest()
             box.x_offset = np.asscalar(x1)
             box.y_offset = np.asscalar(y1)
@@ -128,7 +141,7 @@ class MaskRCNNNode(object):
 
             class_name = self._class_names[class_id]
             result_msg.class_names.append(class_name)
-
+            
             score = result['scores'][i]
             result_msg.scores.append(score)
 
@@ -139,8 +152,21 @@ class MaskRCNNNode(object):
             mask.encoding = "mono8"
             mask.is_bigendian = False
             mask.step = mask.width
-            mask.data = (result['masks'][:, :, i] * 255).tobytes()
+            #mask.data = (result['masks'][:, :, i] * 255).tobytes()
+            mask.data = (result['masks'][:, :, i] * class_id).tobytes()
             result_msg.masks.append(mask)
+            """print(mask.data)
+            data = np.asarray(mask.data)
+            data = data.reshape(mask.height,mask.width)
+            f.write( "\nmask\n"+ str(mask.header) + " " +str( mask.height) + " " + str(mask.width) + "\nmask data:\n")
+            f.write( data )
+            """
+            out_per_obj += str(box.x_offset) + " " +str(box.y_offset) + " " + str(box.height) + " " + str(box.width) + "\n"
+            out_per_obj += str(class_id)+ "\n"
+            out_per_obj += str(class_name) + "\n"
+            f.write( out_per_obj)
+            f.flush()
+
         return result_msg
 
     def _visualize(self, result, image):
