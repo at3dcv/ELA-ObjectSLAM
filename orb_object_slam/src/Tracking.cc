@@ -1579,7 +1579,7 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 			// LL: To read from file add values to the end of the rows and read as:
 			// LL: raw_cuboid->yolo_obj_scale =  Vector3d(pred_frame_objects(i, 4), pred_frame_objects(i, 5), pred_frame_objects(i, 6));
 			// LL: But carful with "use_truth_trackid" which is possibly written to postion 13 (12 in cpp) -> see 7 lines below
-			raw_cuboid->yolo_obj_scale = Eigen::Vector3d(1.9999, 0.9999, 0.8888);
+			raw_cuboid->yolo_obj_scale = raw_cuboid->obj_class_scales["car"];
 			// LL: Added by Leander
 			raw_cuboid->rect_detect_2d = pred_frame_objects.row(i).segment<4>(7);
 			raw_cuboid->box_config_type = Vector2d(1, 1); // randomly given unless provided. for latter visualization

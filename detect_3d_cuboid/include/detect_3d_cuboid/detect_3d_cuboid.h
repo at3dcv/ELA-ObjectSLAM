@@ -12,6 +12,8 @@
 
 #include "detect_3d_cuboid/matrix_utils.h"
 
+#include <unordered_map>
+
 class cuboid // matlab cuboid struct. cuboid on ground. only has yaw, no obj roll/pitch
 {
     public:
@@ -34,6 +36,11 @@ class cuboid // matlab cuboid struct. cuboid on ground. only has yaw, no obj rol
       double down_expand_height;
       double camera_roll_delta;
       double camera_pitch_delta;
+
+      // LL: Added by Leander
+      static std::unordered_map<std::string, Eigen::Vector3d> obj_class_scales;
+      // the map is populated in object_3d_util.cpp
+      // LL: Added by Leander
 
       void print_cuboid(); // print pose information
 };
@@ -63,7 +70,7 @@ class detect_3d_cuboid
 
       // object detector needs image, camera pose, and 2D bounding boxes(n*5, each row: xywh+prob)  long edges: n*4.  all number start from 0
       void detect_cuboid(const cv::Mat &rgb_img, const Eigen::Matrix4d &transToWolrd, const Eigen::MatrixXd &obj_bbox_coors, Eigen::MatrixXd edges,
-                         std::vector<ObjectSet> &all_object_cuboids, std::vector<std::string> yolo_obj_class);
+                         std::vector<ObjectSet> &all_object_cuboids, std::vector<std::string> yolo_obj_class = {"car"});
 
       bool whether_plot_detail_images = false;
       bool whether_plot_final_images = false;

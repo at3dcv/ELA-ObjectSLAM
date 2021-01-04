@@ -11,6 +11,13 @@
 using namespace Eigen;
 using namespace std;
 
+// LL: Added by Leander
+std::unordered_map<std::string, Eigen::Vector3d> cuboid::obj_class_scales{
+    {"car",Eigen::Vector3d(1.9420, 0.8143, 0.7631)},
+    {"bike", Eigen::Vector3d(0.6, 0.3, 0.55)}
+    };
+// LL: Added by Leander
+
 Matrix4d similarityTransformation(const cuboid &cube_obj)
 {
     Matrix3d rot;

@@ -61,7 +61,7 @@ void detect_3d_cuboid::set_cam_pose(const Matrix4d &transToWolrd)
 }
 // LL: Added by Leander: Carfull!! I added `std::vector<std::string> &yolo_obj_class` to this function
 void detect_3d_cuboid::detect_cuboid(const cv::Mat &rgb_img, const Matrix4d &transToWolrd, const MatrixXd &obj_bbox_coors,
-									 MatrixXd all_lines_raw, std::vector<ObjectSet> &all_object_cuboids, std::vector<std::string> yolo_obj_class = {"car"})
+									 MatrixXd all_lines_raw, std::vector<ObjectSet> &all_object_cuboids, std::vector<std::string> yolo_obj_class)
 {
 	// LL: Given the transformation matrix camera to world calibrate the camera
 	set_cam_pose(transToWolrd);
@@ -505,7 +505,7 @@ void detect_3d_cuboid::detect_cuboid(const cv::Mat &rgb_img, const Matrix4d &tra
 				// sample_obj->print_cuboid();
 				if ((sample_obj->scale.array() < 0).any())
 					continue; // scale should be positive
-				
+					
 				// LL: Added by Leander
 				// Use a dictonary like data format.
 				// - Check if class name is in dic.
@@ -513,6 +513,7 @@ void detect_3d_cuboid::detect_cuboid(const cv::Mat &rgb_img, const Matrix4d &tra
 				// -- If yes: Read value from dic
 				if (!yolo_obj_class.front().compare("car"))
     				sample_obj->yolo_obj_scale = Eigen::Vector3d(1.9420, 0.8143, 0.7631);
+				// sample_obj->yolo_obj_scale = sample_obj->obj_class_scales[yolo_obj_class.front()];
     			// LL: Added by Leander
 				
 				sample_obj->rect_detect_2d = Vector4d(left_x_raw, top_y_raw, obj_width_raw, obj_height_raw);
