@@ -103,6 +103,9 @@ public:
     // Backprojects a keypoint (if depth is available) into 3D world coordinates.
     cv::Mat UnprojectDepth(const int &i, float depth);
 
+    // For semantic segmentation thread
+    void FilterOutMovingPoints();
+
 public:
     // by me, detect_3d_cuboid needs raw image
     cv::Mat raw_img;

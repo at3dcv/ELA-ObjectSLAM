@@ -392,7 +392,7 @@ cv::Mat Tracking::GrabImageRGBD(const cv::Mat &imRGB, const cv::Mat &imD, const 
 	mCurrentFrame = Frame(mImGray, imDepth, timestamp, mpORBextractorLeft, mpORBVocabulary, mK, mDistCoef, mbf, mThDepth);
 
 	// AC: The filtering of keypoints should be done here as in DS-SLAM...
-	
+	printf("START FILTERING!");
 
 	// AC: whether_detect_object flag is set in mono.launch
 	// AC: I guess here the image is being copied in an array to be used for the object detectiong
@@ -430,6 +430,7 @@ cv::Mat Tracking::GrabImageMonocular(const cv::Mat &im, const double &timestamp,
 	}
 
 	// create frame and detect features!
+	// AC: if: Initial frame and else: other frames
 	if (mState == NOT_INITIALIZED || mState == NO_IMAGES_YET)
 	{
 		if ((!mono_firstframe_truth_depth_init) || (mCurrentFrame.mnId > 0))
@@ -455,6 +456,9 @@ cv::Mat Tracking::GrabImageMonocular(const cv::Mat &im, const double &timestamp,
 		mCurrentFrame = Frame(mImGray, timestamp, mpORBextractorLeft, mpORBVocabulary, mK, mDistCoef, mbf, mThDepth); // create new frames.
 	}
 
+	mCurrentFrame.FilterOutMovingPoints();
+
+	// AC: Current frame id
 	if (mCurrentFrame.mnId == 0)
 		start_msg_seq_id = msg_seq_id;
 	// if read offline txts, frame id must match!!!

@@ -300,6 +300,12 @@ Frame::Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor *extra
     AssignFeaturesToGrid();
 }
 
+void Frame::FilterOutMovingPoints()
+{
+    
+    cout << "Calculate Everything" << endl;
+}
+
 void Frame::AssignFeaturesToGrid()
 {
     int nReserve = 0.5f * N / (FRAME_GRID_COLS * FRAME_GRID_ROWS);
