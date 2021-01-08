@@ -412,6 +412,7 @@ cv::Mat Tracking::GrabImageRGBD(const cv::Mat &imRGB, const cv::Mat &imD, const 
 
 cv::Mat Tracking::GrabImageMonocular(const cv::Mat &im, const double &timestamp, int msg_seq_id)
 {
+	mImRGB = im;
 	mImGray = im;
 
 	if (mImGray.channels() == 3)
@@ -456,7 +457,9 @@ cv::Mat Tracking::GrabImageMonocular(const cv::Mat &im, const double &timestamp,
 		mCurrentFrame = Frame(mImGray, timestamp, mpORBextractorLeft, mpORBVocabulary, mK, mDistCoef, mbf, mThDepth); // create new frames.
 	}
 
-	mCurrentFrame.FilterOutMovingPoints();
+	object_detection_frame_id = object_detection_frame_id + 1;
+
+	mCurrentFrame.FilterOutMovingPoints(mImRGB);
 
 	// AC: Current frame id
 	if (mCurrentFrame.mnId == 0)

@@ -37,6 +37,16 @@
 
 #include "tictoc_profiler/profiler.hpp"
 
+// Used in Frame::DetectMovingKeypoints
+cv::Mat imGrayPre;
+std::vector<cv::Point2f> prepoint, nextpoint;
+std::vector<cv::Point2f> F_prepoint, F_nextpoint;
+std::vector<cv::Point2f> F2_prepoint, F2_nextpoint;
+// Used in OpenCV::calcOpticalFlowPyrLK
+std::vector<uchar> state;
+std::vector<float> err;
+std::vector<std::vector<cv::KeyPoint>> mvKeysPre;
+
 namespace ORB_SLAM2
 {
 
@@ -218,6 +228,20 @@ Frame::Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor *extra
 
     ExtractORB(0, imGray); // orb detector   change mvKeys, mDescriptors
 
+    cv::Mat  imGrayT = imGray;
+    // AC: Copied from DS-SLAM
+    // AC: What is happening here?
+    if(imGrayPre.data)
+    {
+        DetectMovingKeypoints(imGray);
+        std::swap(imGrayPre, imGrayT);
+    }
+    else
+    {
+        std::swap(imGrayPre, imGrayT);
+        // flag_mov=0;
+    }
+
     if (whether_dynamic_object)
     {
         char frame_index_c[256];
@@ -300,10 +324,111 @@ Frame::Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor *extra
     AssignFeaturesToGrid();
 }
 
-void Frame::FilterOutMovingPoints()
+void Frame::FilterOutMovingPoints(cv::Mat &imRGB)
 {
-    
-    cout << "Calculate Everything" << endl;
+    cout << "FILTER OUT MOVING POINTS" << endl;
+
+    int flagprocess = 0;
+    for ( int m=0; m<imS.rows; m+=1 )
+    {
+        for ( int n=0; n<imS.cols; n+=1 )
+        {
+            // AC: People are MOST LIKELY to be moving...
+            int labelnum = (int)imS.ptr<uchar>(m)[n];
+            if(labelnum == PEOPLE_LABLE)
+            {
+                flagprocess=1;
+                break;
+            }
+        }
+
+        if(flagprocess == 1)
+        break;
+    }
+}
+
+void Frame::DetectMovingKeypoints(const cv::Mat &imgray)
+{
+    cout << "DETECT MOVING KEYPOINTS" << endl;
+    // Clear the previous data
+	F_prepoint.clear();
+	F_nextpoint.clear();
+	F2_prepoint.clear();
+	F2_nextpoint.clear();
+	T_M.clear();
+
+	// Detect dynamic target and ultimately optput the T matrix
+    cv::goodFeaturesToTrack(imGrayPre, prepoint, 1000, 0.01, 8, cv::Mat(), 3, true, 0.04);
+    cv::cornerSubPix(imGrayPre, prepoint, cv::Size(10, 10), cv::Size(-1, -1), cv::TermCriteria(CV_TERMCRIT_ITER | CV_TERMCRIT_EPS, 20, 0.03));
+    cv::calcOpticalFlowPyrLK(imGrayPre, imgray, prepoint, nextpoint, state, err, cv::Size(22, 22), 5, cv::TermCriteria(CV_TERMCRIT_ITER | CV_TERMCRIT_EPS, 20, 0.01));
+    // AC: output of state: output status vector (of unsigned chars); each element of the vector is set to 1 if the flow for the corresponding features has been found, otherwise, it is set to 0.
+	
+    for (int i = 0; i < state.size(); i++)
+    {
+        if(state[i] != 0)
+        {
+            int dx[10] = { -1, 0, 1, -1, 0, 1, -1, 0, 1 };
+            int dy[10] = { -1, -1, -1, 0, 0, 0, 1, 1, 1 };
+            int x1 = prepoint[i].x, y1 = prepoint[i].y;
+            int x2 = nextpoint[i].x, y2 = nextpoint[i].y;
+            if ((x1 < limit_edge_corner || x1 >= imgray.cols - limit_edge_corner || x2 < limit_edge_corner || x2 >= imgray.cols - limit_edge_corner
+            || y1 < limit_edge_corner || y1 >= imgray.rows - limit_edge_corner || y2 < limit_edge_corner || y2 >= imgray.rows - limit_edge_corner))
+            {
+                state[i] = 0;
+                continue;
+            }
+            double sum_check = 0;
+            for (int j = 0; j < 9; j++)
+                sum_check += abs(imGrayPre.at<uchar>(y1 + dy[j], x1 + dx[j]) - imgray.at<uchar>(y2 + dy[j], x2 + dx[j]));
+            if (sum_check > limit_of_check) state[i] = 0;
+            if (state[i])
+            {
+                F_prepoint.push_back(prepoint[i]);
+                F_nextpoint.push_back(nextpoint[i]);
+            }
+        }
+    }
+
+    // F-Matrix
+    cv::Mat mask = cv::Mat(cv::Size(1, 300), CV_8UC1);
+    cv::Mat F = cv::findFundamentalMat(F_prepoint, F_nextpoint, mask, cv::FM_RANSAC, 0.1, 0.99);
+    for (int i = 0; i < mask.rows; i++)
+    {
+        if (mask.at<uchar>(i, 0) == 0);
+        else
+        {
+            // Circle(pre_frame, F_prepoint[i], 6, Scalar(255, 255, 0), 3);
+            double A = F.at<double>(0, 0)*F_prepoint[i].x + F.at<double>(0, 1)*F_prepoint[i].y + F.at<double>(0, 2);
+            double B = F.at<double>(1, 0)*F_prepoint[i].x + F.at<double>(1, 1)*F_prepoint[i].y + F.at<double>(1, 2);
+            double C = F.at<double>(2, 0)*F_prepoint[i].x + F.at<double>(2, 1)*F_prepoint[i].y + F.at<double>(2, 2);
+            double dd = fabs(A*F_nextpoint[i].x + B*F_nextpoint[i].y + C) / sqrt(A*A + B*B); //Epipolar constraints
+            if (dd <= 0.1)
+            {
+                F2_prepoint.push_back(F_prepoint[i]);
+                F2_nextpoint.push_back(F_nextpoint[i]);
+            }
+        }
+    }
+    F_prepoint = F2_prepoint;
+    F_nextpoint = F2_nextpoint;
+
+    for (int i = 0; i < prepoint.size(); i++)
+    {
+        if (state[i] != 0)
+        {
+            // AC: What is being calculated here?!
+            double A = F.at<double>(0, 0)*prepoint[i].x + F.at<double>(0, 1)*prepoint[i].y + F.at<double>(0, 2);
+            double B = F.at<double>(1, 0)*prepoint[i].x + F.at<double>(1, 1)*prepoint[i].y + F.at<double>(1, 2);
+            double C = F.at<double>(2, 0)*prepoint[i].x + F.at<double>(2, 1)*prepoint[i].y + F.at<double>(2, 2);
+            double dd = fabs(A*nextpoint[i].x + B*nextpoint[i].y + C) / sqrt(A*A + B*B);
+
+            // Judge outliers
+            if (dd <= limit_dis_epi) continue;
+            T_M.push_back(nextpoint[i]);
+        }
+    }
+
+    cout << "Found " << T_M.size() << " moving keypoints" << endl;
 }
 
 void Frame::AssignFeaturesToGrid()

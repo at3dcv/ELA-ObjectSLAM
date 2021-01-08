@@ -1,5 +1,13 @@
 {
     "files.associations": {
         "iostream": "cpp"
-    }
+    },
+    "python.autoComplete.extraPaths": [
+        "/mnt/cubeslam/devel/lib/python2.7/dist-packages",
+        "/opt/ros/kinetic/lib/python2.7/dist-packages"
+    ],
+    "python.analysis.extraPaths": [
+        "/mnt/cubeslam/devel/lib/python2.7/dist-packages",
+        "/opt/ros/kinetic/lib/python2.7/dist-packages"
+    ]
 }

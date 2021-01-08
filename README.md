@@ -22,7 +22,7 @@
 4. copy the `seq7` folder to a folder with in your mounted volume.
 5. Edit the path of the parameter `base_data_folder` with in the mono.launch file to point to the `seq7` folder
 6. Change `ORBvoc.bin` to `ORBvoc.txt` with in the mono.launch file (fifth line).
-7. Open three terminals and in all three source the setup fill: `source <path_to_cube_slam>/devel/setup.bash`
+7. Open three terminals and in all three source the setup fill: `source <path_to_cu  be_slam>/devel/setup.bash`
 8. Terminal one run: roscore
 9. Terminal two run: rosbag play <path_to_seq7_folder>/seq7/left_full_gray_.bag --clock -r 0.5
 10. Terminal tree run: roslaunch orb_object_slam mono.launch

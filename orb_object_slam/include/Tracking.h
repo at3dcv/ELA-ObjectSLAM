@@ -84,6 +84,9 @@ public:
     void InformOnlyTracking(const bool &flag);
 
 public:
+    // keep track of object detection frame id
+    int object_detection_frame_id = 0;
+
     // by me
     Eigen::Matrix3d Kalib;
     Eigen::Matrix3f Kalib_f;
@@ -152,6 +155,7 @@ public:
     // Current Frame
     Frame mCurrentFrame;
     cv::Mat mImGray;
+    cv::Mat mImRGB;
 
     // Initialization Variables (Monocular)
     std::vector<int> mvIniLastMatches;
