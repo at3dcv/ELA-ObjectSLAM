@@ -21,6 +21,7 @@
 #include "Frame.h"
 #include "MapPoint.h"
 #include "KeyFrame.h"
+#include "ObjDetectionHelper.h"
 
 #include "Converter.h"
 #include "ORBmatcher.h"
@@ -228,17 +229,16 @@ Frame::Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor *extra
 
     ExtractORB(0, imGray); // orb detector   change mvKeys, mDescriptors
 
-    cv::Mat  imGrayT = imGray;
     // AC: Copied from DS-SLAM
     // AC: What is happening here?
     if(imGrayPre.data)
     {
         DetectMovingKeypoints(imGray);
-        std::swap(imGrayPre, imGrayT);
+        imGrayPre = imGray.clone();
     }
     else
     {
-        std::swap(imGrayPre, imGrayT);
+        imGrayPre = imGray.clone();
         // flag_mov=0;
     }
 
@@ -324,32 +324,18 @@ Frame::Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor *extra
     AssignFeaturesToGrid();
 }
 
-void Frame::FilterOutMovingPoints(cv::Mat &imRGB)
+void Frame::FilterOutMovingPoints(cv::Mat &imRGB, int frame_id)
 {
-    cout << "FILTER OUT MOVING POINTS" << endl;
-
-    int flagprocess = 0;
-    for ( int m=0; m<imS.rows; m+=1 )
-    {
-        for ( int n=0; n<imS.cols; n+=1 )
-        {
-            // AC: People are MOST LIKELY to be moving...
-            int labelnum = (int)imS.ptr<uchar>(m)[n];
-            if(labelnum == PEOPLE_LABLE)
-            {
-                flagprocess=1;
-                break;
-            }
-        }
-
-        if(flagprocess == 1)
-        break;
+    mCurrentObjDetection = ObjDetectionHelper();
+    mCurrentObjDetection.ReadFile(base_data_folder + "MRCNN_renamed/" + to_string(frame_id) + ".txt");
+    mCurrentBBoxes = mCurrentObjDetection.GetBBoxesWithPerson();
+    if (mCurrentBBoxes.size() > 0) {
+        cout << "Found " << mCurrentBBoxes.size() << " people" << endl;
     }
 }
 
 void Frame::DetectMovingKeypoints(const cv::Mat &imgray)
 {
-    cout << "DETECT MOVING KEYPOINTS" << endl;
     // Clear the previous data
 	F_prepoint.clear();
 	F_nextpoint.clear();
@@ -360,9 +346,10 @@ void Frame::DetectMovingKeypoints(const cv::Mat &imgray)
 	// Detect dynamic target and ultimately optput the T matrix
     cv::goodFeaturesToTrack(imGrayPre, prepoint, 1000, 0.01, 8, cv::Mat(), 3, true, 0.04);
     cv::cornerSubPix(imGrayPre, prepoint, cv::Size(10, 10), cv::Size(-1, -1), cv::TermCriteria(CV_TERMCRIT_ITER | CV_TERMCRIT_EPS, 20, 0.03));
-    cv::calcOpticalFlowPyrLK(imGrayPre, imgray, prepoint, nextpoint, state, err, cv::Size(22, 22), 5, cv::TermCriteria(CV_TERMCRIT_ITER | CV_TERMCRIT_EPS, 20, 0.01));
+	cv::calcOpticalFlowPyrLK(imGrayPre, imgray, prepoint, nextpoint, state, err, cv::Size(22, 22), 5, cv::TermCriteria(CV_TERMCRIT_ITER | CV_TERMCRIT_EPS, 20, 0.01));
     // AC: output of state: output status vector (of unsigned chars); each element of the vector is set to 1 if the flow for the corresponding features has been found, otherwise, it is set to 0.
-	
+	// AC: check whether the KP is too far to the edge of the image or the difference to each other is too large
+
     for (int i = 0; i < state.size(); i++)
     {
         if(state[i] != 0)
@@ -381,6 +368,7 @@ void Frame::DetectMovingKeypoints(const cv::Mat &imgray)
             for (int j = 0; j < 9; j++)
                 sum_check += abs(imGrayPre.at<uchar>(y1 + dy[j], x1 + dx[j]) - imgray.at<uchar>(y2 + dy[j], x2 + dx[j]));
             if (sum_check > limit_of_check) state[i] = 0;
+            // If KP is not discarded (state == 0), push KP to F_[KP]
             if (state[i])
             {
                 F_prepoint.push_back(prepoint[i]);
@@ -402,6 +390,7 @@ void Frame::DetectMovingKeypoints(const cv::Mat &imgray)
             double B = F.at<double>(1, 0)*F_prepoint[i].x + F.at<double>(1, 1)*F_prepoint[i].y + F.at<double>(1, 2);
             double C = F.at<double>(2, 0)*F_prepoint[i].x + F.at<double>(2, 1)*F_prepoint[i].y + F.at<double>(2, 2);
             double dd = fabs(A*F_nextpoint[i].x + B*F_nextpoint[i].y + C) / sqrt(A*A + B*B); //Epipolar constraints
+            // Check whether the distance of a matched point to its epipolar line is within a certain threshold
             if (dd <= 0.1)
             {
                 F2_prepoint.push_back(F_prepoint[i]);
@@ -409,6 +398,7 @@ void Frame::DetectMovingKeypoints(const cv::Mat &imgray)
             }
         }
     }
+
     F_prepoint = F2_prepoint;
     F_nextpoint = F2_nextpoint;
 
@@ -416,19 +406,21 @@ void Frame::DetectMovingKeypoints(const cv::Mat &imgray)
     {
         if (state[i] != 0)
         {
-            // AC: What is being calculated here?!
+            // AC: formula of DS SLAM paper (3)
             double A = F.at<double>(0, 0)*prepoint[i].x + F.at<double>(0, 1)*prepoint[i].y + F.at<double>(0, 2);
             double B = F.at<double>(1, 0)*prepoint[i].x + F.at<double>(1, 1)*prepoint[i].y + F.at<double>(1, 2);
             double C = F.at<double>(2, 0)*prepoint[i].x + F.at<double>(2, 1)*prepoint[i].y + F.at<double>(2, 2);
             double dd = fabs(A*nextpoint[i].x + B*nextpoint[i].y + C) / sqrt(A*A + B*B);
 
             // Judge outliers
-            if (dd <= limit_dis_epi) continue;
+            if (dd <= 0.1) continue; // TODO: Needs to be replaced limit_dis_epi
             T_M.push_back(nextpoint[i]);
         }
     }
-
-    cout << "Found " << T_M.size() << " moving keypoints" << endl;
+    
+    if (T_M.size() > 0) {
+        cout << "Found " << T_M.size() << " moving keypoints" << endl;
+    }
 }
 
 void Frame::AssignFeaturesToGrid()

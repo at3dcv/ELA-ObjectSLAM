@@ -1,7 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
-#include "objects.h"
+#include "ObjDetectionHelper.h"
 
 using namespace std;
 
@@ -18,6 +18,11 @@ void ObjDetectionHelper::ReadFile(const string filePath) {
   if (myReadFile.is_open()) {
     while (!myReadFile.eof()) {
       myReadFile >> output;
+      // if file is empty...
+      if (!isdigit(output[0])) {
+        myReadFile.close();
+        return;
+      }
       switch(counter % 6) {
         case 1:
           classes.push_back(stoi(output));
@@ -68,16 +73,4 @@ vector<vector<float> > ObjDetectionHelper::GetBBoxesWithPerson() {
   }
   return bboxes;
 }
-}
-
-int main()
-{
-  TEST::Objects test;
-
-  test = TEST::Objects();
-  test.ReadFile("MRCNN_renamed/513.txt");
-  int entryCount = test.GetEntryCount();
-
-  cout << entryCount << endl;
-  cout << test.GetBBoxesWithPerson().size() << endl;
 }

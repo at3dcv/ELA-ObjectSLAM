@@ -459,7 +459,7 @@ cv::Mat Tracking::GrabImageMonocular(const cv::Mat &im, const double &timestamp,
 
 	object_detection_frame_id = object_detection_frame_id + 1;
 
-	mCurrentFrame.FilterOutMovingPoints(mImRGB);
+	mCurrentFrame.FilterOutMovingPoints(mImRGB, object_detection_frame_id);
 
 	// AC: Current frame id
 	if (mCurrentFrame.mnId == 0)

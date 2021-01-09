@@ -1,14 +1,17 @@
+#ifndef OBJDETECTION_H
+#define OBJDETECTION_H
+
 #include <vector>
 
 using namespace std;
 
-namespace TEST
+namespace ORB_SLAM2
 {
-class Objects
+class ObjDetectionHelper
 {
 
 public:
-    Objects();
+    ObjDetectionHelper();
     void ReadFile(const string filePath);
     vector<float> GetNthEntry(int n);
     vector<vector<float > > GetBBoxesWithPerson();
@@ -22,3 +25,5 @@ private:
     vector<float> confidence;
 };
 }
+
+#endif

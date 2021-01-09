@@ -7,7 +7,7 @@
 3. Open terminal and go to the folder where the Dockerfile is located
 4. sudo docker build -t at3dcv_2020 .
 5. Windows: `docker run -it --rm -p 6080:80 -v "D:\Andy\Bildung_Arbeit\01_Studium\15 WS 21 22\AT3DCV\objectslam\:/mnt/objectslam/src/objectslam" -v "D:\Andy\Bildung_Arbeit\01_Studium\15 WS 21 22\AT3DCV\datasets\:/mnt/datasets/" at3dcv_2020:latest`
-   MacOS: `docker run -it --rm -p 6080:80 -v "D:\Andy\Bildung_Arbeit\01_Studium\15 WS 21 22\AT3DCV\objectslam\:/mnt/objectslam/src/objectslam" -v "D:\Andy\Bildung_Arbeit\01_Studium\15 WS 21 22\AT3DCV\datasets\:/mnt/datasets/" at3dcv_2020:latest`
+   MacOS: `docker run -it --rm -p 6080:80 -v ~/at3dcv/:/mnt/ at3dcv_2020:latest`
 6. Browse to http://127.0.0.1:6080/
 7. In the docker image open Terminal
 8. cd cube_slam_ws

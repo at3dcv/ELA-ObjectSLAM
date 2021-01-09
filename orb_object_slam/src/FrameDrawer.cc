@@ -139,7 +139,7 @@ cv::Mat FrameDrawer::DrawFrame()
                     cv::circle(im, vCurrentKeys[i].pt, 3, cv::Scalar(0, 255, 0), -1);
                     mnTracked++;
                 }
-                else // This is match to a "visual odometry" MapPoint created in the last frame    // blue
+                else // This is match to a "visual odometry" MapPoint created in the last frame    // red
                 {
                     cv::circle(im, vCurrentKeys[i].pt, 3, cv::Scalar(255, 0, 0), -1);
                     mnTrackedVO++;
