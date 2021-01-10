@@ -230,7 +230,6 @@ Frame::Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor *extra
     mvLevelSigma2 = mpORBextractorLeft->GetScaleSigmaSquares();
     mvInvLevelSigma2 = mpORBextractorLeft->GetInverseScaleSigmaSquares();
     
-    cout << "INITIALIZE" << endl;
     ExtractORBKeyPoints(0, imGray); // orb detector   change mvKeys, mDescriptors
 
     // AC: Copied from DS-SLAM
@@ -249,7 +248,6 @@ Frame::Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor *extra
 
 void Frame::FilterOutMovingPoints(cv::Mat &imRGB, const cv::Mat &imGray, int frame_id)
 {
-    cout << "FILTER OUT" << endl;
     mCurrentObjDetection = ObjDetectionHelper();
     mCurrentObjDetection.ReadFile(base_data_folder + "MRCNN_renamed/" + to_string(frame_id) + ".txt");
     mCurrentBBoxes = mCurrentObjDetection.GetBBoxesWithPerson();
@@ -258,14 +256,15 @@ void Frame::FilterOutMovingPoints(cv::Mat &imRGB, const cv::Mat &imGray, int fra
         cout << "Found " << mCurrentBBoxes.size() << " people" << endl;
         flag_mov = mpORBextractorLeft->CheckMovingKeyPoints(imGray, mCurrentBBoxes, mvKeysTemp, T_M);
         if (flag_mov == 1) {
-            cout << "FRAME IS MOVING!!!" << endl;
+            cout << "FRAME IS MOVING!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << endl;
         }
     }
-    ExtractORBDesp(0,imGray);
 }
 
 void Frame::ConstructorExtension(const cv::Mat &imGray, cv::Mat &K)
 {
+    ExtractORBDesp(0,imGray);
+
     if (whether_dynamic_object)
     {   
         char frame_index_c[256];
@@ -430,10 +429,6 @@ void Frame::DetectMovingKeypoints(const cv::Mat &imgray)
             if (dd <= limit_dis_epi) continue;
             T_M.push_back(nextpoint[i]);
         }
-    }
-    
-    if (T_M.size() > 0) {
-        cout << "Found " << T_M.size() << " moving keypoints" << endl;
     }
 }
 

@@ -491,7 +491,6 @@ cv::Mat Tracking::GrabImageMonocular(const cv::Mat &im, const double &timestamp,
 
 void Tracking::Track()
 {
-	cout << "TRACK" << endl;
 	if (mState == NO_IMAGES_YET)
 	{
 		mState = NOT_INITIALIZED;
@@ -967,7 +966,6 @@ void Tracking::MonocularInitialization()
 	}
 	else
 	{
-		std::cout << "ELSE" << std::endl;
 		// Try to initialize
 		if ((int)mCurrentFrame.mvKeys.size() <= 100)
 		{

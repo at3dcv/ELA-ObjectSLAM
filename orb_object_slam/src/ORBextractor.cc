@@ -1080,6 +1080,60 @@ int ORBextractor::CheckMovingKeyPoints(const cv::Mat &imGray, const std::vector<
         if(flag_orb_mov==1)
             break;
     }
+
+    // AC: If yes, erase points in given objects
+	if(flag_orb_mov==1)
+	{
+        // AC: for debug purposes...
+        int kpCountBefore = 0;
+        for (int level = 0; level < nlevels; ++level)
+            kpCountBefore += (int)mvKeysT[level].size();
+
+        for (int j = 0; j < mCurrentBBoxes.size(); j++)
+        {
+            float bbLeft = (float)mCurrentBBoxes[j][1];
+            float bbTop = (float)mCurrentBBoxes[j][2];
+            float bbRight = bbLeft + mCurrentBBoxes[j][3];
+            float bbBottom = bbTop - mCurrentBBoxes[j][4];
+
+            for (int level = 0; level < nlevels; ++level)
+            {
+                vector<cv::KeyPoint>& mkeypoints = mvKeysT[level];
+                int nkeypointsLevel = (int)mkeypoints.size();
+                if(nkeypointsLevel==0)
+                        continue;
+                if (level != 0)
+                    scale = mvScaleFactor[level]; 
+                else
+                    scale =1; 
+                vector<cv::KeyPoint>::iterator keypoint = mkeypoints.begin();
+
+                int eraseCounter = 0;
+                int keypointCounter = 0;
+                while(keypoint != mkeypoints.end())
+                {
+                    cv::Point2f search_coord = keypoint->pt * scale;
+                    // Search in the semantic image
+                    if(search_coord.x >= (imGray.rows -1)) search_coord.x=(imGray.rows -1);
+                    if(search_coord.y >= (imGray.cols -1)) search_coord.y=(imGray.cols -1) ;
+                    if(search_coord.x >= bbLeft && search_coord.x <= bbRight && search_coord.y <= bbTop && search_coord.y >= bbBottom)
+                    {
+                        eraseCounter++;
+                        keypoint=mkeypoints.erase(keypoint);		       
+                    }
+                    else
+                    {
+                        keypoint++;
+                    }
+                    keypointCounter++;
+                }
+            }
+        }
+        int kpCountAfter = 0;
+        for (int level = 0; level < nlevels; ++level)
+            kpCountAfter += (int)mvKeysT[level].size();
+        cout << "Kept " << kpCountAfter << "/" << kpCountBefore << " keypoints" << endl;
+    }
     return flag_orb_mov;
 }
 
