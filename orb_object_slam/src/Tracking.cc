@@ -391,9 +391,6 @@ cv::Mat Tracking::GrabImageRGBD(const cv::Mat &imRGB, const cv::Mat &imD, const 
 
 	mCurrentFrame = Frame(mImGray, imDepth, timestamp, mpORBextractorLeft, mpORBVocabulary, mK, mDistCoef, mbf, mThDepth);
 
-	// AC: The filtering of keypoints should be done here as in DS-SLAM...
-	printf("START FILTERING!");
-
 	// AC: whether_detect_object flag is set in mono.launch
 	// AC: I guess here the image is being copied in an array to be used for the object detectiong
 	if (whether_detect_object)
@@ -459,7 +456,8 @@ cv::Mat Tracking::GrabImageMonocular(const cv::Mat &im, const double &timestamp,
 
 	object_detection_frame_id = object_detection_frame_id + 1;
 
-	mCurrentFrame.FilterOutMovingPoints(mImRGB, object_detection_frame_id);
+	mCurrentFrame.FilterOutMovingPoints(mImRGB, mImGray, object_detection_frame_id);
+	mCurrentFrame.ConstructorExtension(mImGray, mK);
 
 	// AC: Current frame id
 	if (mCurrentFrame.mnId == 0)
@@ -493,6 +491,7 @@ cv::Mat Tracking::GrabImageMonocular(const cv::Mat &im, const double &timestamp,
 
 void Tracking::Track()
 {
+	cout << "TRACK" << endl;
 	if (mState == NO_IMAGES_YET)
 	{
 		mState = NOT_INITIALIZED;
@@ -968,6 +967,7 @@ void Tracking::MonocularInitialization()
 	}
 	else
 	{
+		std::cout << "ELSE" << std::endl;
 		// Try to initialize
 		if ((int)mCurrentFrame.mvKeys.size() <= 100)
 		{

@@ -18,6 +18,9 @@
 * along with ORB-SLAM2. If not, see <http://www.gnu.org/licenses/>.
 */
 
+// VARIABLE DEFINITIONS
+// mvKeyUn = undistorted keypoints
+
 #include "Frame.h"
 #include "MapPoint.h"
 #include "KeyFrame.h"
@@ -114,8 +117,8 @@ Frame::Frame(const cv::Mat &imLeft, const cv::Mat &imRight, const double &timeSt
     mvInvLevelSigma2 = mpORBextractorLeft->GetInverseScaleSigmaSquares();
 
     // ORB extraction
-    thread threadLeft(&Frame::ExtractORB, this, 0, imLeft);
-    thread threadRight(&Frame::ExtractORB, this, 1, imRight);
+    thread threadLeft(&Frame::ExtractORBKeyPoints, this, 0, imLeft);
+    thread threadRight(&Frame::ExtractORBKeyPoints, this, 1, imRight);
     threadLeft.join();
     threadRight.join();
 
@@ -172,7 +175,7 @@ Frame::Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeSt
     mvInvLevelSigma2 = mpORBextractorLeft->GetInverseScaleSigmaSquares();
 
     // ORB extraction
-    ExtractORB(0, imGray);
+    ExtractORBKeyPoints(0, imGray);
 
     N = mvKeys.size();
 
@@ -226,8 +229,9 @@ Frame::Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor *extra
     mvInvScaleFactors = mpORBextractorLeft->GetInverseScaleFactors();
     mvLevelSigma2 = mpORBextractorLeft->GetScaleSigmaSquares();
     mvInvLevelSigma2 = mpORBextractorLeft->GetInverseScaleSigmaSquares();
-
-    ExtractORB(0, imGray); // orb detector   change mvKeys, mDescriptors
+    
+    cout << "INITIALIZE" << endl;
+    ExtractORBKeyPoints(0, imGray); // orb detector   change mvKeys, mDescriptors
 
     // AC: Copied from DS-SLAM
     // AC: What is happening here?
@@ -239,11 +243,31 @@ Frame::Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor *extra
     else
     {
         imGrayPre = imGray.clone();
-        // flag_mov=0;
+        flag_mov=0;
     }
+}
 
+void Frame::FilterOutMovingPoints(cv::Mat &imRGB, const cv::Mat &imGray, int frame_id)
+{
+    cout << "FILTER OUT" << endl;
+    mCurrentObjDetection = ObjDetectionHelper();
+    mCurrentObjDetection.ReadFile(base_data_folder + "MRCNN_renamed/" + to_string(frame_id) + ".txt");
+    mCurrentBBoxes = mCurrentObjDetection.GetBBoxesWithPerson();
+
+    if (!T_M.empty() && mCurrentBBoxes.size() > 0) {
+        cout << "Found " << mCurrentBBoxes.size() << " people" << endl;
+        flag_mov = mpORBextractorLeft->CheckMovingKeyPoints(imGray, mCurrentBBoxes, mvKeysTemp, T_M);
+        if (flag_mov == 1) {
+            cout << "FRAME IS MOVING!!!" << endl;
+        }
+    }
+    ExtractORBDesp(0,imGray);
+}
+
+void Frame::ConstructorExtension(const cv::Mat &imGray, cv::Mat &K)
+{
     if (whether_dynamic_object)
-    {
+    {   
         char frame_index_c[256];
         sprintf(frame_index_c, "%04d", (int)mnId); // format into 4 digit
         std::string pred_mask_img_name = base_data_folder + "/rcnn_labelmap_3dmatched/" + frame_index_c + "_maskmap.png";
@@ -291,7 +315,7 @@ Frame::Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor *extra
 
     if (mvKeys.empty())
         return;
-
+        
     UndistortKeyPoints();
 
     // Set no stereo information
@@ -324,16 +348,7 @@ Frame::Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor *extra
     AssignFeaturesToGrid();
 }
 
-void Frame::FilterOutMovingPoints(cv::Mat &imRGB, int frame_id)
-{
-    mCurrentObjDetection = ObjDetectionHelper();
-    mCurrentObjDetection.ReadFile(base_data_folder + "MRCNN_renamed/" + to_string(frame_id) + ".txt");
-    mCurrentBBoxes = mCurrentObjDetection.GetBBoxesWithPerson();
-    if (mCurrentBBoxes.size() > 0) {
-        cout << "Found " << mCurrentBBoxes.size() << " people" << endl;
-    }
-}
-
+// AC: The generated keypoints are ONLY used to determine whether a frame has a moving object or not!
 void Frame::DetectMovingKeypoints(const cv::Mat &imgray)
 {
     // Clear the previous data
@@ -412,8 +427,7 @@ void Frame::DetectMovingKeypoints(const cv::Mat &imgray)
             double C = F.at<double>(2, 0)*prepoint[i].x + F.at<double>(2, 1)*prepoint[i].y + F.at<double>(2, 2);
             double dd = fabs(A*nextpoint[i].x + B*nextpoint[i].y + C) / sqrt(A*A + B*B);
 
-            // Judge outliers
-            if (dd <= 0.1) continue; // TODO: Needs to be replaced limit_dis_epi
+            if (dd <= limit_dis_epi) continue;
             T_M.push_back(nextpoint[i]);
         }
     }
@@ -440,12 +454,21 @@ void Frame::AssignFeaturesToGrid()
     }
 }
 
-void Frame::ExtractORB(int flag, const cv::Mat &im)
+void Frame::ExtractORBKeyPoints(int flag, const cv::Mat &im)
 {
     if (flag == 0)
-        (*mpORBextractorLeft)(im, cv::Mat(), mvKeys, mDescriptors);
+        (*mpORBextractorLeft)(im, cv::Mat(), mvKeysTemp);
     else
-        (*mpORBextractorRight)(im, cv::Mat(), mvKeysRight, mDescriptorsRight);
+        (*mpORBextractorRight)(im, cv::Mat(), mvKeysTemp);
+}
+
+void Frame::ExtractORBDesp(int flag,const cv::Mat &imgray)
+{
+    if(flag==0)
+        (*mpORBextractorLeft).ProcessDesp(imgray,cv::Mat(),mvKeysTemp,mvKeys,mDescriptors);
+    else
+        (*mpORBextractorLeft).ProcessDesp(imgray,cv::Mat(),mvKeysTemp,mvKeysRight,mDescriptorsRight);
+    
 }
 
 void Frame::SetPose(cv::Mat Tcw)

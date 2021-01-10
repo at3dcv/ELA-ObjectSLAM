@@ -58,6 +58,7 @@
 #include <opencv2/features2d/features2d.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <vector>
+#include <iostream>
 
 #include "ORBextractor.h"
 
@@ -1033,8 +1034,56 @@ static void computeDescriptors(const Mat &image, vector<KeyPoint> &keypoints, Ma
         computeOrbDescriptor(keypoints[i], image, &pattern[0], descriptors.ptr((int)i));
 }
 
-void ORBextractor::operator()(InputArray _image, InputArray _mask, vector<KeyPoint> &_keypoints,
-                              OutputArray _descriptors)
+int ORBextractor::CheckMovingKeyPoints(const cv::Mat &imGray, const std::vector<std::vector<float > > mCurrentBBoxes,
+    std::vector<std::vector<cv::KeyPoint>>& mvKeysT,std::vector<cv::Point2f> T)
+{
+    float scale;
+    int flag_orb_mov =0;
+   
+    // Make further judgment
+    // AC: Check whether the frame has a moving object
+    for (int j = 0; j < mCurrentBBoxes.size(); j++)
+    {
+        float bbLeft = (float)mCurrentBBoxes[j][1];
+        float bbTop = (float)mCurrentBBoxes[j][2];
+        float bbRight = bbLeft + mCurrentBBoxes[j][3];
+        float bbBottom = bbTop - mCurrentBBoxes[j][4];
+
+        for (int i = 0; i < T.size(); i++)
+        {
+            for(int m = -15; m < 15; m++) 
+            {
+                for(int n = -15; n < 15; n++)
+                {
+                    // AC: wiggle keypoint around +- 15 to check whether the keypoint is in segment of the label people
+                    int my = ((int)T[i].y + n) ;
+                    int mx = ((int)T[i].x + m) ;
+                    if( ((int)T[i].y + n) > (imGray.rows -1) ) my = (imGray.rows - 1) ;
+                    if( ((int)T[i].y + n) < 1 ) my = 0;
+                    if( ((int)T[i].x + m) > (imGray.cols -1) ) mx = (imGray.cols - 1) ;
+                    if( ((int)T[i].x + m) < 1 ) mx = 0;
+                    // The label of people is 15
+
+                    // AC: Check whether keypoint is in bounding box
+                    if(mx >= bbLeft && mx <= bbRight && my <= bbTop && my >= bbBottom)
+                    {
+                        flag_orb_mov=1;
+                        break;
+                    }
+                }
+                if(flag_orb_mov==1)
+                    break;
+            }
+            if(flag_orb_mov==1)
+                break;
+        }
+        if(flag_orb_mov==1)
+            break;
+    }
+    return flag_orb_mov;
+}
+
+void ORBextractor::operator()(InputArray _image, InputArray _mask, vector<vector<KeyPoint>> &allKeypoints)
 {
     if (_image.empty())
         return;
@@ -1044,11 +1093,12 @@ void ORBextractor::operator()(InputArray _image, InputArray _mask, vector<KeyPoi
 
     // Pre-compute the scale pyramid
     ComputePyramid(image);
-
-    vector<vector<KeyPoint>> allKeypoints;
     ComputeKeyPointsOctTree(allKeypoints);
-    //ComputeKeyPointsOld(allKeypoints);
+}
 
+void ORBextractor::ProcessDesp(InputArray _image, InputArray _mask, vector<vector<KeyPoint>> &allKeypoints,
+                              vector<KeyPoint> &_keypoints, OutputArray _descriptors)
+{
     Mat descriptors;
 
     int nkeypoints = 0;

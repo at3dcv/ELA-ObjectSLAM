@@ -57,8 +57,12 @@ public:
     Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor *extractor, ORBVocabulary *voc, cv::Mat &K, cv::Mat &distCoef,
           const float &bf, const float &thDepth);
 
+    // Second-Half of constructor
+    void ConstructorExtension(const cv::Mat &imGray, cv::Mat &K);
+
     // Extract ORB on the image. 0 for left image and 1 for right image.
-    void ExtractORB(int flag, const cv::Mat &im);
+    void ExtractORBKeyPoints(int flag, const cv::Mat &im);
+    void ExtractORBDesp(int flag,const cv::Mat &imgray);
 
     // Compute Bag of Words representation of ORB descriptors
     void ComputeBoW();
@@ -108,14 +112,16 @@ public:
     // detect moving points
     void DetectMovingKeypoints(const cv::Mat &imgray);
     std::vector<cv::Point2f> T_M;
-    double limit_dis_epi = 100; 
+    double limit_dis_epi = 1; 
     double limit_of_check = 2120;
     int limit_edge_corner = 5;
 
     // For semantic segmentation thread
-    void FilterOutMovingPoints(cv::Mat &imRGB, int frame_id);
+    void FilterOutMovingPoints(cv::Mat &imRGB, const cv::Mat &imGray, int frame_id);
     ObjDetectionHelper mCurrentObjDetection;
     std::vector<vector<float > > mCurrentBBoxes;
+    int flag_mov;
+    std::vector<std::vector<cv::KeyPoint>> mvKeysTemp;
 
 public:
     // by me, detect_3d_cuboid needs raw image
