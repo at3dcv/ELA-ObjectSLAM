@@ -1593,6 +1593,7 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 	}
 	else
 	{
+		// AC: Online cuboid proposals
 		std::string data_edge_data_dir = base_data_folder + "/edge_detection/LSD/";
 		std::string data_yolo_obj_dir = base_data_folder + "/mats/filter_match_2d_boxes_txts/";
 		char frame_index_c[256];

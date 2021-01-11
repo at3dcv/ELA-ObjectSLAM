@@ -71,6 +71,7 @@ vector<vector<float> > ObjDetectionHelper::GetBBoxesWithPerson() {
       bboxes.push_back(bbox);
     }
   }
+  cout << "Found " << bboxes.size() << " people" << endl;
   return bboxes;
 }
 }

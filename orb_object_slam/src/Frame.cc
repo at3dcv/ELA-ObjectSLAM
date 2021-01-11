@@ -248,8 +248,22 @@ Frame::Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor *extra
 
 void Frame::FilterOutMovingPoints(cv::Mat &imRGB, const cv::Mat &imGray, int frame_id)
 {
+
     mCurrentObjDetection = ObjDetectionHelper();
-    mCurrentObjDetection.ReadFile(base_data_folder + "MRCNN_renamed/" + to_string(frame_id) + ".txt");
+    std::string filename;
+    if (frame_id <= 9) {
+        filename = "000" + to_string(frame_id) + "_mrcnn.txt";
+    }
+    if (frame_id <= 99) {
+        filename = "00" + to_string(frame_id) + "_mrcnn.txt";
+    }
+    if (frame_id <= 999) {
+        filename = "0" + to_string(frame_id) + "_mrcnn.txt";
+    }
+    if (frame_id <= 9999) {
+        filename = to_string(frame_id) + "_mrcnn.txt";
+    }
+    mCurrentObjDetection.ReadFile(base_data_folder + "results/" + filename);
     mCurrentBBoxes = mCurrentObjDetection.GetBBoxesWithPerson();
 
     if (!T_M.empty() && mCurrentBBoxes.size() > 0) {
