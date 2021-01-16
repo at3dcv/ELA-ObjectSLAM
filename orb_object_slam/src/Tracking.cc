@@ -454,11 +454,13 @@ cv::Mat Tracking::GrabImageMonocular(const cv::Mat &im, const double &timestamp,
 		mCurrentFrame = Frame(mImGray, timestamp, mpORBextractorLeft, mpORBVocabulary, mK, mDistCoef, mbf, mThDepth); // create new frames.
 	}
 
-	object_detection_frame_id = object_detection_frame_id + 1;
-
-	mCurrentFrame.FilterOutMovingPoints(mImRGB, mImGray, object_detection_frame_id);
+	if (whether_dynamic_object)
+	{
+		object_detection_frame_id = object_detection_frame_id + 1;
+		mCurrentFrame.FilterOutMovingPoints(mImRGB, mImGray, object_detection_frame_id);
+	}
 	mCurrentFrame.ConstructorExtension(mImGray, mK);
-
+	
 	// AC: Current frame id
 	if (mCurrentFrame.mnId == 0)
 		start_msg_seq_id = msg_seq_id;
@@ -495,7 +497,6 @@ void Tracking::Track()
 	{
 		mState = NOT_INITIALIZED;
 	}
-
 	mLastProcessedState = mState;
 
 	bool created_keyframe = false;
@@ -516,6 +517,7 @@ void Tracking::Track()
 				if (mono_firstframe_truth_depth_init)
 				{
 					special_initialization = true;
+					cout << "3" << endl;
 					StereoInitialization(); // if first frame has truth depth, we can initialize simiar to stereo/rgbd. create keyframe for it.
 				}
 				else if (mono_firstframe_Obj_depth_init)

@@ -233,7 +233,6 @@ Frame::Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor *extra
     ExtractORBKeyPoints(0, imGray); // orb detector   change mvKeys, mDescriptors
 
     // AC: Copied from DS-SLAM
-    // AC: What is happening here?
     if(imGrayPre.data)
     {
         DetectMovingKeypoints(imGray);
@@ -250,28 +249,20 @@ void Frame::FilterOutMovingPoints(cv::Mat &imRGB, const cv::Mat &imGray, int fra
 {
 
     mCurrentObjDetection = ObjDetectionHelper();
-    std::string filename;
-    if (frame_id <= 9) {
-        filename = "000" + to_string(frame_id) + "_mrcnn.txt";
-    }
-    if (frame_id <= 99) {
-        filename = "00" + to_string(frame_id) + "_mrcnn.txt";
-    }
-    if (frame_id <= 999) {
-        filename = "0" + to_string(frame_id) + "_mrcnn.txt";
-    }
-    if (frame_id <= 9999) {
-        filename = to_string(frame_id) + "_mrcnn.txt";
-    }
-    mCurrentObjDetection.ReadFile(base_data_folder + "results/" + filename);
+    char frame_index_c[256];
+    sprintf(frame_index_c, "%04d", (int)frame_id); // format into 4 digit
+    mCurrentObjDetection.ReadFile(base_data_folder + "results/" + frame_index_c + "_mrcnn.txt");
     mCurrentBBoxes = mCurrentObjDetection.GetBBoxesWithPerson();
 
     if (!T_M.empty() && mCurrentBBoxes.size() > 0) {
         cout << "Found " << mCurrentBBoxes.size() << " people" << endl;
-        flag_mov = mpORBextractorLeft->CheckMovingKeyPoints(imGray, mCurrentBBoxes, mvKeysTemp, T_M);
-        if (flag_mov == 1) {
-            cout << "FRAME IS MOVING!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << endl;
-        }
+        if (remove_dynamic_features)
+        {
+            flag_mov = mpORBextractorLeft->CheckMovingKeyPoints(imGray, mCurrentBBoxes, mvKeysTemp, T_M);
+            if (flag_mov == 1) {
+                cout << "FRAME IS MOVING!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << endl;
+            }
+        }  
     }
 }
 
@@ -279,48 +270,27 @@ void Frame::ConstructorExtension(const cv::Mat &imGray, cv::Mat &K)
 {
     ExtractORBDesp(0,imGray, mvKeysTemp);
     
+    // AC: here was the dynamic object removal process, however, it only takes a segmented map
+    // AC: with only dynamic objects
     if (whether_dynamic_object)
     {
-        char frame_index_c[256];
-        sprintf(frame_index_c, "%04d", (int)mnId); // format into 4 digit
-        std::string pred_mask_img_name = base_data_folder + "/rcnn_labelmap_3dmatched/" + frame_index_c + "_maskmap.png";
+        // AC: commented out as different naming convention
+        // char frame_index_c[256];
+        // sprintf(frame_index_c, "%04d", (int)mnId); // format into 4 digit
+        std::string pred_mask_img_name = base_data_folder + "rcnn_labelmap_3dmatched/" + to_string(mnId) + "_maskmap.png";
         objmask_img = cv::imread(pred_mask_img_name, CV_LOAD_IMAGE_UNCHANGED); // uint8  sometimes read image might take long time....
 
         KeysStatic = vector<bool>(mvKeys.size(), true); // all points are static now.
         keypoint_associate_objectID = vector<int>(mvKeys.size(), -1);
         numobject = 0;
 
-        if (remove_dynamic_features) // directly delete dynamic region features
+        for (size_t i = 0; i < mvKeys.size(); i++)
         {
-            std::vector<cv::KeyPoint> mvKeys_cp;
-            cv::Mat mDescriptors_cp;
-
-            for (size_t i = 0; i < mvKeys.size(); i++)
-            {
-                int maskval = int(objmask_img.at<uint8_t>(mvKeys[i].pt.y, mvKeys[i].pt.x));
-                bool delete_feature = maskval > 0;
-                
-                if (!delete_feature)
-                {
-                    mvKeys_cp.push_back(mvKeys[i]);
-                    mDescriptors_cp.push_back(mDescriptors.row(i));
-                }
-            }
-            std::cout << "Delete dynamic feature points  " << mvKeys.size() - mvKeys_cp.size() << std::endl;
-
-            mvKeys = mvKeys_cp;
-            mDescriptors = mDescriptors_cp.clone();
-        }
-        else
-        {
-            for (size_t i = 0; i < mvKeys.size(); i++)
-            {
-                int maskval = int(objmask_img.at<uint8_t>(mvKeys[i].pt.y, mvKeys[i].pt.x));
-                KeysStatic[i] = (maskval == 0); //0 is background, static >0 object id
-                numobject = max(numobject, maskval);
-                if (maskval > 0)
-                    keypoint_associate_objectID[i] = maskval - 1;
-            }
+            int maskval = int(objmask_img.at<uint8_t>(mvKeys[i].pt.y, mvKeys[i].pt.x));
+            KeysStatic[i] = (maskval == 0); //0 is background, static >0 object id
+            numobject = max(numobject, maskval);
+            if (maskval > 0)
+                keypoint_associate_objectID[i] = maskval - 1;
         }
     }
 
