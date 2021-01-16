@@ -277,10 +277,10 @@ void Frame::FilterOutMovingPoints(cv::Mat &imRGB, const cv::Mat &imGray, int fra
 
 void Frame::ConstructorExtension(const cv::Mat &imGray, cv::Mat &K)
 {
-    ExtractORBDesp(0,imGray);
-
+    ExtractORBDesp(0,imGray, mvKeysTemp);
+    
     if (whether_dynamic_object)
-    {   
+    {
         char frame_index_c[256];
         sprintf(frame_index_c, "%04d", (int)mnId); // format into 4 digit
         std::string pred_mask_img_name = base_data_folder + "/rcnn_labelmap_3dmatched/" + frame_index_c + "_maskmap.png";
@@ -299,7 +299,7 @@ void Frame::ConstructorExtension(const cv::Mat &imGray, cv::Mat &K)
             {
                 int maskval = int(objmask_img.at<uint8_t>(mvKeys[i].pt.y, mvKeys[i].pt.x));
                 bool delete_feature = maskval > 0;
-
+                
                 if (!delete_feature)
                 {
                     mvKeys_cp.push_back(mvKeys[i]);
@@ -471,12 +471,12 @@ void Frame::ExtractORBKeyPoints(int flag, const cv::Mat &im)
         (*mpORBextractorRight)(im, cv::Mat(), mvKeysTemp);
 }
 
-void Frame::ExtractORBDesp(int flag,const cv::Mat &imgray)
+void Frame::ExtractORBDesp(int flag,const cv::Mat &imgray, std::vector<std::vector<cv::KeyPoint>> tempKeys)
 {
     if(flag==0)
-        (*mpORBextractorLeft).ProcessDesp(imgray,cv::Mat(),mvKeysTemp,mvKeys,mDescriptors);
+        (*mpORBextractorLeft).ProcessDesp(imgray,cv::Mat(),tempKeys,mvKeys,mDescriptors);
     else
-        (*mpORBextractorLeft).ProcessDesp(imgray,cv::Mat(),mvKeysTemp,mvKeysRight,mDescriptorsRight);
+        (*mpORBextractorLeft).ProcessDesp(imgray,cv::Mat(),tempKeys,mvKeysRight,mDescriptorsRight);
     
 }
 

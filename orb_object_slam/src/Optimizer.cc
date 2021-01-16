@@ -2189,7 +2189,9 @@ void Optimizer::LocalBACameraPointObjectsDynamic(KeyFrame *pKF, bool *pbStopFlag
                     }
                     else // add velocity edge
                     {
+                        cout << "Edge Object Motion" << endl;
                         g2o::EdgeObjectMotion *e = new g2o::EdgeObjectMotion();
+                        cout << "END" << endl;
                         e->setVertex(0, dynamic_cast<g2o::OptimizableGraph::Vertex *>(optimizer.vertex(pMObject->bundle_vertex_ids[prevgoodobsframe])));
                         e->setVertex(1, dynamic_cast<g2o::OptimizableGraph::Vertex *>(optimizer.vertex(pMObject->bundle_vertex_ids[obskf])));
                         e->setVertex(2, dynamic_cast<g2o::OptimizableGraph::Vertex *>(vVelocity));

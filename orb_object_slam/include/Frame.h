@@ -62,7 +62,7 @@ public:
 
     // Extract ORB on the image. 0 for left image and 1 for right image.
     void ExtractORBKeyPoints(int flag, const cv::Mat &im);
-    void ExtractORBDesp(int flag,const cv::Mat &imgray);
+    void ExtractORBDesp(int flag,const cv::Mat &imgray, std::vector<std::vector<cv::KeyPoint>> tempKeys);
 
     // Compute Bag of Words representation of ORB descriptors
     void ComputeBoW();
