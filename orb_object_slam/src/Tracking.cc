@@ -459,7 +459,6 @@ cv::Mat Tracking::GrabImageMonocular(const cv::Mat &im, const double &timestamp,
 		object_detection_frame_id = object_detection_frame_id + 1;
 		mCurrentFrame.FilterOutMovingPoints(mImRGB, mImGray, object_detection_frame_id);
 	}
-	mCurrentFrame.ConstructorExtension(mImGray, mK);
 	
 	// AC: Current frame id
 	if (mCurrentFrame.mnId == 0)
@@ -1661,6 +1660,7 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 			MapObject *newcuboid = new MapObject(mpMap);
 			g2o::cuboid cube_local_meas = cube_ground_value.transform_to(Converter::toSE3Quat(pop_pose_to_ground));
 			newcuboid->cube_meas = cube_local_meas;
+			// AC: bboxes are defined here!
 			newcuboid->bbox_2d = cv::Rect(raw_cuboid->rect_detect_2d[0], raw_cuboid->rect_detect_2d[1], raw_cuboid->rect_detect_2d[2], raw_cuboid->rect_detect_2d[3]);
 			newcuboid->bbox_vec = Vector4d((double)newcuboid->bbox_2d.x + (double)newcuboid->bbox_2d.width / 2, (double)newcuboid->bbox_2d.y + (double)newcuboid->bbox_2d.height / 2,
 										   (double)newcuboid->bbox_2d.width, (double)newcuboid->bbox_2d.height);

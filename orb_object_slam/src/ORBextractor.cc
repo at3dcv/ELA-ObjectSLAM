@@ -1034,110 +1034,7 @@ static void computeDescriptors(const Mat &image, vector<KeyPoint> &keypoints, Ma
         computeOrbDescriptor(keypoints[i], image, &pattern[0], descriptors.ptr((int)i));
 }
 
-int ORBextractor::CheckMovingKeyPoints(const cv::Mat &imGray, const std::vector<std::vector<float > > mCurrentBBoxes,
-    std::vector<std::vector<cv::KeyPoint>>& mvKeysT,std::vector<cv::Point2f> T)
-{
-    float scale;
-    int flag_orb_mov =0;
-   
-    // Make further judgment
-    // AC: Check whether the frame has a moving object
-    for (int j = 0; j < mCurrentBBoxes.size(); j++)
-    {
-        float bbLeft = (float)mCurrentBBoxes[j][1];
-        float bbTop = (float)mCurrentBBoxes[j][2];
-        float bbRight = bbLeft + mCurrentBBoxes[j][3];
-        float bbBottom = bbTop - mCurrentBBoxes[j][4];
-
-        for (int i = 0; i < T.size(); i++)
-        {
-            for(int m = -15; m < 15; m++) 
-            {
-                for(int n = -15; n < 15; n++)
-                {
-                    // AC: wiggle keypoint around +- 15 to check whether the keypoint is in segment of the label people
-                    int my = ((int)T[i].y + n) ;
-                    int mx = ((int)T[i].x + m) ;
-                    if( ((int)T[i].y + n) > (imGray.rows -1) ) my = (imGray.rows - 1) ;
-                    if( ((int)T[i].y + n) < 1 ) my = 0;
-                    if( ((int)T[i].x + m) > (imGray.cols -1) ) mx = (imGray.cols - 1) ;
-                    if( ((int)T[i].x + m) < 1 ) mx = 0;
-                    // The label of people is 15
-
-                    // AC: Check whether keypoint is in bounding box
-                    if(mx >= bbLeft && mx <= bbRight && my <= bbTop && my >= bbBottom)
-                    {
-                        flag_orb_mov=1;
-                        break;
-                    }
-                }
-                if(flag_orb_mov==1)
-                    break;
-            }
-            if(flag_orb_mov==1)
-                break;
-        }
-        if(flag_orb_mov==1)
-            break;
-    }
-
-    // AC: If yes, erase points in given objects
-	if(flag_orb_mov==1)
-	{
-        // AC: for debug purposes...
-        int kpCountBefore = 0;
-        for (int level = 0; level < nlevels; ++level)
-            kpCountBefore += (int)mvKeysT[level].size();
-
-        for (int j = 0; j < mCurrentBBoxes.size(); j++)
-        {
-            float bbLeft = (float)mCurrentBBoxes[j][1];
-            float bbTop = (float)mCurrentBBoxes[j][2];
-            float bbRight = bbLeft + mCurrentBBoxes[j][3];
-            float bbBottom = bbTop - mCurrentBBoxes[j][4];
-
-            for (int level = 0; level < nlevels; ++level)
-            {
-                vector<cv::KeyPoint>& mkeypoints = mvKeysT[level];
-                int nkeypointsLevel = (int)mkeypoints.size();
-                if(nkeypointsLevel==0)
-                        continue;
-                if (level != 0)
-                    scale = mvScaleFactor[level]; 
-                else
-                    scale =1; 
-                vector<cv::KeyPoint>::iterator keypoint = mkeypoints.begin();
-
-                int eraseCounter = 0;
-                int keypointCounter = 0;
-                while(keypoint != mkeypoints.end())
-                {
-                    cv::Point2f search_coord = keypoint->pt * scale;
-                    // Search in the semantic image
-                    if(search_coord.x >= (imGray.rows -1)) search_coord.x=(imGray.rows -1);
-                    if(search_coord.y >= (imGray.cols -1)) search_coord.y=(imGray.cols -1) ;
-                    if(search_coord.x >= bbLeft && search_coord.x <= bbRight && search_coord.y <= bbTop && search_coord.y >= bbBottom)
-                    {
-                        eraseCounter++;
-                        keypoint=mkeypoints.erase(keypoint);		       
-                    }
-                    else
-                    {
-                        keypoint++;
-                    }
-                    keypointCounter++;
-                }
-            }
-        }
-        int kpCountAfter = 0;
-        for (int level = 0; level < nlevels; ++level)
-            kpCountAfter += (int)mvKeysT[level].size();
-        cout << "Kept " << kpCountAfter << "/" << kpCountBefore << " keypoints" << endl;
-    }
-    return flag_orb_mov;
-}
-
-void ORBextractor::operator()(InputArray _image, InputArray _mask, vector<vector<KeyPoint>> &allKeypoints)
+void ORBextractor::operator()(InputArray _image, InputArray _mask, vector<KeyPoint> &_keypoints, OutputArray _descriptors)
 {
     if (_image.empty())
         return;
@@ -1146,13 +1043,10 @@ void ORBextractor::operator()(InputArray _image, InputArray _mask, vector<vector
     assert(image.type() == CV_8UC1);
 
     // Pre-compute the scale pyramid
+    vector<vector<KeyPoint>> allKeypoints;
     ComputePyramid(image);
     ComputeKeyPointsOctTree(allKeypoints);
-}
 
-void ORBextractor::ProcessDesp(InputArray _image, InputArray _mask, vector<vector<KeyPoint>> &allKeypoints,
-                              vector<KeyPoint> &_keypoints, OutputArray _descriptors)
-{
     Mat descriptors;
 
     int nkeypoints = 0;

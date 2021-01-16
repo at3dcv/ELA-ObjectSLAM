@@ -57,10 +57,7 @@ public:
     // ORB are dispersed on the image using an octree.
     // Mask is ignored in the current implementation.
     void operator()( cv::InputArray image, cv::InputArray mask,
-      std::vector<std::vector<cv::KeyPoint>>& allKeypoints);
-    void ProcessDesp( cv::InputArray image, cv::InputArray mask,
-      std::vector<std::vector<cv::KeyPoint>>& allKeypoints, std::vector<cv::KeyPoint>& keypoints,
-      cv::OutputArray descriptors);
+      std::vector<cv::KeyPoint>& keypoints, cv::OutputArray descriptors);
 
     int inline GetLevels(){
         return nlevels;}
@@ -85,8 +82,6 @@ public:
     }
 
     std::vector<cv::Mat> mvImagePyramid;
-    int CheckMovingKeyPoints(const cv::Mat &imGray, const std::vector<std::vector<float > > mCurrentBBoxes,
-        std::vector<std::vector<cv::KeyPoint>>& mvKeysT,std::vector<cv::Point2f> T);
 
 protected:
 

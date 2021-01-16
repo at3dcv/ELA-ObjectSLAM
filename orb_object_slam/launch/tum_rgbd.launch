@@ -28,7 +28,7 @@
 
    # for dynamic object
    <param name="whether_dynamic_object" value="true" />
-   <param name="remove_dynamic_features" value="false" />
+   <param name="remove_dynamic_features" value="true" />
    <param name="use_dynamic_klt_features" value="false" />	# not orb features
    <param name="object_velocity_BA_weight" value="0.5" />
 

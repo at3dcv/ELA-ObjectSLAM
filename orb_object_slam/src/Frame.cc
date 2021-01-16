@@ -117,8 +117,8 @@ Frame::Frame(const cv::Mat &imLeft, const cv::Mat &imRight, const double &timeSt
     mvInvLevelSigma2 = mpORBextractorLeft->GetInverseScaleSigmaSquares();
 
     // ORB extraction
-    thread threadLeft(&Frame::ExtractORBKeyPoints, this, 0, imLeft);
-    thread threadRight(&Frame::ExtractORBKeyPoints, this, 1, imRight);
+    thread threadLeft(&Frame::ExtractORB, this, 0, imLeft);
+    thread threadRight(&Frame::ExtractORB, this, 1, imRight);
     threadLeft.join();
     threadRight.join();
 
@@ -175,7 +175,7 @@ Frame::Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeSt
     mvInvLevelSigma2 = mpORBextractorLeft->GetInverseScaleSigmaSquares();
 
     // ORB extraction
-    ExtractORBKeyPoints(0, imGray);
+    ExtractORB(0, imGray);
 
     N = mvKeys.size();
 
@@ -230,7 +230,7 @@ Frame::Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor *extra
     mvLevelSigma2 = mpORBextractorLeft->GetScaleSigmaSquares();
     mvInvLevelSigma2 = mpORBextractorLeft->GetInverseScaleSigmaSquares();
     
-    ExtractORBKeyPoints(0, imGray); // orb detector   change mvKeys, mDescriptors
+    ExtractORB(0, imGray); // orb detector   change mvKeys, mDescriptors
 
     // AC: Copied from DS-SLAM
     if(imGrayPre.data)
@@ -241,58 +241,31 @@ Frame::Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor *extra
     else
     {
         imGrayPre = imGray.clone();
-        flag_mov=0;
     }
-}
-
-void Frame::FilterOutMovingPoints(cv::Mat &imRGB, const cv::Mat &imGray, int frame_id)
-{
-
-    mCurrentObjDetection = ObjDetectionHelper();
-    char frame_index_c[256];
-    sprintf(frame_index_c, "%04d", (int)frame_id); // format into 4 digit
-    mCurrentObjDetection.ReadFile(base_data_folder + "results/" + frame_index_c + "_mrcnn.txt");
-    mCurrentBBoxes = mCurrentObjDetection.GetBBoxesWithPerson();
-
-    if (!T_M.empty() && mCurrentBBoxes.size() > 0) {
-        cout << "Found " << mCurrentBBoxes.size() << " people" << endl;
-        if (remove_dynamic_features)
-        {
-            flag_mov = mpORBextractorLeft->CheckMovingKeyPoints(imGray, mCurrentBBoxes, mvKeysTemp, T_M);
-            if (flag_mov == 1) {
-                cout << "FRAME IS MOVING!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << endl;
-            }
-        }  
-    }
-}
-
-void Frame::ConstructorExtension(const cv::Mat &imGray, cv::Mat &K)
-{
-    ExtractORBDesp(0,imGray, mvKeysTemp);
     
     // AC: here was the dynamic object removal process, however, it only takes a segmented map
     // AC: with only dynamic objects
-    if (whether_dynamic_object)
-    {
-        // AC: commented out as different naming convention
-        // char frame_index_c[256];
-        // sprintf(frame_index_c, "%04d", (int)mnId); // format into 4 digit
-        std::string pred_mask_img_name = base_data_folder + "rcnn_labelmap_3dmatched/" + to_string(mnId) + "_maskmap.png";
-        objmask_img = cv::imread(pred_mask_img_name, CV_LOAD_IMAGE_UNCHANGED); // uint8  sometimes read image might take long time....
+    // if (whether_dynamic_object)
+    // {
+    //     // AC: commented out as different naming convention
+    //     // char frame_index_c[256];
+    //     // sprintf(frame_index_c, "%04d", (int)mnId); // format into 4 digit
+    //     std::string pred_mask_img_name = base_data_folder + "rcnn_labelmap_3dmatched/" + to_string(mnId) + "_maskmap.png";
+    //     objmask_img = cv::imread(pred_mask_img_name, CV_LOAD_IMAGE_UNCHANGED); // uint8  sometimes read image might take long time....
 
-        KeysStatic = vector<bool>(mvKeys.size(), true); // all points are static now.
-        keypoint_associate_objectID = vector<int>(mvKeys.size(), -1);
-        numobject = 0;
+    //     KeysStatic = vector<bool>(mvKeys.size(), true); // all points are static now.
+    //     keypoint_associate_objectID = vector<int>(mvKeys.size(), -1);
+    //     numobject = 0;
 
-        for (size_t i = 0; i < mvKeys.size(); i++)
-        {
-            int maskval = int(objmask_img.at<uint8_t>(mvKeys[i].pt.y, mvKeys[i].pt.x));
-            KeysStatic[i] = (maskval == 0); //0 is background, static >0 object id
-            numobject = max(numobject, maskval);
-            if (maskval > 0)
-                keypoint_associate_objectID[i] = maskval - 1;
-        }
-    }
+    //     for (size_t i = 0; i < mvKeys.size(); i++)
+    //     {
+    //         int maskval = int(objmask_img.at<uint8_t>(mvKeys[i].pt.y, mvKeys[i].pt.x));
+    //         KeysStatic[i] = (maskval == 0); //0 is background, static >0 object id
+    //         numobject = max(numobject, maskval);
+    //         if (maskval > 0)
+    //             keypoint_associate_objectID[i] = maskval - 1;
+    //     }
+    // }
 
     N = mvKeys.size();
 
@@ -331,7 +304,21 @@ void Frame::ConstructorExtension(const cv::Mat &imGray, cv::Mat &K)
     AssignFeaturesToGrid();
 }
 
+void Frame::FilterOutMovingPoints(cv::Mat &imRGB, const cv::Mat &imGray, int frame_id)
+{
+    mCurrentObjDetection = ObjDetectionHelper();
+    char frame_index_c[256];
+    sprintf(frame_index_c, "%04d", (int)frame_id); // format into 4 digit
+    mCurrentObjDetection.ReadFile(base_data_folder + "results/" + frame_index_c + "_mrcnn.txt");
+    mCurrentBBoxes = mCurrentObjDetection.GetBBoxesWithPerson();
+
+    if (!T_M.empty() && mCurrentBBoxes.size() > 0) {
+        CheckMovingKeyPoints(imGray, mCurrentBBoxes);
+    }
+}
+
 // AC: The generated keypoints are ONLY used to determine whether a frame has a moving object or not!
+// TODO: instead of creating new keypoints, use old ones
 void Frame::DetectMovingKeypoints(const cv::Mat &imgray)
 {
     // Clear the previous data
@@ -416,6 +403,95 @@ void Frame::DetectMovingKeypoints(const cv::Mat &imgray)
     }
 }
 
+// TODO: Add semantic mask
+void Frame::CheckMovingKeyPoints(const cv::Mat &imGray, const std::vector<std::vector<float > > mCurrentBBoxes)
+{
+    std::vector<bool> objectsAreMoving = vector<bool>(mCurrentBBoxes.size(), false);
+
+    // Make further judgment
+    // AC: Check whether an object is moving
+    for (int j = 0; j < mCurrentBBoxes.size(); j++)
+    {
+        float bbLeft = (float)mCurrentBBoxes[j][1];
+        float bbTop = (float)mCurrentBBoxes[j][2];
+        float bbRight = bbLeft + mCurrentBBoxes[j][3];
+        float bbBottom = bbTop - mCurrentBBoxes[j][4];
+
+        int movingKeypointCounter = 0;
+
+        for (int i = 0; i < T_M.size(); i++)
+        {
+            // AC: Check whether keypoint is in bounding box
+            if((int)T_M[i].x >= bbLeft && (int)T_M[i].x <= bbRight && (int)T_M[i].y <= bbTop && (int)T_M[i].y >= bbBottom)
+            {
+                movingKeypointCounter++;
+                // AC: if two keypoints are in object, it is considered moving
+                if (movingKeypointCounter > 1)
+                {
+                    objectsAreMoving[j] = 1;
+                    break;
+                }
+            }
+        }
+    }
+
+    // AC: If yes, erase points in given objects
+    KeysStatic = vector<bool>(mvKeys.size(), true); // all points are static now.
+    keypoint_associate_objectID = vector<int>(mvKeys.size(), -1);
+    numobject = 0;
+
+    for (int j = 0; j < mCurrentBBoxes.size(); j++)
+    {
+        if (objectsAreMoving[j])
+        {
+            float bbLeft = (float)mCurrentBBoxes[j][1];
+            float bbTop = (float)mCurrentBBoxes[j][2];
+            float bbRight = bbLeft + mCurrentBBoxes[j][3];
+            float bbBottom = bbTop - mCurrentBBoxes[j][4];
+
+            for (size_t i = 0; i < mvKeys.size(); i++)
+            {
+                if ((int)mvKeys[i].pt.x >= bbLeft && (int)mvKeys[i].pt.x <= bbRight && (int)mvKeys[i].pt.y <= bbTop && (int)mvKeys[i].pt.y >= bbBottom)
+                {
+                    KeysStatic[i] = 0; //0 is background, static >0 object id
+                    numobject = max(numobject, 1);
+                    keypoint_associate_objectID[i] = 0;
+                }
+            }
+        }
+    }
+
+    if (remove_dynamic_features)
+    {
+        std::vector<cv::KeyPoint> mvKeys_cp;
+        cv::Mat mDescriptors_cp;
+
+        for (int l = 0; l < KeysStatic.size(); l++)
+        {
+            if (KeysStatic[l]) {
+                mvKeys_cp.push_back(mvKeys[l]);
+                mDescriptors_cp.push_back(mDescriptors.row(l));
+            }
+        }
+        cout << "Kept " << mvKeys_cp.size() << "/" << mvKeys.size() << " keypoints" << endl;
+        mvKeys = mvKeys_cp;
+        mDescriptors = mDescriptors_cp.clone();
+        KeysStatic = vector<bool>(mvKeys.size(), true);
+        return;
+    }
+
+    // AC: For debugging
+    int dynamicKeypointsCounter = 0;
+    for (int k = 0; k < KeysStatic.size(); k++)
+    {
+        if (!KeysStatic[k]) {
+            dynamicKeypointsCounter++;
+        }
+    }
+
+    cout << "Found " << dynamicKeypointsCounter << "/" << mvKeys.size() << " dynamic keypoints" << endl;
+}
+
 void Frame::AssignFeaturesToGrid()
 {
     int nReserve = 0.5f * N / (FRAME_GRID_COLS * FRAME_GRID_ROWS);
@@ -433,21 +509,12 @@ void Frame::AssignFeaturesToGrid()
     }
 }
 
-void Frame::ExtractORBKeyPoints(int flag, const cv::Mat &im)
+void Frame::ExtractORB(int flag, const cv::Mat &im)
 {
     if (flag == 0)
-        (*mpORBextractorLeft)(im, cv::Mat(), mvKeysTemp);
+        (*mpORBextractorLeft)(im, cv::Mat(), mvKeys,mDescriptors);
     else
-        (*mpORBextractorRight)(im, cv::Mat(), mvKeysTemp);
-}
-
-void Frame::ExtractORBDesp(int flag,const cv::Mat &imgray, std::vector<std::vector<cv::KeyPoint>> tempKeys)
-{
-    if(flag==0)
-        (*mpORBextractorLeft).ProcessDesp(imgray,cv::Mat(),tempKeys,mvKeys,mDescriptors);
-    else
-        (*mpORBextractorLeft).ProcessDesp(imgray,cv::Mat(),tempKeys,mvKeysRight,mDescriptorsRight);
-    
+        (*mpORBextractorRight)(im, cv::Mat(), mvKeysRight, mDescriptorsRight);
 }
 
 void Frame::SetPose(cv::Mat Tcw)
