@@ -4,16 +4,19 @@
 * Copyright (C) 2018  Shichao Yang (Carnegie Mellon Univ)
 */
 
+//LL: g2o is an open source c++ general graph optimization framework 
 #include "Thirdparty/g2o/g2o/types/types_six_dof_expmap.h"
 #include "detect_3d_cuboid/matrix_utils.h"
 
 #include "g2o_Object.h"
 
+//LL: Eigen is a C++ libary for linear algebra, matrix and vector operations...
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 #include <Eigen/Dense>
 #include <math.h>
 #include <algorithm> // std::swap
+
 
 namespace g2o
 {
@@ -21,23 +24,37 @@ namespace g2o
 using namespace Eigen;
 using namespace std;
 
+/* LL:
+ * 
+ * For the case that there is no roll or pitch but only twist:
+ * Takes in an 6D vector and converts it to a g2o-quaternion and translation vector t
+ * to initalizes _r(q),_t(t) of the SE3Quat class.
+ *
+ */
 SE3Quat exptwist_norollpitch(const Vector6d &update)
 {
+    // LL: Copy the first three values from update to omega
     Vector3d omega;
     for (int i = 0; i < 3; i++)
         omega[i] = update[i];
+
+    // LL: Copy the last three values from update to upsilon
     Vector3d upsilon;
     for (int i = 0; i < 3; i++)
         upsilon[i] = update[i + 3];
 
     double theta = omega.norm();
+
+    // LL: Convert omega to a skew symmetric matrix
     Matrix3d Omega = skew(omega);
 
+    // LL: Create a rotational matrix from the third value of omgea
     Matrix3d R;
     R << cos(omega(2)), -sin(omega(2)), 0,
         sin(omega(2)), cos(omega(2)), 0,
         0, 0, 1;
 
+    // LL: Check if the approximation V by R is sufficient 
     Matrix3d V;
     if (theta < 0.00001)
     {
@@ -53,11 +70,15 @@ SE3Quat exptwist_norollpitch(const Vector6d &update)
     return SE3Quat(Quaterniond(R), V * upsilon);
 }
 
+// LL: Create a new graph cubid vertex
 void VertexCuboid::oplusImpl(const double *update_)
 {
     Eigen::Map<const Vector9d> update(update_);
 
+    // LL: Init new cube instance
     g2o::cuboid newcube;
+
+    // LL: Updates the pose of the new cube instance based only tranlation, translation and rotation, translation roation pitch and roll 
     if (whether_fixrotation)
     {
         newcube.pose.setTranslation(_estimate.pose.translation() + update.segment<3>(3));
@@ -84,6 +105,7 @@ void VertexCuboid::oplusImpl(const double *update_)
 }
 
 // similar as above
+// LL: Create a new graph cubid vertex which has a fixed scale
 void VertexCuboidFixScale::oplusImpl(const double *update_)
 {
     Eigen::Map<const Vector6d> update(update_);

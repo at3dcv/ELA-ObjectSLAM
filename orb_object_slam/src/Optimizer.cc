@@ -54,6 +54,7 @@ using namespace Eigen;
 namespace ORB_SLAM2
 {
 
+
 void Optimizer::GlobalBundleAdjustemnt(Map *pMap, int nIterations, bool *pbStopFlag, const unsigned long nLoopKF, const bool bRobust)
 {
     vector<KeyFrame *> vpKFs = pMap->GetAllKeyFrames();
@@ -61,12 +62,16 @@ void Optimizer::GlobalBundleAdjustemnt(Map *pMap, int nIterations, bool *pbStopF
     BundleAdjustment(vpKFs, vpMP, nIterations, pbStopFlag, nLoopKF, bRobust);
 }
 
+// LL: Given the key frames, map points and observations the function creates an graph which it then
+// LL: optimizes in the sense of BA using a linear solver.
+// ??LL: Generic function that can be called with a arbitrary number of frames and map points => is either global or local ??
 void Optimizer::BundleAdjustment(const vector<KeyFrame *> &vpKFs, const vector<MapPoint *> &vpMP,
                                  int nIterations, bool *pbStopFlag, const unsigned long nLoopKF, const bool bRobust)
 {
     vector<bool> vbNotIncludedMP;
     vbNotIncludedMP.resize(vpMP.size());
 
+    // LL: Setup optimizer with a linear solver
     g2o::SparseOptimizer optimizer;
     g2o::BlockSolver_6_3::LinearSolverType *linearSolver;
 
@@ -83,6 +88,9 @@ void Optimizer::BundleAdjustment(const vector<KeyFrame *> &vpKFs, const vector<M
     long unsigned int maxKFid = 0;
 
     // Set KeyFrame vertices
+    // LL: Creates a new SE3 Vertex parameterized internally with a transformation matrix and externally with its exponential map
+    // LL: The vertex represents the frame through its pose (as quaternion + t) and frame id.
+    // LL: Add the new vertex to the optimizer
     for (size_t i = 0; i < vpKFs.size(); i++)
     {
         KeyFrame *pKF = vpKFs[i];
@@ -101,11 +109,17 @@ void Optimizer::BundleAdjustment(const vector<KeyFrame *> &vpKFs, const vector<M
     const float thHuber3D = sqrt(7.815);
 
     // Set MapPoint vertices
+    // 
+    //
     for (size_t i = 0; i < vpMP.size(); i++)
     {
+        // LL: Retrive the next map point pióinter
         MapPoint *pMP = vpMP[i];
         if (pMP->isBad())
             continue;
+        
+        // LL: Create an g2o VertexSBAPointXYZ instance and parse it the relevant information from the map point pointer
+        // LL: Add the new vertex to the optimizer
         g2o::VertexSBAPointXYZ *vPoint = new g2o::VertexSBAPointXYZ();
         vPoint->setEstimate(Converter::toVector3d(pMP->GetWorldPos()));
         const int id = pMP->mnId + maxKFid + 1;
@@ -113,10 +127,14 @@ void Optimizer::BundleAdjustment(const vector<KeyFrame *> &vpKFs, const vector<M
         vPoint->setMarginalized(true);
         optimizer.addVertex(vPoint);
 
+        // LL: Get all observations
         const map<KeyFrame *, size_t> observations = pMP->GetObservations();
 
         int nEdges = 0;
         //SET EDGES
+        // LL: Iterate over all observations and compare them to to current map point
+        // LL: If an observation fits the current map point creat an edge between them an add it to the optimizer as an edge
+
         for (map<KeyFrame *, size_t>::const_iterator mit = observations.begin(); mit != observations.end(); mit++)
         {
 
@@ -250,6 +268,8 @@ void Optimizer::BundleAdjustment(const vector<KeyFrame *> &vpKFs, const vector<M
     }
 }
 
+// LL: Builds Graph for the pose optimization.
+// LL: Similar implementation as above. However, for a mono setup we simply add an edge between the current and the next image. 
 int Optimizer::PoseOptimization(Frame *pFrame)
 {
     g2o::SparseOptimizer optimizer;
@@ -823,6 +843,9 @@ void Optimizer::LocalBundleAdjustment(KeyFrame *pKF, bool *pbStopFlag, Map *pMap
 }
 
 // similar to localBA, add objects
+// LL: Given the pointer to a key frame (pKF), get all key frames in close proximity, get all the map points with in those key frames
+// LL: get all map objects in those key frames, get all the frames that see the map objects or points but which are not in close porximity and 
+// LL: save them in a sperate vector
 void Optimizer::LocalBACameraPointObjects(KeyFrame *pKF, bool *pbStopFlag, Map *pMap, bool fixCamera, bool fixPoint)
 {
     // Local KeyFrames to optimize: First Breath Search from Current Keyframe
@@ -831,6 +854,7 @@ void Optimizer::LocalBACameraPointObjects(KeyFrame *pKF, bool *pbStopFlag, Map *
     lLocalKeyFrames.push_back(pKF);
     pKF->mnBALocalForKF = pKF->mnId;
 
+    // LL: Get all key frames in close proximity
     const vector<KeyFrame *> vNeighKFs = pKF->GetVectorCovisibleKeyFrames(); // directly get local keyframes.
     for (int i = 0, iend = vNeighKFs.size(); i < iend; i++)
     {
@@ -841,6 +865,7 @@ void Optimizer::LocalBACameraPointObjects(KeyFrame *pKF, bool *pbStopFlag, Map *
     }
 
     // Local MapPoints seen in Local KeyFrames. some points might not be seen by currentKF
+    // LL: Get all map points with in those key frames
     vector<MapPoint *> lLocalMapPoints;
     for (vector<KeyFrame *>::iterator lit = lLocalKeyFrames.begin(), lend = lLocalKeyFrames.end(); lit != lend; lit++)
     {
@@ -861,6 +886,7 @@ void Optimizer::LocalBACameraPointObjects(KeyFrame *pKF, bool *pbStopFlag, Map *
         }
     }
 
+    // LL: Get all the LANDMARK map objects with in those key frames
     vector<MapObject *> lLocalMapObjects;
     for (vector<KeyFrame *>::iterator lit = lLocalKeyFrames.begin(), lend = lLocalKeyFrames.end(); lit != lend; lit++)
     {
@@ -879,6 +905,7 @@ void Optimizer::LocalBACameraPointObjects(KeyFrame *pKF, bool *pbStopFlag, Map *
     }
 
     // Fixed Keyframes. Keyframes that see Local MapPoints but that are not Local Keyframes
+    // LL: Get all the frames that see the map points, but which are not in close proximity, and save them in a sperate vector
     vector<KeyFrame *> lFixedCameras;
     for (vector<MapPoint *>::iterator lit = lLocalMapPoints.begin(), lend = lLocalMapPoints.end(); lit != lend; lit++)
     {
@@ -897,6 +924,7 @@ void Optimizer::LocalBACameraPointObjects(KeyFrame *pKF, bool *pbStopFlag, Map *
     }
 
     // More Fixed Keyframes. Keyframes that see Local MapObjects but that are not Local Keyframes  改变的地方
+    // LL: Get all the frames that see the map objects, but which are not in close proximity, and save them in a sperate vector
     for (vector<MapObject *>::iterator lit = lLocalMapObjects.begin(), lend = lLocalMapObjects.end(); lit != lend; lit++)
     {
         unordered_map<KeyFrame *, size_t> observations = (*lit)->GetObservations();
@@ -926,6 +954,7 @@ void Optimizer::LocalBACameraPointObjects(KeyFrame *pKF, bool *pbStopFlag, Map *
 #define ObjectFixScale // use when scale is provided and fixed. such as KITTI
 
     // Setup optimizer
+    // LL: IFOFS: use linear solver 63
     g2o::SparseOptimizer optimizer;
 #ifdef ObjectFixScale
     g2o::BlockSolver_6_3::LinearSolverType *linearSolver;
@@ -944,6 +973,7 @@ void Optimizer::LocalBACameraPointObjects(KeyFrame *pKF, bool *pbStopFlag, Map *
 
     unsigned long maxKFid = 0;
     // Set Local KeyFrame vertices
+    // LL: Create vertices for the g2o graph of the key local frames
     for (vector<KeyFrame *>::iterator lit = lLocalKeyFrames.begin(), lend = lLocalKeyFrames.end(); lit != lend; lit++)
     {
         KeyFrame *pKFi = *lit;
@@ -960,6 +990,7 @@ void Optimizer::LocalBACameraPointObjects(KeyFrame *pKF, bool *pbStopFlag, Map *
     }
 
     // Set Fixed KeyFrame vertices
+    // LL: Create vertices for the g2o graph of the key frames sharing features but not being local
     for (vector<KeyFrame *>::iterator lit = lFixedCameras.begin(), lend = lFixedCameras.end(); lit != lend; lit++)
     {
         KeyFrame *pKFi = *lit;
@@ -980,6 +1011,7 @@ void Optimizer::LocalBACameraPointObjects(KeyFrame *pKF, bool *pbStopFlag, Map *
     typedef g2o::EdgeSE3CuboidProj g2o_camera_obj_2d_edge;
 #endif
 
+    // LL: Iterate over all local map objects and create g2o_object_vertex from them
     // Set MapObject vertices
     long int maxObjectid = 0;
     for (vector<MapObject *>::iterator lit = lLocalMapObjects.begin(), lend = lLocalMapObjects.end(); lit != lend; lit++)

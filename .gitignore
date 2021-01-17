@@ -7,6 +7,8 @@
 # Icon must end with two \r
 Icon
 
+# Cube_slam specific stuff
+mono_data/
 
 # Thumbnails
 ._*
