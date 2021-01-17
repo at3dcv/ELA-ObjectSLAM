@@ -1025,10 +1025,12 @@ void Optimizer::LocalBACameraPointObjects(KeyFrame *pKF, bool *pbStopFlag, Map *
 
         if (scene_unique_id == kitti)
         {
-            vObject->fixedscale = Eigen::Vector3d(1.9420, 0.8143, 0.7631);
             // LL: Added by Leander
-            // Overwrite vObject->fixedscale with pMObject->yolo_map_obj_scale at this point.
-            // cout << pMObject->yolo_map_obj_scale << "\n";      
+        #ifndef at3dcv_leander
+            vObject->fixedscale = Eigen::Vector3d(1.9420, 0.8143, 0.7631);
+        #else
+            vObject->fixedscale = pMObject->yolo_map_obj_scale;
+        #endif
             // LL: Added by Leander
 
         }
@@ -1288,7 +1290,13 @@ void Optimizer::LocalBACameraPointObjects(KeyFrame *pKF, bool *pbStopFlag, Map *
                     if (scene_unique_id == kitti)
                     {
                         e->max_outside_margin_ratio = 2;
+                    // LL: Added by Leander
+                    #ifndef at3dcv_leander
                         e->prior_object_half_size = Eigen::Vector3d(1.9420, 0.8143, 0.7631);
+                    #else
+                        e->prior_object_half_size = pMO->yolo_map_obj_scale;
+                    #endif
+                    // LL: Added by Leander
                     }
                     optimizer.addEdge(e);
                 }

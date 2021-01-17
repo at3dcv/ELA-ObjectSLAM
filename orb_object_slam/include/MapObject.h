@@ -11,6 +11,9 @@
 
 #include "KeyFrame.h"
 
+// LL: Added config header to pass macro that switches Leander's code off and on
+#include "At3dcv_config.h"
+
 namespace ORB_SLAM2
 {
 // class KeyFrame;
@@ -101,7 +104,9 @@ public:
     g2o::SE3Quat getMovePose(KeyFrame *kf, double deltaT = 0); // deltaT relative to kf. works for short period where velocity doesn't change much
 
     // LL: Added by Leander
+    #ifdef at3dcv_leander
     Eigen::Vector3d yolo_map_obj_scale;
+    #endif
     // LL: Added by Leander
     
     //----------for local MapObject--------     no mutex needed, for local cuboid storage, not landmark

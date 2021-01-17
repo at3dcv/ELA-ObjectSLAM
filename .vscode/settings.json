@@ -88,6 +88,7 @@
         "ranges": "cpp",
         "stop_token": "cpp",
         "cfenv": "cpp",
-        "cinttypes": "cpp"
+        "cinttypes": "cpp",
+        "filesystem": "cpp"
     }
 }
