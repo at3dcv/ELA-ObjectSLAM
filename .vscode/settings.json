@@ -1,6 +1,5 @@
 {
     "files.associations": {
-        "core": "cpp",
         "iostream": "cpp",
         "__bit_reference": "cpp",
         "__config": "cpp",
@@ -69,26 +68,28 @@
         "streambuf": "cpp",
         "string": "cpp",
         "string_view": "cpp",
-        "strstream": "cpp",
         "system_error": "cpp",
         "thread": "cpp",
         "tuple": "cpp",
         "type_traits": "cpp",
-        "typeindex": "cpp",
         "typeinfo": "cpp",
         "unordered_map": "cpp",
         "unordered_set": "cpp",
         "utility": "cpp",
-        "variant": "cpp",
         "vector": "cpp",
-        "hash_map": "cpp",
         "*.tcc": "cpp",
         "concepts": "cpp",
         "memory_resource": "cpp",
         "ranges": "cpp",
         "stop_token": "cpp",
-        "cfenv": "cpp",
-        "cinttypes": "cpp",
-        "filesystem": "cpp"
-    }
+        "cinttypes": "cpp"
+    },
+    "python.autoComplete.extraPaths": [
+        "/mnt/cubeslam/devel/lib/python2.7/dist-packages",
+        "/opt/ros/kinetic/lib/python2.7/dist-packages"
+    ],
+    "python.analysis.extraPaths": [
+        "/mnt/cubeslam/devel/lib/python2.7/dist-packages",
+        "/opt/ros/kinetic/lib/python2.7/dist-packages"
+    ]
 }

@@ -663,6 +663,7 @@ void getVanishingPoints(const Matrix3d &KinvR, double yaw_esti, Vector2d &vp_1, 
 }
 
 // box_corners_2d_float is 2*8    change to my object struct from 2D box corners.
+// AC: Keypoints here?!?!?!
 void change_2d_corner_to_3d_object(const MatrixXd &box_corners_2d_float, const Vector3d &configs, const Vector4d &ground_plane_sensor,
                                    const Matrix4d &transToWolrd, const Matrix3d &invK, Eigen::Matrix<double, 3, 4> &projectionMatrix,
                                    cuboid &sample_obj)

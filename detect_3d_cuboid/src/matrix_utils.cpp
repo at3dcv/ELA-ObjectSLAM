@@ -199,6 +199,7 @@ void vert_stack_m_self(MatrixXf &a_in, const MatrixXf &b_in)
 }
 
 // make sure column size is given. no checks here. row will be adjusted automatically. if more cols given, will be zero.
+// AC: the offline values of bboxes and segmentation are read here!
 template <class T>
 bool read_all_number_txt(const std::string txt_file_name, Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> &read_number_mat)
 {

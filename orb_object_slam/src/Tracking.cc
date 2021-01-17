@@ -69,6 +69,8 @@ using namespace std;
 namespace ORB_SLAM2
 {
 
+// AC: is being called in System.cc
+// AC: pMap is a Map.h instance
 Tracking::Tracking(System *pSys, ORBVocabulary *pVoc, FrameDrawer *pFrameDrawer, MapDrawer *pMapDrawer, Map *pMap, KeyFrameDatabase *pKFDB,
 				   const string &strSettingPath, const int sensor) : mState(NO_IMAGES_YET), mSensor(sensor), mbOnlyTracking(false), mbVO(false), mpORBVocabulary(pVoc),
 																	 mpKeyFrameDB(pKFDB), mpInitializer(static_cast<Initializer *>(NULL)), mpSystem(pSys),
@@ -389,6 +391,8 @@ cv::Mat Tracking::GrabImageRGBD(const cv::Mat &imRGB, const cv::Mat &imD, const 
 
 	mCurrentFrame = Frame(mImGray, imDepth, timestamp, mpORBextractorLeft, mpORBVocabulary, mK, mDistCoef, mbf, mThDepth);
 
+	// AC: whether_detect_object flag is set in mono.launch
+	// AC: I guess here the image is being copied in an array to be used for the object detectiong
 	if (whether_detect_object)
 		mCurrentFrame.raw_img = mImGray.clone();
 
@@ -405,6 +409,7 @@ cv::Mat Tracking::GrabImageRGBD(const cv::Mat &imRGB, const cv::Mat &imD, const 
 
 cv::Mat Tracking::GrabImageMonocular(const cv::Mat &im, const double &timestamp, int msg_seq_id)
 {
+	mImRGB = im;
 	mImGray = im;
 
 	if (mImGray.channels() == 3)
@@ -423,6 +428,7 @@ cv::Mat Tracking::GrabImageMonocular(const cv::Mat &im, const double &timestamp,
 	}
 
 	// create frame and detect features!
+	// AC: if: Initial frame and else: other frames
 	if (mState == NOT_INITIALIZED || mState == NO_IMAGES_YET)
 	{
 		if ((!mono_firstframe_truth_depth_init) || (mCurrentFrame.mnId > 0))
@@ -448,6 +454,13 @@ cv::Mat Tracking::GrabImageMonocular(const cv::Mat &im, const double &timestamp,
 		mCurrentFrame = Frame(mImGray, timestamp, mpORBextractorLeft, mpORBVocabulary, mK, mDistCoef, mbf, mThDepth); // create new frames.
 	}
 
+	if (whether_dynamic_object)
+	{
+		object_detection_frame_id = object_detection_frame_id + 1;
+		mCurrentFrame.FilterOutMovingPoints(mImRGB, mImGray, object_detection_frame_id);
+	}
+	
+	// AC: Current frame id
 	if (mCurrentFrame.mnId == 0)
 		start_msg_seq_id = msg_seq_id;
 	// if read offline txts, frame id must match!!!
@@ -483,7 +496,6 @@ void Tracking::Track()
 	{
 		mState = NOT_INITIALIZED;
 	}
-
 	mLastProcessedState = mState;
 
 	bool created_keyframe = false;
@@ -504,6 +516,7 @@ void Tracking::Track()
 				if (mono_firstframe_truth_depth_init)
 				{
 					special_initialization = true;
+					cout << "3" << endl;
 					StereoInitialization(); // if first frame has truth depth, we can initialize simiar to stereo/rgbd. create keyframe for it.
 				}
 				else if (mono_firstframe_Obj_depth_init)
@@ -1415,6 +1428,7 @@ bool Tracking::TrackLocalMap()
 		return true;
 }
 
+// AC: decision whether a new key frame is needed...
 bool Tracking::NeedNewKeyFrame()
 {
 	if (mbOnlyTracking)
@@ -1599,6 +1613,7 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 	}
 	else
 	{
+		// AC: Online cuboid proposals
 		std::string data_edge_data_dir = base_data_folder + "/edge_detection/LSD/";
 		std::string data_yolo_obj_dir = base_data_folder + "/mats/filter_match_2d_boxes_txts/";
 		char frame_index_c[256];

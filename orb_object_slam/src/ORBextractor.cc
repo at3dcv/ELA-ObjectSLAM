@@ -58,6 +58,7 @@
 #include <opencv2/features2d/features2d.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <vector>
+#include <iostream>
 
 #include "ORBextractor.h"
 
@@ -1033,8 +1034,7 @@ static void computeDescriptors(const Mat &image, vector<KeyPoint> &keypoints, Ma
         computeOrbDescriptor(keypoints[i], image, &pattern[0], descriptors.ptr((int)i));
 }
 
-void ORBextractor::operator()(InputArray _image, InputArray _mask, vector<KeyPoint> &_keypoints,
-                              OutputArray _descriptors)
+void ORBextractor::operator()(InputArray _image, InputArray _mask, vector<KeyPoint> &_keypoints, OutputArray _descriptors)
 {
     if (_image.empty())
         return;
@@ -1043,11 +1043,9 @@ void ORBextractor::operator()(InputArray _image, InputArray _mask, vector<KeyPoi
     assert(image.type() == CV_8UC1);
 
     // Pre-compute the scale pyramid
-    ComputePyramid(image);
-
     vector<vector<KeyPoint>> allKeypoints;
+    ComputePyramid(image);
     ComputeKeyPointsOctTree(allKeypoints);
-    //ComputeKeyPointsOld(allKeypoints);
 
     Mat descriptors;
 
