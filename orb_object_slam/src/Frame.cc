@@ -245,27 +245,6 @@ Frame::Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor *extra
     
     // AC: here was the dynamic object removal process, however, it only takes a segmented map
     // AC: with only dynamic objects
-    // if (whether_dynamic_object)
-    // {
-    //     // AC: commented out as different naming convention
-    //     // char frame_index_c[256];
-    //     // sprintf(frame_index_c, "%04d", (int)mnId); // format into 4 digit
-    //     std::string pred_mask_img_name = base_data_folder + "rcnn_labelmap_3dmatched/" + to_string(mnId) + "_maskmap.png";
-    //     objmask_img = cv::imread(pred_mask_img_name, CV_LOAD_IMAGE_UNCHANGED); // uint8  sometimes read image might take long time....
-
-    //     KeysStatic = vector<bool>(mvKeys.size(), true); // all points are static now.
-    //     keypoint_associate_objectID = vector<int>(mvKeys.size(), -1);
-    //     numobject = 0;
-
-    //     for (size_t i = 0; i < mvKeys.size(); i++)
-    //     {
-    //         int maskval = int(objmask_img.at<uint8_t>(mvKeys[i].pt.y, mvKeys[i].pt.x));
-    //         KeysStatic[i] = (maskval == 0); //0 is background, static >0 object id
-    //         numobject = max(numobject, maskval);
-    //         if (maskval > 0)
-    //             keypoint_associate_objectID[i] = maskval - 1;
-    //     }
-    // }
 
     N = mvKeys.size();
 
@@ -474,6 +453,7 @@ void Frame::CheckMovingKeyPoints(const cv::Mat &imGray, const std::vector<std::v
             }
         }
         cout << "Kept " << mvKeys_cp.size() << "/" << mvKeys.size() << " keypoints" << endl;
+
         mvKeys = mvKeys_cp;
         mDescriptors = mDescriptors_cp.clone();
         KeysStatic = vector<bool>(mvKeys.size(), true);
