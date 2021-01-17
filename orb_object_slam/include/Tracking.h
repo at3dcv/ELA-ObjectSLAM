@@ -36,6 +36,9 @@
 
 #include "unordered_map"
 
+// LL: Added config header to pass macro that switches Leander's code off and on
+#include "At3dcv_config.h"
+
 class detect_3d_cuboid;
 
 namespace ORB_SLAM2

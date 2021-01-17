@@ -26,6 +26,9 @@
 #include <map>
 #include "LoopClosing.h"
 
+// LL: Added config header to pass macro that switches Leander's code off and on
+#include "At3dcv_config.h"
+
 namespace ORB_SLAM2
 {
 

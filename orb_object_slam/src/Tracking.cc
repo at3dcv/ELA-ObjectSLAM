@@ -1563,10 +1563,10 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 	std::vector<Vector4d> all_obj2d_bbox;
 	std::vector<double> all_box_confidence;
 	vector<int> truth_tracklet_ids;
-
+	
 	// LL: Differentiate between offline and online (loading from file or detection with e.g. YOLO)
 	// LL: - Offline: We used ReadAllObjecttxt of the file Tracking_util.cc to read all the all object proposels and saved them to all_offline_object_cubes
-	// LL: - Offline: We the information of all_offline_object_cubes line by line an use it to initalizen new cuboid instances and in addition ad the relevant info to all_obj2d_bbox
+	// LL: - Offline: We read the information of all_offline_object_cubes line by line an use it to initalizen new cuboid instances and in addition add the relevant info to all_obj2d_bbox
 	// LL: - Offline: The new cuboid instances are then pushed to all_obj_cubes
 	// LL: - Online: Given the path to the folder (data_yolo_obj_dir) uses the read_obj_detection_txt function of matrix_util.cc to write all the detections to raw_all_obj2d_bbox
 	// LL: - Online: Filtering out all boxes to close to the images boundaries saving the filterd bunch to all_obj2d_bbox_infov_mat and all_obj2d_bbox
@@ -1589,6 +1589,17 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 			raw_cuboid->pos = pred_frame_objects.row(i).head(3);
 			raw_cuboid->rotY = pred_frame_objects(i, 3);
 			raw_cuboid->scale = Vector3d(pred_frame_objects(i, 4), pred_frame_objects(i, 5), pred_frame_objects(i, 6));
+			// LL: Added by Leander
+			// LL: To read from file add values to the end of the rows and read as:
+			// LL: raw_cuboid->yolo_obj_scale =  Vector3d(pred_frame_objects(i, 4), pred_frame_objects(i, 5), pred_frame_objects(i, 6));
+			// LL: But carful with "use_truth_trackid" which is possibly written to postion 13 (12 in cpp) -> see 7 lines below
+			
+		// LL: Added by Leander
+		#ifndef at3dcv_leander
+			raw_cuboid->yolo_obj_scale = raw_cuboid->obj_class_scales["3"];
+		#endif
+		// LL: Added by Leander
+
 			raw_cuboid->rect_detect_2d = pred_frame_objects.row(i).segment<4>(7);
 			raw_cuboid->box_config_type = Vector2d(1, 1); // randomly given unless provided. for latter visualization
 			all_obj2d_bbox.push_back(raw_cuboid->rect_detect_2d);
@@ -1609,15 +1620,16 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 		sprintf(frame_index_c, "%04d", (int)pKF->mnFrameId); // format into 4 digit
 
 		// read detected edges
-		Eigen::MatrixXd all_lines_raw(100, 4); // 100 is some large frame number,   the txt edge index start from 0
+		Eigen::MatrixXd all_lines_raw(100, 4); // 100 is some large frame number, the txt edge index start from 0
 		read_all_number_txt(data_edge_data_dir + frame_index_c + "_edge.txt", all_lines_raw);
 
 		// read yolo object detection
 		Eigen::MatrixXd raw_all_obj2d_bbox(10, 5);
-		std::vector<string> object_classes;
+		std::vector<string> raw_object_classes;
 		char obj_2d_txt_postfix[256];
-		sprintf(obj_2d_txt_postfix, "_yolo2_%.2f.txt", obj_det_2d_thre);
-		if (!read_obj_detection_txt(data_yolo_obj_dir + frame_index_c + obj_2d_txt_postfix, raw_all_obj2d_bbox, object_classes))
+		// LL: Added - chagend the file ending to "_mrcnn.txt"
+		sprintf(obj_2d_txt_postfix, "_mrcnn.txt", obj_det_2d_thre);
+		if (!read_obj_detection_txt(data_yolo_obj_dir + frame_index_c + obj_2d_txt_postfix, raw_all_obj2d_bbox, raw_object_classes))
 			ROS_ERROR_STREAM("Cannot read yolo txt  " << data_yolo_obj_dir + frame_index_c + obj_2d_txt_postfix);
 
 		// remove some 2d boxes too close to boundary.
@@ -1628,12 +1640,33 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 			if ((raw_all_obj2d_bbox(i, 0) > boundary_threshold) && (raw_all_obj2d_bbox(i, 0) + raw_all_obj2d_bbox(i, 2) < img_width - boundary_threshold))
 				good_object_ids.push_back(i);
 		Eigen::MatrixXd all_obj2d_bbox_infov_mat(good_object_ids.size(), 5);
+
 		for (size_t i = 0; i < good_object_ids.size(); i++)
 		{
 			all_obj2d_bbox_infov_mat.row(i) = raw_all_obj2d_bbox.row(good_object_ids[i]);
 			all_obj2d_bbox.push_back(raw_all_obj2d_bbox.row(good_object_ids[i]));
+			// LL: We should read in the confidence score and added here!
 			all_box_confidence.push_back(1); //TODO change here.
 		}
+
+// LL: Added by Leander
+#ifdef at3dcv_leander
+		// LL: Added by Leander - read detected cuboids vertices
+		std::string data_inst_seg_vertices_dir = base_data_folder + "/mats/instance_segmentation_vertices/";
+		std::vector<Eigen::MatrixXd> raw_read_inst_segment_vert;
+		if (!read_inst_segment_vertices(data_inst_seg_vertices_dir + frame_index_c + "_obj_vertices.txt", raw_read_inst_segment_vert))
+			ROS_ERROR_STREAM("Cannot read the polygon vertices txt " << data_inst_seg_vertices_dir + frame_index_c + "_obj_vertices.txt");
+
+		// LL: Added by Leander: Filter the raw_read_inst_segment_vert and read_inst_segment_vert
+		std::vector<Eigen::MatrixXd> read_inst_segment_vert;
+		std::vector<string> object_classes;
+		for (size_t i = 0; i < good_object_ids.size(); i++)
+		{
+			//read_inst_segment_vert.push_back(raw_read_inst_segment_vert[good_object_ids[i]]);
+			object_classes.push_back(raw_object_classes[good_object_ids[i]]);
+		}
+#endif
+// LL: Added by Leander
 
 		cv::Mat frame_pose_to_init = pKF->GetPoseInverse(); // camera to init world
 		cv::Mat frame_pose_to_ground;
@@ -1645,7 +1678,14 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 
 		pop_pose_to_ground = frame_pose_to_ground;
 		Eigen::Matrix4f cam_transToGround = Converter::toMatrix4f(pop_pose_to_ground);
+
+// LL: Added by Leander
+#ifndef at3dcv_leander
 		detect_cuboid_obj->detect_cuboid(pKF->raw_img, cam_transToGround.cast<double>(), all_obj2d_bbox_infov_mat, all_lines_raw, all_obj_cubes);
+#else
+		// LL: Added by Leander: Added `object_classes` and `read_inst_segment_vert` to this function call
+		detect_cuboid_obj->detect_cuboid(pKF->raw_img, cam_transToGround.cast<double>(), all_obj2d_bbox_infov_mat, all_lines_raw, all_obj_cubes, read_inst_segment_vert, object_classes);
+#endif
 	}
 
 	// LL: Going through the all_obj_cubes vector holding the object proposels and converting a to a class instance of type MapObject.
@@ -1670,7 +1710,13 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 			MapObject *newcuboid = new MapObject(mpMap);
 			g2o::cuboid cube_local_meas = cube_ground_value.transform_to(Converter::toSE3Quat(pop_pose_to_ground));
 			newcuboid->cube_meas = cube_local_meas;
-			// AC: bboxes are defined here!
+
+// LL: Added by Leander
+#ifdef at3dcv_leander
+			newcuboid->yolo_map_obj_scale = raw_cuboid->yolo_obj_scale;
+#endif
+// LL: Added by Leander		
+
 			newcuboid->bbox_2d = cv::Rect(raw_cuboid->rect_detect_2d[0], raw_cuboid->rect_detect_2d[1], raw_cuboid->rect_detect_2d[2], raw_cuboid->rect_detect_2d[3]);
 			newcuboid->bbox_vec = Vector4d((double)newcuboid->bbox_2d.x + (double)newcuboid->bbox_2d.width / 2, (double)newcuboid->bbox_2d.y + (double)newcuboid->bbox_2d.height / 2,
 										   (double)newcuboid->bbox_2d.width, (double)newcuboid->bbox_2d.height);

@@ -4,6 +4,9 @@
 #include <Eigen/Core>
 #include <Eigen/Dense>
 
+// LL: Added config header to pass macro that switches Leander's code off and on
+#include "detect_3d_cuboid/at3dcv_config.h"
+
 template <class T>
 Eigen::Quaternion<T> zyx_euler_to_quat(const T &roll, const T &pitch, const T &yaw);
 
@@ -42,6 +45,12 @@ void fast_RemoveRow(Eigen::MatrixXd &matrix, int rowToRemove, int &total_line_nu
 // make sure column size is given. not check here. row will be adjusted automatically. if more cols given, will be zero.
 template <class T>
 bool read_all_number_txt(const std::string txt_file_name, Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> &read_number_mat);
+
+// LL: Added by Leander
+#ifdef at3dcv_leander
+bool read_inst_segment_vertices(const std::string txt_file_name, std::vector<Eigen::MatrixXd> &read_number_mat);
+#endif
+// LL: Added by Leander
 
 // each line: one string, several numbers. make sure column size is correct.
 bool read_obj_detection_txt(const std::string txt_file_name, Eigen::MatrixXd &read_number_mat, std::vector<std::string> &strings);

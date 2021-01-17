@@ -12,6 +12,12 @@
 #include <sstream>
 #include <ctime>
 
+// LL: Added by Leander
+#ifdef at3dcv_leander
+#include <vector>
+#endif
+// LL: Added by Leander
+
 using namespace Eigen;
 
 template <class T>
@@ -234,30 +240,104 @@ bool read_all_number_txt(const std::string txt_file_name, Eigen::Matrix<T, Eigen
 template bool read_all_number_txt(const std::string, MatrixXd &);
 template bool read_all_number_txt(const std::string, MatrixXi &);
 
-bool read_obj_detection_txt(const std::string txt_file_name, Eigen::MatrixXd &read_number_mat, std::vector<std::string> &all_strings)
+
+// LL: Added by Leander 
+#ifdef at3dcv_leander
+bool read_inst_segment_vertices(const std::string txt_file_name, std::vector<Eigen::MatrixXd> &read_inst_segment_vert)
 {
+    // LL: Check if the file can be read
     if (!std::ifstream(txt_file_name))
     {
         std::cout << "ERROR!!! Cannot read txt file " << txt_file_name << std::endl;
         return false;
     }
-    all_strings.clear();
+        
+    // LL: Read the text file to `filetxt`
     std::ifstream filetxt(txt_file_name.c_str());
+    
+    std::string line_x;
+    std::string line_y;
+
+    // LL: Track the number of columns 
+    int row_counter = 0;
+	
+    // LL: Loop over the current and the next line (x and y value)
+    while (getline(filetxt, line_x))
+    {
+        getline(filetxt, line_y);
+    
+        // LL: Matrix to hold the vertices of the polygon from the current x and y row  
+        // LL: Carful: This configuration expects a polygon to have a maximum of a 100 vertices
+        Eigen::MatrixXd single_object_is_vertices(2,100);
+    
+        // LL: Variable to which we pass the x and the y value of the current and the next row
+        double t1;
+        double t2;
+    
+        // LL: Retrive the first string (column) in the current line and write it to `classname`
+        std::stringstream ss1(line_x);
+        std::stringstream ss2(line_y);
+    
+        // LL: Keep track at what column we are currently at.
+        int colu = 0;
+    
+        // LL: Extracts one by one all remaining columns of the current row and writes them to read_number_mat
+        while (ss1 >> t1 && ss2 >> t2 && colu < 99 )
+        {
+            single_object_is_vertices(0, colu) = t1;
+            single_object_is_vertices(1, colu) = t2;
+    
+            colu++;
+        }
+        // LL: Since reading two lines at the time increase the row counter by two
+        row_counter += 2;
+    
+        // LL: Reduce the number of columns from a hundred to the actual number
+        single_object_is_vertices.conservativeResize(3,colu);
+        // LL: Push the vertices matrix of the current object to the vector containing the info. on all the objects in the frame.
+        read_inst_segment_vert.push_back(single_object_is_vertices);
+    }
+    filetxt.close();  
+    return true;
+}
+// LL: Added by Leander 
+#endif
+
+
+bool read_obj_detection_txt(const std::string txt_file_name, Eigen::MatrixXd &read_number_mat, std::vector<std::string> &all_strings)
+{
+    // LL: Check if the file can be read
+    if (!std::ifstream(txt_file_name))
+    {
+        std::cout << "ERROR!!! Cannot read txt file " << txt_file_name << std::endl;
+        return false;
+    }
+    
+    // LL: Clear the memory of the all_strings vector that will save the class names
+    all_strings.clear();
+    
+    // LL: Read the text file to `filetxt`
+    std::ifstream filetxt(txt_file_name.c_str());
+    
+    // LL: If the memory was not correctly assigned to `read_number_mat`, set rows to 100 and columns to 10 if rows==0
     if (read_number_mat.rows() == 0)
         read_number_mat.resize(100, 10);
     int row_counter = 0;
     std::string line;
+    // LL: Loop over all lines from the file
     while (getline(filetxt, line))
     {
         double t;
         if (!line.empty())
         {
+            // LL: Retrive the first string (column) in the current line and write it to `classname`
             std::stringstream ss(line);
             std::string classname;
             ss >> classname;
             all_strings.push_back(classname);
 
             int colu = 0;
+            // LL: Extracts one by one all remaining columns of the current row and writes them to read_number_mat
             while (ss >> t)
             {
                 read_number_mat(row_counter, colu) = t;

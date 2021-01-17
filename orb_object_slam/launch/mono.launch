@@ -16,7 +16,7 @@
    <param name="base_data_folder" value="/mnt/datasets/seq_07/" />
 
    <param name="whether_detect_object" value="true" />
-   <param name="whether_read_offline_cuboidtxt" value="true" />  # for kitti, I read offline data.
+   <param name="whether_read_offline_cuboidtxt" value="false" />  # for kitti, I read offline data.
    <param name="associate_point_with_object" value="true" />
    <param name="obj_det_2d_thre" value="0.5" />  # for online 3D detection
 
