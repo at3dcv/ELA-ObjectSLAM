@@ -18,9 +18,13 @@
 * along with ORB-SLAM2. If not, see <http://www.gnu.org/licenses/>.
 */
 
+// VARIABLE DEFINITIONS
+// mvKeyUn = undistorted keypoints
+
 #include "Frame.h"
 #include "MapPoint.h"
 #include "KeyFrame.h"
+#include "ObjDetectionHelper.h"
 
 #include "Converter.h"
 #include "ORBmatcher.h"
@@ -36,6 +40,16 @@
 #include <string>
 
 #include "tictoc_profiler/profiler.hpp"
+
+// Used in Frame::DetectMovingKeypoints
+cv::Mat imGrayPre;
+std::vector<cv::Point2f> prepoint, nextpoint;
+std::vector<cv::Point2f> F_prepoint, F_nextpoint;
+std::vector<cv::Point2f> F2_prepoint, F2_nextpoint;
+// Used in OpenCV::calcOpticalFlowPyrLK
+std::vector<uchar> state;
+std::vector<float> err;
+std::vector<std::vector<cv::KeyPoint>> mvKeysPre;
 
 namespace ORB_SLAM2
 {
@@ -215,59 +229,28 @@ Frame::Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor *extra
     mvInvScaleFactors = mpORBextractorLeft->GetInverseScaleFactors();
     mvLevelSigma2 = mpORBextractorLeft->GetScaleSigmaSquares();
     mvInvLevelSigma2 = mpORBextractorLeft->GetInverseScaleSigmaSquares();
-
+    
     ExtractORB(0, imGray); // orb detector   change mvKeys, mDescriptors
 
-    if (whether_dynamic_object)
+    // AC: Copied from DS-SLAM
+    if(imGrayPre.data)
     {
-        char frame_index_c[256];
-        sprintf(frame_index_c, "%04d", (int)mnId); // format into 4 digit
-        std::string pred_mask_img_name = base_data_folder + "/rcnn_labelmap_3dmatched/" + frame_index_c + "_maskmap.png";
-        objmask_img = cv::imread(pred_mask_img_name, CV_LOAD_IMAGE_UNCHANGED); // uint8  sometimes read image might take long time....
-
-        KeysStatic = vector<bool>(mvKeys.size(), true); // all points are static now.
-        keypoint_associate_objectID = vector<int>(mvKeys.size(), -1);
-        numobject = 0;
-
-        if (remove_dynamic_features) // directly delete dynamic region features
-        {
-            std::vector<cv::KeyPoint> mvKeys_cp;
-            cv::Mat mDescriptors_cp;
-
-            for (size_t i = 0; i < mvKeys.size(); i++)
-            {
-                int maskval = int(objmask_img.at<uint8_t>(mvKeys[i].pt.y, mvKeys[i].pt.x));
-                bool delete_feature = maskval > 0;
-
-                if (!delete_feature)
-                {
-                    mvKeys_cp.push_back(mvKeys[i]);
-                    mDescriptors_cp.push_back(mDescriptors.row(i));
-                }
-            }
-            std::cout << "Delete dynamic feature points  " << mvKeys.size() - mvKeys_cp.size() << std::endl;
-
-            mvKeys = mvKeys_cp;
-            mDescriptors = mDescriptors_cp.clone();
-        }
-        else
-        {
-            for (size_t i = 0; i < mvKeys.size(); i++)
-            {
-                int maskval = int(objmask_img.at<uint8_t>(mvKeys[i].pt.y, mvKeys[i].pt.x));
-                KeysStatic[i] = (maskval == 0); //0 is background, static >0 object id
-                numobject = max(numobject, maskval);
-                if (maskval > 0)
-                    keypoint_associate_objectID[i] = maskval - 1;
-            }
-        }
+        DetectMovingKeypoints(imGray);
+        imGrayPre = imGray.clone();
     }
+    else
+    {
+        imGrayPre = imGray.clone();
+    }
+    
+    // AC: here was the dynamic object removal process, however, it only takes a segmented map
+    // AC: with only dynamic objects
 
     N = mvKeys.size();
 
     if (mvKeys.empty())
         return;
-
+        
     UndistortKeyPoints();
 
     // Set no stereo information
@@ -300,6 +283,195 @@ Frame::Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor *extra
     AssignFeaturesToGrid();
 }
 
+void Frame::FilterOutMovingPoints(cv::Mat &imRGB, const cv::Mat &imGray, int frame_id)
+{
+    mCurrentObjDetection = ObjDetectionHelper();
+    char frame_index_c[256];
+    sprintf(frame_index_c, "%04d", (int)frame_id); // format into 4 digit
+    mCurrentObjDetection.ReadFile(base_data_folder + "results/" + frame_index_c + "_mrcnn.txt");
+    mCurrentBBoxes = mCurrentObjDetection.GetBBoxesWithPerson();
+
+    if (!T_M.empty() && mCurrentBBoxes.size() > 0) {
+        CheckMovingKeyPoints(imGray, mCurrentBBoxes);
+    }
+}
+
+// AC: The generated keypoints are ONLY used to determine whether a frame has a moving object or not!
+// TODO: instead of creating new keypoints, use old ones
+void Frame::DetectMovingKeypoints(const cv::Mat &imgray)
+{
+    // Clear the previous data
+	F_prepoint.clear();
+	F_nextpoint.clear();
+	F2_prepoint.clear();
+	F2_nextpoint.clear();
+	T_M.clear();
+
+	// Detect dynamic target and ultimately optput the T matrix
+    cv::goodFeaturesToTrack(imGrayPre, prepoint, 1000, 0.01, 8, cv::Mat(), 3, true, 0.04);
+    cv::cornerSubPix(imGrayPre, prepoint, cv::Size(10, 10), cv::Size(-1, -1), cv::TermCriteria(CV_TERMCRIT_ITER | CV_TERMCRIT_EPS, 20, 0.03));
+	cv::calcOpticalFlowPyrLK(imGrayPre, imgray, prepoint, nextpoint, state, err, cv::Size(22, 22), 5, cv::TermCriteria(CV_TERMCRIT_ITER | CV_TERMCRIT_EPS, 20, 0.01));
+    // AC: output of state: output status vector (of unsigned chars); each element of the vector is set to 1 if the flow for the corresponding features has been found, otherwise, it is set to 0.
+	// AC: check whether the KP is too far to the edge of the image or the difference to each other is too large
+
+    for (int i = 0; i < state.size(); i++)
+    {
+        if(state[i] != 0)
+        {
+            int dx[10] = { -1, 0, 1, -1, 0, 1, -1, 0, 1 };
+            int dy[10] = { -1, -1, -1, 0, 0, 0, 1, 1, 1 };
+            int x1 = prepoint[i].x, y1 = prepoint[i].y;
+            int x2 = nextpoint[i].x, y2 = nextpoint[i].y;
+            if ((x1 < limit_edge_corner || x1 >= imgray.cols - limit_edge_corner || x2 < limit_edge_corner || x2 >= imgray.cols - limit_edge_corner
+            || y1 < limit_edge_corner || y1 >= imgray.rows - limit_edge_corner || y2 < limit_edge_corner || y2 >= imgray.rows - limit_edge_corner))
+            {
+                state[i] = 0;
+                continue;
+            }
+            double sum_check = 0;
+            for (int j = 0; j < 9; j++)
+                sum_check += abs(imGrayPre.at<uchar>(y1 + dy[j], x1 + dx[j]) - imgray.at<uchar>(y2 + dy[j], x2 + dx[j]));
+            if (sum_check > limit_of_check) state[i] = 0;
+            // If KP is not discarded (state == 0), push KP to F_[KP]
+            if (state[i])
+            {
+                F_prepoint.push_back(prepoint[i]);
+                F_nextpoint.push_back(nextpoint[i]);
+            }
+        }
+    }
+
+    // F-Matrix
+    cv::Mat mask = cv::Mat(cv::Size(1, 300), CV_8UC1);
+    cv::Mat F = cv::findFundamentalMat(F_prepoint, F_nextpoint, mask, cv::FM_RANSAC, 0.1, 0.99);
+    for (int i = 0; i < mask.rows; i++)
+    {
+        if (mask.at<uchar>(i, 0) == 0);
+        else
+        {
+            // Circle(pre_frame, F_prepoint[i], 6, Scalar(255, 255, 0), 3);
+            double A = F.at<double>(0, 0)*F_prepoint[i].x + F.at<double>(0, 1)*F_prepoint[i].y + F.at<double>(0, 2);
+            double B = F.at<double>(1, 0)*F_prepoint[i].x + F.at<double>(1, 1)*F_prepoint[i].y + F.at<double>(1, 2);
+            double C = F.at<double>(2, 0)*F_prepoint[i].x + F.at<double>(2, 1)*F_prepoint[i].y + F.at<double>(2, 2);
+            double dd = fabs(A*F_nextpoint[i].x + B*F_nextpoint[i].y + C) / sqrt(A*A + B*B); //Epipolar constraints
+            // Check whether the distance of a matched point to its epipolar line is within a certain threshold
+            if (dd <= 0.1)
+            {
+                F2_prepoint.push_back(F_prepoint[i]);
+                F2_nextpoint.push_back(F_nextpoint[i]);
+            }
+        }
+    }
+
+    F_prepoint = F2_prepoint;
+    F_nextpoint = F2_nextpoint;
+
+    for (int i = 0; i < prepoint.size(); i++)
+    {
+        if (state[i] != 0)
+        {
+            // AC: formula of DS SLAM paper (3)
+            double A = F.at<double>(0, 0)*prepoint[i].x + F.at<double>(0, 1)*prepoint[i].y + F.at<double>(0, 2);
+            double B = F.at<double>(1, 0)*prepoint[i].x + F.at<double>(1, 1)*prepoint[i].y + F.at<double>(1, 2);
+            double C = F.at<double>(2, 0)*prepoint[i].x + F.at<double>(2, 1)*prepoint[i].y + F.at<double>(2, 2);
+            double dd = fabs(A*nextpoint[i].x + B*nextpoint[i].y + C) / sqrt(A*A + B*B);
+
+            if (dd <= limit_dis_epi) continue;
+            T_M.push_back(nextpoint[i]);
+        }
+    }
+}
+
+// TODO: Add semantic mask
+void Frame::CheckMovingKeyPoints(const cv::Mat &imGray, const std::vector<std::vector<float > > mCurrentBBoxes)
+{
+    std::vector<bool> objectsAreMoving = vector<bool>(mCurrentBBoxes.size(), false);
+
+    // Make further judgment
+    // AC: Check whether an object is moving
+    for (int j = 0; j < mCurrentBBoxes.size(); j++)
+    {
+        float bbLeft = (float)mCurrentBBoxes[j][1];
+        float bbTop = (float)mCurrentBBoxes[j][2];
+        float bbRight = bbLeft + mCurrentBBoxes[j][3];
+        float bbBottom = bbTop - mCurrentBBoxes[j][4];
+
+        int movingKeypointCounter = 0;
+
+        for (int i = 0; i < T_M.size(); i++)
+        {
+            // AC: Check whether keypoint is in bounding box
+            if((int)T_M[i].x >= bbLeft && (int)T_M[i].x <= bbRight && (int)T_M[i].y <= bbTop && (int)T_M[i].y >= bbBottom)
+            {
+                movingKeypointCounter++;
+                // AC: if two keypoints are in object, it is considered moving
+                if (movingKeypointCounter > 1)
+                {
+                    objectsAreMoving[j] = 1;
+                    break;
+                }
+            }
+        }
+    }
+
+    // AC: If yes, erase points in given objects
+    KeysStatic = vector<bool>(mvKeys.size(), true); // all points are static now.
+    keypoint_associate_objectID = vector<int>(mvKeys.size(), -1);
+    numobject = 0;
+
+    for (int j = 0; j < mCurrentBBoxes.size(); j++)
+    {
+        if (objectsAreMoving[j])
+        {
+            float bbLeft = (float)mCurrentBBoxes[j][1];
+            float bbTop = (float)mCurrentBBoxes[j][2];
+            float bbRight = bbLeft + mCurrentBBoxes[j][3];
+            float bbBottom = bbTop - mCurrentBBoxes[j][4];
+
+            for (size_t i = 0; i < mvKeys.size(); i++)
+            {
+                if ((int)mvKeys[i].pt.x >= bbLeft && (int)mvKeys[i].pt.x <= bbRight && (int)mvKeys[i].pt.y <= bbTop && (int)mvKeys[i].pt.y >= bbBottom)
+                {
+                    KeysStatic[i] = 0; //0 is background, static >0 object id
+                    numobject = max(numobject, 1);
+                    keypoint_associate_objectID[i] = 0;
+                }
+            }
+        }
+    }
+
+    if (remove_dynamic_features)
+    {
+        std::vector<cv::KeyPoint> mvKeys_cp;
+        cv::Mat mDescriptors_cp;
+
+        for (int l = 0; l < KeysStatic.size(); l++)
+        {
+            if (KeysStatic[l]) {
+                mvKeys_cp.push_back(mvKeys[l]);
+                mDescriptors_cp.push_back(mDescriptors.row(l));
+            }
+        }
+        cout << "Kept " << mvKeys_cp.size() << "/" << mvKeys.size() << " keypoints" << endl;
+
+        mvKeys = mvKeys_cp;
+        mDescriptors = mDescriptors_cp.clone();
+        KeysStatic = vector<bool>(mvKeys.size(), true);
+        return;
+    }
+
+    // AC: For debugging
+    int dynamicKeypointsCounter = 0;
+    for (int k = 0; k < KeysStatic.size(); k++)
+    {
+        if (!KeysStatic[k]) {
+            dynamicKeypointsCounter++;
+        }
+    }
+
+    cout << "Found " << dynamicKeypointsCounter << "/" << mvKeys.size() << " dynamic keypoints" << endl;
+}
+
 void Frame::AssignFeaturesToGrid()
 {
     int nReserve = 0.5f * N / (FRAME_GRID_COLS * FRAME_GRID_ROWS);
@@ -320,7 +492,7 @@ void Frame::AssignFeaturesToGrid()
 void Frame::ExtractORB(int flag, const cv::Mat &im)
 {
     if (flag == 0)
-        (*mpORBextractorLeft)(im, cv::Mat(), mvKeys, mDescriptors);
+        (*mpORBextractorLeft)(im, cv::Mat(), mvKeys,mDescriptors);
     else
         (*mpORBextractorRight)(im, cv::Mat(), mvKeysRight, mDescriptorsRight);
 }

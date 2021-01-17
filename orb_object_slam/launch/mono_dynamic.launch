@@ -2,7 +2,7 @@
 <launch>
    # ROS_NAMESPACE=mono rosrun image_proc image_proc   bayer to bgr8
    <node pkg="image_proc" type="image_proc" name="image_proc" ns="mono" args="bayer to bgr8" />
-   <node pkg="orb_object_slam" type="ros_mono" name="ros_mono"  output="screen"  args="$(find orb_object_slam)/Vocabulary/ORBvoc.bin 
+   <node pkg="orb_object_slam" type="ros_mono" name="ros_mono"  output="screen"  args="$(find orb_object_slam)/Vocabulary/ORBvoc.txt 
 	    $(find orb_object_slam)/Examples/Monocular/KITTI_track18.yaml">  # KITTI_09_26 KITTI04-12_me kinect_mev2 TUM_mono  tamu_corridor
  	<remap from="/camera/image_raw" to ="/kitti/left/image_raw"/> 
  	# /kitti/left/image_raw   /camera/rgb/image_raw /camera/rgb/image_color  /mono/image_rect_color /kinect2/qhd/image_color_rect /camera/mono/image_raw
@@ -13,7 +13,7 @@
    <param name="parallel_mapping" value="true" />  # if false, may reduce bag rate
    
    <rosparam file="$(find orb_object_slam)/launch/object_params/kitti.yaml" command="load"/>   # initial pose, folder name
-   <param name="base_data_folder" value="/home/shichao/ysc_space/dataset/processed_third/kitti_tracking/training/0018" />
+   <param name="base_data_folder" value="/mnt/datasets/0018" />
 
    <param name="whether_detect_object" value="true" />
    <param name="whether_read_offline_cuboidtxt" value="true" />  # for kitti, I read offline data.
@@ -39,7 +39,7 @@
    <param name="ba_dyna_obj_cam" value="true" />
    
    # for depth initialization
-   <param name="mono_firstframe_truth_depth_init" value="true" />
+   <param name="mono_firstframe_truth_depth_init" value="false" />   # original had true
    <param name="mono_firstframe_Obj_depth_init" value="false" />
    <param name="mono_allframe_Obj_depth_init" value="false" />   # may not need for kitti
    

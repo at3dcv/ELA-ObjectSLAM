@@ -282,6 +282,8 @@ void EdgeObjectMotion::computeError()
 
     const double vehicle_length = 2.71; // front and back wheels distance
     // vehicle motion model is applied to back wheel center
+    // AC: Here's the main motion model!
+    std::cout << "Yoooooooooooooooooooo!!!!!!" << endl;
     Vector3d trans_back_pred = posefrom.translation() + (velocity(0) * delta_t - vehicle_length * 0.5) * Vector3d(cos(yaw_from), sin(yaw_from), 0);
     double yaw_pred = yaw_from + tan(velocity(1)) * delta_t / vehicle_length * velocity(0);
 

@@ -136,10 +136,14 @@ cv::Mat FrameDrawer::DrawFrame()
 
                 if (vbMap[i]) // This is a match to a MapPoint in the map    // green
                 {
-                    cv::circle(im, vCurrentKeys[i].pt, 3, cv::Scalar(0, 255, 0), -1);
+                    // AC: Dynamic keys are colored red
+                    if (mvStaticKeys[i])
+                        cv::circle(im, vCurrentKeys[i].pt, 3, cv::Scalar(0, 255, 0), -1);
+                    else
+                        cv::circle(im, vCurrentKeys[i].pt, 10, cv::Scalar(0, 0, 255), -1);
                     mnTracked++;
                 }
-                else // This is match to a "visual odometry" MapPoint created in the last frame    // blue
+                else // This is match to a "visual odometry" MapPoint created in the last frame    // red
                 {
                     cv::circle(im, vCurrentKeys[i].pt, 3, cv::Scalar(255, 0, 0), -1);
                     mnTrackedVO++;
@@ -248,6 +252,7 @@ void FrameDrawer::Update(Tracking *pTracker)
     unique_lock<mutex> lock(mMutex);
     pTracker->mImGray.copyTo(mIm);
     mvCurrentKeys = pTracker->mCurrentFrame.mvKeys;
+    mvStaticKeys = pTracker->mCurrentFrame.KeysStatic;
     N = mvCurrentKeys.size();
     mvbVO = vector<bool>(N, false);
     mvbMap = vector<bool>(N, false);
