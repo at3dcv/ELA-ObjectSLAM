@@ -6,15 +6,14 @@
 2. Change the Dockerfile with the Dockerfile uploaded here
 3. Open terminal and go to the folder where the Dockerfile is located
 4. sudo docker build -t at3dcv_2020 .
-5. Windows: `docker run -it --rm -p 6080:80 -v "D:\Andy\Bildung_Arbeit\01_Studium\15 WS 21 22\AT3DCV\objectslam\:/mnt/objectslam/src/objectslam" -v "D:\Andy\Bildung_Arbeit\01_Studium\15 WS 21 22\AT3DCV\datasets\:/mnt/datasets/" at3dcv_2020:latest`
-   MacOS: `docker run -it --rm -p 6080:80 -v ~/at3dcv/:/mnt/ at3dcv_2020:latest`
+5. `docker run -it --rm -p 6080:80 -v ~/at3dcv/:/mnt/ at3dcv_2020:latest`
 6. Browse to http://127.0.0.1:6080/
 7. In the docker image open Terminal
 8. cd cube_slam_ws
 9.  `source /opt/ros/kinetic/setup.bash`
 10. catkin_make -j1
 11. source devel/setup.bash
-12. roslaunch object_slam object_slam_example.launch
+12. roslaunch object_slam object_slam_example.launch > roslaunch.log
 
 ## Start ROS
 1. download the `ORBvoc.txt` file from the original ORB Slam 2 Vocabulary folder or from our now updated master branch.
@@ -23,10 +22,10 @@
 4. copy the `seq7` folder to a folder with in your mounted volume.
 5. Edit the path of the parameter `base_data_folder` with in the mono.launch file to point to the `seq7` folder
 6. Change `ORBvoc.bin` to `ORBvoc.txt` with in the mono.launch file (fifth line).
-7. Open three terminals and in all three source the setup fill: `source <path_to_cu  be_slam>/devel/setup.bash`
-8. Terminal one run: roscore
-9. Terminal two run: rosbag play <path_to_seq7_folder>/seq7/left_full_gray_.bag --clock -r 0.5
-10. Terminal tree run: roslaunch orb_object_slam mono.launch
+7. Open two terminals and in all three source the setup fill: `source <path_to_cu  be_slam>/devel/setup.bash`
+8. Terminal one run: roslaunch orb_object_slam mono.launch and wait for two windows to pop up
+9. Terminal two run: rosbag play /mnt/datasets/freiburg3_walking_xyz.bag /camera/rgb/image_color:=/kitti/left/image_raw --clock -r 0.5
+
 
 
 #### Architecture for 3D dense map reconstruction - brainstorming session 05.11.2020
