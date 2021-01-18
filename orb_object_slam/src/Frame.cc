@@ -285,6 +285,10 @@ Frame::Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor *extra
 
 void Frame::FilterOutMovingPoints(cv::Mat &imRGB, const cv::Mat &imGray, int frame_id)
 {
+    // AC: If yes, erase points in given objects
+    KeysStatic = vector<bool>(mvKeys.size(), true); // all points are static now.
+    keypoint_associate_objectID = vector<int>(mvKeys.size(), -1);
+
     mCurrentObjDetection = ObjDetectionHelper();
     char frame_index_c[256];
     sprintf(frame_index_c, "%04d", (int)frame_id); // format into 4 digit
@@ -414,9 +418,6 @@ void Frame::CheckMovingKeyPoints(const cv::Mat &imGray, const std::vector<std::v
         }
     }
 
-    // AC: If yes, erase points in given objects
-    KeysStatic = vector<bool>(mvKeys.size(), true); // all points are static now.
-    keypoint_associate_objectID = vector<int>(mvKeys.size(), -1);
     numobject = 0;
 
     for (int j = 0; j < mCurrentBBoxes.size(); j++)
