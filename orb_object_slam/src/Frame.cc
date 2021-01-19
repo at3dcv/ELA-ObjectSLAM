@@ -177,6 +177,17 @@ Frame::Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeSt
     // ORB extraction
     ExtractORB(0, imGray);
 
+    // AC: Copied from DS-SLAM
+    if(imGrayPre.data)
+    {
+        DetectMovingKeypoints(imGray);
+        imGrayPre = imGray.clone();
+    }
+    else
+    {
+        imGrayPre = imGray.clone();
+    }
+
     N = mvKeys.size();
 
     if (mvKeys.empty())

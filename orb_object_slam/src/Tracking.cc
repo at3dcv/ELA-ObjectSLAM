@@ -365,7 +365,7 @@ cv::Mat Tracking::GrabImageStereo(const cv::Mat &imRectLeft, const cv::Mat &imRe
 	return mCurrentFrame.mTcw.clone();
 }
 
-cv::Mat Tracking::GrabImageRGBD(const cv::Mat &imRGB, const cv::Mat &imD, const double &timestamp)
+cv::Mat Tracking::GrabImageRGBD(const cv::Mat &imRGB, const cv::Mat &imD, const double &timestamp, int msg_seq_id)
 {
 	mImGray = imRGB;
 	cv::Mat imDepth = imD;
@@ -391,8 +391,29 @@ cv::Mat Tracking::GrabImageRGBD(const cv::Mat &imRGB, const cv::Mat &imD, const 
 
 	mCurrentFrame = Frame(mImGray, imDepth, timestamp, mpORBextractorLeft, mpORBVocabulary, mK, mDistCoef, mbf, mThDepth);
 
+	// AC: copied from GrabImageMonocular
+	if (whether_dynamic_object)
+	{
+		object_detection_frame_id = object_detection_frame_id + 1;
+		mCurrentFrame.FilterOutMovingPoints(mImRGB, mImGray, object_detection_frame_id);
+	}
+	
+	// AC: Current frame id
+	if (mCurrentFrame.mnId == 0)
+		start_msg_seq_id = msg_seq_id;
+	// if read offline txts, frame id must match!!!
+	if (all_offline_object_cubes.size() > 0)
+	{
+		if ((mCurrentFrame.mnId > 0) && (msg_seq_id > 0))					// if msg_seq_id=0 may because the value is not set.
+			if (int(mCurrentFrame.mnId) != (msg_seq_id - start_msg_seq_id)) // can use frame->IdinRawImages = msg_seq_id-start_msg_seq_id  need to change lots of stuff.
+			{
+				ROS_ERROR_STREAM("Different frame ID, might due to lost frame from bag.   " << mCurrentFrame.mnId << "  " << msg_seq_id - start_msg_seq_id);
+				exit(0);
+			}
+	}
+
 	// AC: whether_detect_object flag is set in mono.launch
-	// AC: I guess here the image is being copied in an array to be used for the object detectiong
+	// AC: I guess here the image is being copied in an array to be used for the object detection
 	if (whether_detect_object)
 		mCurrentFrame.raw_img = mImGray.clone();
 
@@ -400,6 +421,11 @@ cv::Mat Tracking::GrabImageRGBD(const cv::Mat &imRGB, const cv::Mat &imD, const 
 	{
 		mpMap->img_height = mImGray.rows;
 		mpMap->img_width = mImGray.cols;
+	}
+	
+	if (whether_detect_object)
+	{
+		mCurrentFrame.raw_img = mImGray; // I clone in Keyframe.cc  don't need to clone here.
 	}
 
 	Track();
@@ -516,7 +542,6 @@ void Tracking::Track()
 				if (mono_firstframe_truth_depth_init)
 				{
 					special_initialization = true;
-					cout << "3" << endl;
 					StereoInitialization(); // if first frame has truth depth, we can initialize simiar to stereo/rgbd. create keyframe for it.
 				}
 				else if (mono_firstframe_Obj_depth_init)

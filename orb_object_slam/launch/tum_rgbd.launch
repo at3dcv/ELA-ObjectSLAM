@@ -2,9 +2,10 @@
 <launch>
    # ROS_NAMESPACE=mono rosrun image_proc image_proc   bayer to bgr8
    <node pkg="image_proc" type="image_proc" name="image_proc" ns="mono" args="bayer to bgr8" />
-   <node pkg="orb_object_slam" type="ros_mono" name="ros_mono"  output="screen"  args="$(find orb_object_slam)/Vocabulary/ORBvoc.txt 
+   <node pkg="orb_object_slam" type="ros_rgbd" name="ros_rgbd"  output="screen"  args="$(find orb_object_slam)/Vocabulary/ORBvoc.txt 
 	    $(find orb_object_slam)/Examples/Monocular/TUM1.yaml">  # KITTI_09_26 KITTI04-12_me kinect_mev2 TUM_mono  tamu_corridor
- 	<remap from="/camera/image_raw" to ="/kitti/left/image_raw"/> 
+ 	<remap from="/camera/image_raw" to ="/camera/rgb/image_color"/>
+	<remap from="/camera/depth_registered/image_raw" to ="/camera/depth/image"/> 
  	# /kitti/left/image_raw   /camera/rgb/image_raw /camera/rgb/image_color  /mono/image_rect_color /kinect2/qhd/image_color_rect /camera/mono/image_raw
    </node>
    <param name="enable_loop_closing" value="false" />  # false true
