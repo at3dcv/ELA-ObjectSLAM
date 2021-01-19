@@ -1,0 +1,46 @@
+sensor_msgs/Image.msg:
+
+std_msgs/Header header
+uint32 height
+uint32 width
+string encoding
+uint8 is_bigendian
+uint32 step
+uint8[] data
+
+std_msgs/Header.msg:
+
+uint32 seq
+time stamp -> secs.nsec(image name: 6 haneye yuvarlanmış, datası: 9 haneli)
+string frame_id
+
+
+image size: 480x640
+
+long_office = 2.585 images
+walking_xyz = 859 images
+
+to see what is inside bag file :
+	>time rosbag info demo.bag 
+	
+playback a bag file:
+	>rosbag play xx.bag --topics <topicname> -r <multiply rate>
+
+KITTI : 'image_00': left rectified grayscale image sequence
+
+for line detection :
+pip install opencv-contrib-python==4.0.0.21
+pip install opencv-python==4.0.0.21
+
+
+axis() error in tensorflow (softmax):
+pip2 install tensorflow==1.5.0
+
+modified files:
+
+example.rviz
+example.launch
+mask_rcnn_node
+util.py
+model.py
+visualize.py
