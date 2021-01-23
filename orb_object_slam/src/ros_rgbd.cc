@@ -112,20 +112,17 @@ int main(int argc, char **argv)
     else
         ROS_WARN_STREAM("Turn on global loop closing!!");
     // Create SLAM system. It initializes all system threads and gets ready to process frames.
-    cout << "1" << endl;
-    ORB_SLAM2::System SLAM(argv[1], argv[2], ORB_SLAM2::System::RGBD, enable_loop_closing);
-
-    cout << "2" << endl;
+    // AC: Set System to MONOCULAR as we don't leverage the depth data
+    ORB_SLAM2::System SLAM(argv[1], argv[2], ORB_SLAM2::System::MONOCULAR, enable_loop_closing);
 
     ImageGrabber igb(&SLAM);
-    cout << "3" << endl;
+
     message_filters::Subscriber<sensor_msgs::Image> rgb_sub(nh, "/camera/image_raw", 1);
     message_filters::Subscriber<sensor_msgs::Image> depth_sub(nh, "/camera/depth_registered/image_raw", 1);
     typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::Image> sync_pol;
     message_filters::Synchronizer<sync_pol> sync(sync_pol(10), rgb_sub, depth_sub);
     sync.registerCallback(boost::bind(&ImageGrabber::GrabRGBD, &igb, _1, _2));
 
-    cout << "4" << endl;
     ros::spin(); //block here till I ctrl-C
 
     // Stop all threads

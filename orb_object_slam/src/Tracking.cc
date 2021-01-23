@@ -412,11 +412,6 @@ cv::Mat Tracking::GrabImageRGBD(const cv::Mat &imRGB, const cv::Mat &imD, const 
 			}
 	}
 
-	// AC: whether_detect_object flag is set in mono.launch
-	// AC: I guess here the image is being copied in an array to be used for the object detection
-	if (whether_detect_object)
-		mCurrentFrame.raw_img = mImGray.clone();
-
 	if (mCurrentFrame.mnId == 0)
 	{
 		mpMap->img_height = mImGray.rows;
@@ -426,6 +421,7 @@ cv::Mat Tracking::GrabImageRGBD(const cv::Mat &imRGB, const cv::Mat &imD, const 
 	if (whether_detect_object)
 	{
 		mCurrentFrame.raw_img = mImGray; // I clone in Keyframe.cc  don't need to clone here.
+		mCurrentFrame.raw_depth = imDepth;
 	}
 
 	Track();
@@ -532,29 +528,8 @@ void Tracking::Track()
 
 	if (mState == NOT_INITIALIZED) // initialization
 	{
-		if (mSensor == System::STEREO || mSensor == System::RGBD)
-			StereoInitialization(); // for stereo or RGBD, the first frame is used to initialize the keyframe and map
-		else
-		{
-			bool special_initialization = false;
-			if (mCurrentFrame.mnId == 0)
-			{
-				if (mono_firstframe_truth_depth_init)
-				{
-					special_initialization = true;
-					StereoInitialization(); // if first frame has truth depth, we can initialize simiar to stereo/rgbd. create keyframe for it.
-				}
-				else if (mono_firstframe_Obj_depth_init)
-				{
-					special_initialization = true;
-					// similar to stereo initialization, but directly create map point. don't create stereo right coordinate
-					// have less effect on g2o optimization.  because depth initialization is not accurate
-					MonoObjDepthInitialization();
-				}
-			}
-			if (!special_initialization)
-				MonocularInitialization(); // usually for monocular, need to wait for several frames, with enough parallax
-		}
+		// AC: skip all other initializations as we only want the monocular initialization!
+		MonocularInitialization();
 
 		mpFrameDrawer->Update(this);
 

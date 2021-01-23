@@ -288,6 +288,7 @@ void FrameDrawer::Update(Tracking *pTracker)
             }
         }
     }
+    
     mState = static_cast<int>(pTracker->mLastProcessedState);
 
     if (whether_detect_object) // copy some object data for visualization
@@ -299,7 +300,9 @@ void FrameDrawer::Update(Tracking *pTracker)
         box_corners_2ds.clear();
         edge_markers_2ds.clear();
         point_Object_AssoID.clear();
-        if (pTracker->mCurrentFrame.mpReferenceKF != NULL)                                             // mCurrentFrame.mpReferenceKF
+        
+        if (pTracker->mCurrentFrame.mpReferenceKF != NULL)
+        {
             if ((pTracker->mCurrentFrame.mnId - pTracker->mCurrentFrame.mpReferenceKF->mnFrameId) < 1) // if current frame is a keyframe
             {
                 if (whether_detect_object)
@@ -317,6 +320,7 @@ void FrameDrawer::Update(Tracking *pTracker)
                         point_Object_AssoID = pTracker->mCurrentFrame.mpReferenceKF->keypoint_associate_objectID;
                 }
             }
+        } 
     }
 
     if (enable_ground_height_scale)
@@ -328,5 +332,4 @@ void FrameDrawer::Update(Tracking *pTracker)
             }
     }
 }
-
 } // namespace ORB_SLAM2

@@ -86,7 +86,10 @@ Frame::Frame(const Frame &frame)
         SetPose(frame.mTcw);
 
     if (whether_detect_object)
+    {
         raw_img = frame.raw_img.clone();
+        raw_depth = frame.raw_depth.clone();
+    }
     if (whether_dynamic_object)
     {
         KeysStatic = frame.KeysStatic;

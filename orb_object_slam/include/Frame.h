@@ -122,6 +122,7 @@ public:
 public:
     // by me, detect_3d_cuboid needs raw image
     cv::Mat raw_img;
+    cv::Mat raw_depth;
     std::vector<bool> KeysStatic;
     std::vector<int> keypoint_associate_objectID;
     int numobject;
