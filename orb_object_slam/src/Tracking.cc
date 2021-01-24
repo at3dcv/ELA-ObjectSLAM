@@ -565,8 +565,6 @@ void Tracking::Track()
 	if (parallel_mapping) // if sequential mapping, no need to use mutex, otherwise conflict with localmapping optimizers.
 		unique_lock<mutex> lock(mpMap->mMutexMapUpdate);
 
-	std::cout << "INITIALIZATION!" << std::endl;
-
 	if (mState == NOT_INITIALIZED) // initialization
 	{
 		// AC: skip all other initializations as we only want the monocular initialization!
@@ -582,7 +580,6 @@ void Tracking::Track()
 	}
 	else
 	{
-		std::cout << "START!" << std::endl;
 		ca::Profiler::tictoc("Tracking time");
 
 		// System is initialized. Track Frame.
@@ -591,26 +588,21 @@ void Tracking::Track()
 		// Initial camera pose estimation using motion model or relocalization (if tracking is lost)
 		if (!mbOnlyTracking)
 		{
-			std::cout << "FUUU!" << std::endl;
 			// Local Mapping is activated. This is the normal behaviour, unless explicitly activate the "only tracking" mode.
 			if (mState == OK)
 			{
-				std::cout << "WHOO!" << std::endl;
 				// Local Mapping might have changed some MapPoints tracked in last frame
 				CheckReplacedInLastFrame();
 
 				if (mVelocity.empty() || mCurrentFrame.mnId < mnLastRelocFrameId + 2) // at initialization or relocalization stage
 				{
-					std::cout << "YAY!" << std::endl;
 					bOK = TrackReferenceKeyFrame();
 				}
 				else
 				{
-					std::cout << "BLAB!" << std::endl;
 					bOK = TrackWithMotionModel(); // usual way of camera tracking
 					if (!bOK)					  // if trackMotion model failed,   usually not happening
 					{
-						std::cout << "TRACK REFERENCE KEYFRAME!" << std::endl;
 						bOK = TrackReferenceKeyFrame();
 						if (!bOK)
 							std::cout << "Not OK right after TrackReferenceKeyFrame!!!" << std::endl;
@@ -625,7 +617,6 @@ void Tracking::Track()
 		}
 		else // Only Tracking: Local Mapping is deactivated, usually not happening.
 		{
-			std::cout << "TRACKING!" << std::endl;
 			if (mState == LOST)
 			{
 				bOK = Relocalization();
@@ -694,7 +685,6 @@ void Tracking::Track()
 			}
 		}
 
-		std::cout << "SAVE KF!" << std::endl;
 		mCurrentFrame.mpReferenceKF = mpReferenceKF;
 
 		// If we have an initial estimation of the camera pose and matching. Track the local map.
@@ -716,7 +706,6 @@ void Tracking::Track()
 				bOK = TrackLocalMap();
 		}
 
-		std::cout << "STUFF!" << std::endl;
 		if (bOK)
 			mState = OK;
 		else
@@ -729,7 +718,6 @@ void Tracking::Track()
 		// If tracking were good, check if we insert a keyframe
 		if (bOK)
 		{
-			std::cout << "AMAZING!" << std::endl;
 			// Update motion model
 			if (!mLastFrame.mTcw.empty())
 			{
@@ -763,7 +751,6 @@ void Tracking::Track()
 			}
 			mlpTemporalPoints.clear();
 			
-			std::cout << "AWESOME!" << std::endl;
 			// Check if we need to insert a new keyframe
 			if (NeedNewKeyFrame())
 			{
@@ -772,7 +759,6 @@ void Tracking::Track()
 				// ROS_WARN_STREAM("Created new keyframe!   " << mpReferenceKF->mnId << "   total ID  " << mpReferenceKF->mnFrameId);
 			}
 
-			std::cout << "WOW!" << std::endl;
 			mpFrameDrawer->Update(this); // I put here so that frame drawer syncs with new keyframe.
 
 			// We allow points with high innovation (considererd outliers by the Huber Function)
@@ -790,7 +776,6 @@ void Tracking::Track()
 			mpFrameDrawer->Update(this);
 		}
 
-		std::cout << "NICE!" << std::endl;
 		// Reset if the camera get lost soon after initialization
 		if (mState == LOST)
 		{
@@ -802,7 +787,6 @@ void Tracking::Track()
 			}
 		}
 
-		std::cout << "COOL!" << std::endl;
 		if (!mCurrentFrame.mpReferenceKF)
 			mCurrentFrame.mpReferenceKF = mpReferenceKF;
 
@@ -1344,7 +1328,6 @@ void Tracking::UpdateLastFrame()
 
 bool Tracking::TrackWithMotionModel()
 {
-	std::cout << "START TWMM!" << std::endl;
 	ORBmatcher matcher(0.9, true);
 	
 	// Update last frame pose according to its reference keyframe
@@ -1357,16 +1340,16 @@ bool Tracking::TrackWithMotionModel()
 	fill(mCurrentFrame.mvpMapPoints.begin(), mCurrentFrame.mvpMapPoints.end(), static_cast<MapPoint *>(NULL));
 
 	mCurrentFrame.mvpMapPoints_inlastframe.resize(mCurrentFrame.N); // NOTE add by me for visualization
-	std::cout << "AWESOME!" << std::endl;
+
 	// Project map points seen in previous frame  onto current frame.
 	int searchRadiusFactor;
 	if (mSensor != System::STEREO)
 		searchRadiusFactor = 15;
 	else
 		searchRadiusFactor = 7;
-	std::cout << "BLIBLUBLABLU!" << std::endl;
+
 	int nmatches = matcher.SearchByProjection(mCurrentFrame, mLastFrame, searchRadiusFactor, mSensor == System::MONOCULAR);
-	std::cout << "SO COOL!" << std::endl;
+
 	// If few matches, uses a wider window search
 	if (nmatches < 20)
 	{
@@ -1376,7 +1359,6 @@ bool Tracking::TrackWithMotionModel()
 
 	if (whether_detect_object)
 	{
-		std::cout << "DAMN!" << std::endl;
 		if (use_dynamic_klt_features)
 			matcher.SearchByTrackingHarris(mCurrentFrame, mLastFrame, searchRadiusFactor, mSensor == System::MONOCULAR);
 		else
@@ -1389,13 +1371,11 @@ bool Tracking::TrackWithMotionModel()
 		return false;
 	}
 
-	std::cout << "OKAAY!" << std::endl;
 	// Optimize frame pose with all matches
 	Optimizer::PoseOptimization(&mCurrentFrame);
 
 	mCurrentFrame.mvpMapPoints_lasttracked = mCurrentFrame.mvpMapPoints; // NOTE add by me for visualization
 
-	std::cout << "RIGHT ON!" << std::endl;
 	// Discard outliers
 	int nmatchesMap = 0;
 	for (int i = 0; i < mCurrentFrame.N; i++)
@@ -1423,7 +1403,7 @@ bool Tracking::TrackWithMotionModel()
 		mbVO = nmatchesMap < 10;
 		return nmatches > 20;
 	}
-	std::cout << "END!" << std::endl;
+	
 	return nmatchesMap >= 10;
 }
 

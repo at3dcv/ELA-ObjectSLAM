@@ -1372,7 +1372,6 @@ int ORBmatcher::SearchBySim3(KeyFrame *pKF1, KeyFrame *pKF2, vector<MapPoint *> 
 
 int ORBmatcher::SearchByProjection(Frame &CurrentFrame, const Frame &LastFrame, const float th, const bool bMono)
 {
-    std::cout << "SBP START!" << std::endl;
     int nmatches = 0;
 
     // Rotation Histogram (to check rotation consistency)
@@ -1519,7 +1518,6 @@ int ORBmatcher::SearchByProjection(Frame &CurrentFrame, const Frame &LastFrame, 
         }
     }
 
-    std::cout << "SBP CONSISTENCY!" << std::endl;
     //Apply rotation consistency
     if (mbCheckOrientation)
     {
@@ -1542,7 +1540,6 @@ int ORBmatcher::SearchByProjection(Frame &CurrentFrame, const Frame &LastFrame, 
         }
     }
 
-    std::cout << "SBP END!" << std::endl;
     return nmatches;
 }
 
@@ -1628,7 +1625,6 @@ int ORBmatcher::SearchByTracking(Frame &CurrentFrame, const Frame &LastFrame, co
                 }
     }
 
-    std::cout << "SBP YEAAH!" << std::endl;
     if (lastobjpts.size() == 0)
         return 0;
 
@@ -1766,7 +1762,7 @@ int ORBmatcher::SearchByProjection(Frame &CurrentFrame, KeyFrame *pKF, const set
     const float factor = 1.0f / HISTO_LENGTH;
 
     const vector<MapPoint *> vpMPs = pKF->GetMapPointMatches();
-    std::cout << "SBP WOOO!" << std::endl;
+    
     for (size_t i = 0, iend = vpMPs.size(); i < iend; i++)
     {
         MapPoint *pMP = vpMPs[i];

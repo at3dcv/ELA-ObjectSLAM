@@ -312,11 +312,8 @@ void Frame::FilterOutMovingPoints(const cv::Mat &imGray)
     mCurrentObjDetection.ReadFile(base_data_folder + "mats/filter_match_2d_boxes_txts/" + frame_index_c + "_mrcnn.txt");
     mCurrentBBoxes = mCurrentObjDetection.GetBBoxesWithPerson();
 
-    if (!T_M.empty() && mCurrentBBoxes.size() > 0) {
-        std::cout << "BEFORE" << std::endl;
+    if (!T_M.empty() && mCurrentBBoxes.size() > 0)
         CheckMovingKeyPoints(imGray, mCurrentBBoxes);
-        std::cout << "AFTER" << std::endl;
-    }
 }
 
 // AC: The generated keypoints are ONLY used to determine whether a frame has a moving object or not!
@@ -408,7 +405,6 @@ void Frame::DetectMovingKeypoints(const cv::Mat &imgray)
 // TODO: Add semantic mask
 void Frame::CheckMovingKeyPoints(const cv::Mat &imGray, const std::vector<std::vector<float > > mCurrentBBoxes)
 {
-    std::cout << "CMKP START" << endl;
     std::vector<bool> objectsAreMoving = vector<bool>(mCurrentBBoxes.size(), false);
 
     // Make further judgment
@@ -438,7 +434,6 @@ void Frame::CheckMovingKeyPoints(const cv::Mat &imGray, const std::vector<std::v
         }
     }
 
-    std::cout << "CMKP MIDDLE" << endl;
     numobject = 0;
 
     for (int j = 0; j < mCurrentBBoxes.size(); j++)
@@ -462,15 +457,11 @@ void Frame::CheckMovingKeyPoints(const cv::Mat &imGray, const std::vector<std::v
         }
     }
 
-    std::cout << "CMKP REMOVE" << endl;
     if (remove_dynamic_features)
     {
         std::vector<cv::KeyPoint> mvKeys_cp;
         cv::Mat mDescriptors_cp;
 
-        std::cout << "CMKP YOHO" << endl;
-        std::cout << mvKeys.size() << endl;
-        std::cout << KeysStatic.size() << endl;
         for (int l = 0; l < KeysStatic.size(); l++)
         {
             if (KeysStatic[l]) {
@@ -479,18 +470,12 @@ void Frame::CheckMovingKeyPoints(const cv::Mat &imGray, const std::vector<std::v
             }
         }
 
-        cout << "Kept " << mDescriptors_cp.size() << "/" << mDescriptors.size() << " descriptors" << endl;
-        cout << "Kept " << mvKeys_cp.size() << "/" << mvKeys.size() << " keypoints" << endl;
-
         mvKeys = mvKeys_cp;
         mDescriptors = mDescriptors_cp.clone();
-
-        cout << "NEW " << mvKeys.size() << " & " << mDescriptors.size() << endl;
         KeysStatic = vector<bool>(mvKeys.size(), true);
         return;
     }
 
-    std::cout << "CMKP DEBUG" << endl;
     // AC: For debugging
     int dynamicKeypointsCounter = 0;
     for (int k = 0; k < KeysStatic.size(); k++)
