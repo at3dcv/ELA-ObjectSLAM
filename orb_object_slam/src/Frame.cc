@@ -250,6 +250,9 @@ Frame::Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor *extra
     if(imGrayPre.data)
     {
         DetectMovingKeypoints(imGray);
+        if (whether_dynamic_object) {
+            FilterOutMovingPoints(imGray);
+        }
         imGrayPre = imGray.clone();
     }
     else
@@ -297,7 +300,7 @@ Frame::Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor *extra
     AssignFeaturesToGrid();
 }
 
-void Frame::FilterOutMovingPoints(cv::Mat &imRGB, const cv::Mat &imGray, int frame_id)
+void Frame::FilterOutMovingPoints(const cv::Mat &imGray)
 {
     // AC: If yes, erase points in given objects
     KeysStatic = vector<bool>(mvKeys.size(), true); // all points are static now.
@@ -305,12 +308,14 @@ void Frame::FilterOutMovingPoints(cv::Mat &imRGB, const cv::Mat &imGray, int fra
 
     mCurrentObjDetection = ObjDetectionHelper();
     char frame_index_c[256];
-    sprintf(frame_index_c, "%04d", (int)frame_id); // format into 4 digit
+    sprintf(frame_index_c, "%04d", (int)mnId); // format into 4 digit
     mCurrentObjDetection.ReadFile(base_data_folder + "mats/filter_match_2d_boxes_txts/" + frame_index_c + "_mrcnn.txt");
     mCurrentBBoxes = mCurrentObjDetection.GetBBoxesWithPerson();
 
     if (!T_M.empty() && mCurrentBBoxes.size() > 0) {
+        std::cout << "BEFORE" << std::endl;
         CheckMovingKeyPoints(imGray, mCurrentBBoxes);
+        std::cout << "AFTER" << std::endl;
     }
 }
 
@@ -403,6 +408,7 @@ void Frame::DetectMovingKeypoints(const cv::Mat &imgray)
 // TODO: Add semantic mask
 void Frame::CheckMovingKeyPoints(const cv::Mat &imGray, const std::vector<std::vector<float > > mCurrentBBoxes)
 {
+    std::cout << "CMKP START" << endl;
     std::vector<bool> objectsAreMoving = vector<bool>(mCurrentBBoxes.size(), false);
 
     // Make further judgment
@@ -432,6 +438,7 @@ void Frame::CheckMovingKeyPoints(const cv::Mat &imGray, const std::vector<std::v
         }
     }
 
+    std::cout << "CMKP MIDDLE" << endl;
     numobject = 0;
 
     for (int j = 0; j < mCurrentBBoxes.size(); j++)
@@ -455,11 +462,15 @@ void Frame::CheckMovingKeyPoints(const cv::Mat &imGray, const std::vector<std::v
         }
     }
 
+    std::cout << "CMKP REMOVE" << endl;
     if (remove_dynamic_features)
     {
         std::vector<cv::KeyPoint> mvKeys_cp;
         cv::Mat mDescriptors_cp;
 
+        std::cout << "CMKP YOHO" << endl;
+        std::cout << mvKeys.size() << endl;
+        std::cout << KeysStatic.size() << endl;
         for (int l = 0; l < KeysStatic.size(); l++)
         {
             if (KeysStatic[l]) {
@@ -467,14 +478,19 @@ void Frame::CheckMovingKeyPoints(const cv::Mat &imGray, const std::vector<std::v
                 mDescriptors_cp.push_back(mDescriptors.row(l));
             }
         }
+
+        cout << "Kept " << mDescriptors_cp.size() << "/" << mDescriptors.size() << " descriptors" << endl;
         cout << "Kept " << mvKeys_cp.size() << "/" << mvKeys.size() << " keypoints" << endl;
 
         mvKeys = mvKeys_cp;
         mDescriptors = mDescriptors_cp.clone();
+
+        cout << "NEW " << mvKeys.size() << " & " << mDescriptors.size() << endl;
         KeysStatic = vector<bool>(mvKeys.size(), true);
         return;
     }
 
+    std::cout << "CMKP DEBUG" << endl;
     // AC: For debugging
     int dynamicKeypointsCounter = 0;
     for (int k = 0; k < KeysStatic.size(); k++)
@@ -762,8 +778,10 @@ void Frame::UndistortKeyPoints()
     }
 }
 
+// AC: Frame boundaries
 void Frame::ComputeImageBounds(const cv::Mat &imLeft)
 {
+    // AC: if distortion is present
     if (mDistCoef.at<float>(0) != 0.0)
     {
         cv::Mat mat(4, 2, CV_32F);
@@ -786,6 +804,7 @@ void Frame::ComputeImageBounds(const cv::Mat &imLeft)
         mnMinY = min(mat.at<float>(0, 1), mat.at<float>(1, 1));
         mnMaxY = max(mat.at<float>(2, 1), mat.at<float>(3, 1));
     }
+    // AC: for TUM RGBD no distortion!
     else
     {
         mnMinX = 0.0f;
