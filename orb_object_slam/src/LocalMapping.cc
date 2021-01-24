@@ -638,6 +638,7 @@ void LocalMapping::CreateNewMapPoints()
                             mlpRecentAddedMapPoints.push_back(pNewMP);
                             if (whether_dynamic_object && actually_use_obj_depth)
                             {
+                                // AC: How is it termined that a map point is dynamic??
                                 pNewMP->is_dynamic = true;
                                 pNewMP->SetWorldPos(x3D); // compute dynamic point to object pose
                             }
@@ -645,7 +646,7 @@ void LocalMapping::CreateNewMapPoints()
                         vector_counter++;
                     }
                     object_initialized_pts = nPoints;
-                    std::cout << "Online depth initilaized mappoints!!  " << nPoints << std::endl;
+                    std::cout << "Online depth initialized mappoints!!  " << nPoints << std::endl;
                 }
             }
         }

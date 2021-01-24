@@ -1372,6 +1372,7 @@ int ORBmatcher::SearchBySim3(KeyFrame *pKF1, KeyFrame *pKF2, vector<MapPoint *> 
 
 int ORBmatcher::SearchByProjection(Frame &CurrentFrame, const Frame &LastFrame, const float th, const bool bMono)
 {
+    std::cout << "SBP START!" << std::endl;
     int nmatches = 0;
 
     // Rotation Histogram (to check rotation consistency)
@@ -1380,52 +1381,75 @@ int ORBmatcher::SearchByProjection(Frame &CurrentFrame, const Frame &LastFrame, 
         rotHist[i].reserve(500);
     const float factor = 1.0f / HISTO_LENGTH;
 
+    // AC: rotation/translation matrix - camera to world
     const cv::Mat Rcw = CurrentFrame.mTcw.rowRange(0, 3).colRange(0, 3);
     const cv::Mat tcw = CurrentFrame.mTcw.rowRange(0, 3).col(3);
 
+    // AC: translation matrix - world to camera
     const cv::Mat twc = -Rcw.t() * tcw;
 
+    // AC: rotation/translation matrix - last frame camera to world
     const cv::Mat Rlw = LastFrame.mTcw.rowRange(0, 3).colRange(0, 3);
     const cv::Mat tlw = LastFrame.mTcw.rowRange(0, 3).col(3);
 
+    // AC: translation - last frame camera to camera
     const cv::Mat tlc = Rlw * twc + tlw;
 
+    // AC: mb is the stereo baseline in meters (not used in monocular)
+    // AC: probably not relevant for us...
     const bool bForward = tlc.at<float>(2) > CurrentFrame.mb && !bMono;
     const bool bBackward = -tlc.at<float>(2) > CurrentFrame.mb && !bMono;
 
     for (int i = 0; i < LastFrame.N; i++)
     {
+        // AC: MapPoints associated to keypoints, NULL pointer if no association. same length as keypoints
+        // AC: for monocular, need to triangulate with old frame
         MapPoint *pMP = LastFrame.mvpMapPoints[i];
 
         if (pMP)
         {
+            // AC: mvbOutlier is a flag to identify outlier associations
+            // AC: How are they doing that?
             if (!LastFrame.mvbOutlier[i])
             {
                 if (pMP->is_dynamic)
+                {
+                    std::cout << "mappoint is dynamic" << std::endl;
                     continue;
+                } 
                 // Project
+                // AC: Cuboid pose in world coordinates
                 cv::Mat x3Dw = pMP->GetWorldPos();
 
+                // AC: Cuboid pose in camera coordinates
                 cv::Mat x3Dc = Rcw * x3Dw + tcw;
 
+                // AC: extract x and y of cuboid in camera coordinate system
+                // AC: Q: invert z?? Why?
                 const float xc = x3Dc.at<float>(0);
                 const float yc = x3Dc.at<float>(1);
                 const float invzc = 1.0 / x3Dc.at<float>(2);
 
+                // AC: If cuboid is behind camera (only then invzc can be negative...)
                 if (invzc < 0)
                     continue;
 
+                // AC: 2D cuboid position in frame
                 float u = CurrentFrame.fx * xc * invzc + CurrentFrame.cx;
                 float v = CurrentFrame.fy * yc * invzc + CurrentFrame.cy;
 
+                // Check whether 2D cuboid position is in frame
                 if (u < CurrentFrame.mnMinX || u > CurrentFrame.mnMaxX)
                     continue;
                 if (v < CurrentFrame.mnMinY || v > CurrentFrame.mnMaxY)
                     continue;
 
+                // AC: octave (pyramid layer) from which the keypoint has been extracted...
+                // AC: What is an octave?
                 int nLastOctave = LastFrame.mvKeys[i].octave;
 
                 // Search in a window. Size depends on scale
+                // AC: Depending on the octave, the search window is larger or smaller
                 float radius = th * CurrentFrame.mvScaleFactors[nLastOctave];
 
                 vector<size_t> vIndices2;
@@ -1463,7 +1487,6 @@ int ORBmatcher::SearchByProjection(Frame &CurrentFrame, const Frame &LastFrame, 
                         if (er > radius)
                             continue;
                     }
-
                     const cv::Mat &d = CurrentFrame.mDescriptors.row(i2);
 
                     const int dist = DescriptorDistance(dMP, d);
@@ -1496,6 +1519,7 @@ int ORBmatcher::SearchByProjection(Frame &CurrentFrame, const Frame &LastFrame, 
         }
     }
 
+    std::cout << "SBP CONSISTENCY!" << std::endl;
     //Apply rotation consistency
     if (mbCheckOrientation)
     {
@@ -1518,6 +1542,7 @@ int ORBmatcher::SearchByProjection(Frame &CurrentFrame, const Frame &LastFrame, 
         }
     }
 
+    std::cout << "SBP END!" << std::endl;
     return nmatches;
 }
 
@@ -1588,6 +1613,7 @@ int ORBmatcher::SearchByTracking(Frame &CurrentFrame, const Frame &LastFrame, co
     lastobjpts.reserve(LastFrame.N);
     vector<int> lastptsinds;
     lastptsinds.reserve(LastFrame.N);
+    
     for (int i = 0; i < LastFrame.N; i++)
     {
         if (LastFrame.mvpMapPoints[i])          //last map point should exist, otherwise no need to track it anymore.
@@ -1602,6 +1628,7 @@ int ORBmatcher::SearchByTracking(Frame &CurrentFrame, const Frame &LastFrame, co
                 }
     }
 
+    std::cout << "SBP YEAAH!" << std::endl;
     if (lastobjpts.size() == 0)
         return 0;
 
@@ -1615,7 +1642,7 @@ int ORBmatcher::SearchByTracking(Frame &CurrentFrame, const Frame &LastFrame, co
         ROS_ERROR_STREAM("Matcher  feature tracking  zero image size");
         return 0;
     }
-
+    
     // KLT predict the tracked feature points. then find the closest ORB features to the predicted position.
     cv::calcOpticalFlowPyrLK(LastFrame.raw_img, CurrentFrame.raw_img, lastobjpts, currobjpts, status, err, cv::Size(21, 21), 3);
 
@@ -1739,7 +1766,7 @@ int ORBmatcher::SearchByProjection(Frame &CurrentFrame, KeyFrame *pKF, const set
     const float factor = 1.0f / HISTO_LENGTH;
 
     const vector<MapPoint *> vpMPs = pKF->GetMapPointMatches();
-
+    std::cout << "SBP WOOO!" << std::endl;
     for (size_t i = 0, iend = vpMPs.size(); i < iend; i++)
     {
         MapPoint *pMP = vpMPs[i];
@@ -1853,7 +1880,6 @@ int ORBmatcher::SearchByProjection(Frame &CurrentFrame, KeyFrame *pKF, const set
             }
         }
     }
-
     return nmatches;
 }
 

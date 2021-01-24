@@ -113,7 +113,7 @@ public:
     int limit_edge_corner = 5;
 
     // For semantic segmentation thread
-    void FilterOutMovingPoints(cv::Mat &imRGB, const cv::Mat &imGray, int frame_id);
+    void FilterOutMovingPoints(const cv::Mat &imGray);
     ObjDetectionHelper mCurrentObjDetection;
     std::vector<vector<float > > mCurrentBBoxes;
 
