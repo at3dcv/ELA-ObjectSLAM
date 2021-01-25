@@ -110,16 +110,12 @@ int main(int argc, char **argv)
         ROS_WARN_STREAM("Turn on global loop closing!!");
     // Create SLAM system. It initializes all system threads and gets ready to process frames.
 
-    cout << "1" << endl;
     ORB_SLAM2::System SLAM(argv[1], argv[2], ORB_SLAM2::System::MONOCULAR, enable_loop_closing);
 
-    cout << "2" << endl;
     ImageGrabber igb(&SLAM);
 
-    cout << "3" << endl;
     ros::Subscriber sub = nh.subscribe("/camera/image_raw", 10, &ImageGrabber::GrabImage, &igb);
 
-    cout << "4" << endl;
     ros::spin(); //block here till I ctrl-C
 
     // Stop all threads
