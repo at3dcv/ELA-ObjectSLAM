@@ -470,9 +470,12 @@ void Frame::CheckMovingKeyPoints(const cv::Mat &imGray, const std::vector<std::v
             }
         }
 
+        cout << "Kept " << mvKeys_cp.size() << "/" << mvKeys.size() << " keypoints" << endl;
+
         mvKeys = mvKeys_cp;
         mDescriptors = mDescriptors_cp.clone();
         KeysStatic = vector<bool>(mvKeys.size(), true);
+        keypoint_associate_objectID = vector<int>(mvKeys.size(), -1);
         return;
     }
 
