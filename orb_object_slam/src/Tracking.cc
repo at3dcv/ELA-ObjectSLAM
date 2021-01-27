@@ -1699,16 +1699,16 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 #ifdef at3dcv_leander
 		// LL: Added by Leander - read detected cuboids vertices
 		std::string data_inst_seg_vertices_dir = base_data_folder + "/mats/instance_segmentation_vertices/";
-		std::vector<Eigen::MatrixXd> raw_read_inst_segment_vert;
+		std::vector<Eigen::Matrix2Xd> raw_read_inst_segment_vert;
 		if (!read_inst_segment_vertices(data_inst_seg_vertices_dir + frame_index_c + "_obj_vertices.txt", raw_read_inst_segment_vert))
 			ROS_ERROR_STREAM("Cannot read the polygon vertices txt " << data_inst_seg_vertices_dir + frame_index_c + "_obj_vertices.txt");
 
 		// LL: Added by Leander: Filter the raw_read_inst_segment_vert and read_inst_segment_vert
-		std::vector<Eigen::MatrixXd> read_inst_segment_vert;
+		std::vector<Eigen::Matrix2Xd> read_inst_segment_vert;
 		std::vector<string> object_classes;
 		for (size_t i = 0; i < good_object_ids.size(); i++)
 		{
-			//read_inst_segment_vert.push_back(raw_read_inst_segment_vert[good_object_ids[i]]);
+			read_inst_segment_vert.push_back(raw_read_inst_segment_vert[good_object_ids[i]]);
 			object_classes.push_back(raw_object_classes[good_object_ids[i]]);
 		}
 #endif
@@ -2069,7 +2069,11 @@ void Tracking::AssociateCuboids(KeyFrame *pKF)
 			if (scene_unique_id == kitti) // object scale change back and forth
 			{
 				g2o::cuboid cubeglobalpose = candidateObject->GetWorldPos();
-				cubeglobalpose.setScale(Eigen::Vector3d(1.9420, 0.8143, 0.7631));
+				#ifndef at3dcv_leander
+				    cubeglobalpose.setScale(Eigen::Vector3d(1.9420, 0.8143, 0.7631));
+				#else
+				    cubeglobalpose.setScale(candidateObject->yolo_map_obj_scale);
+				#endif
 				candidateObject->SetWorldPos(cubeglobalpose);
 				candidateObject->pose_Twc_latestKF = cubeglobalpose;
 				candidateObject->pose_noopti = cubeglobalpose;
@@ -2092,8 +2096,11 @@ void Tracking::AssociateCuboids(KeyFrame *pKF)
 			if (scene_unique_id == kitti)
 			{
 				g2o::cuboid cubeglobalpose = candidateObject->GetWorldPos();
-				cubeglobalpose.setScale(Eigen::Vector3d(1.9420, 0.8143, 0.7631));
-
+				#ifndef at3dcv_leander
+				    cubeglobalpose.setScale(Eigen::Vector3d(1.9420, 0.8143, 0.7631));
+				#else
+				    cubeglobalpose.setScale(candidateObject->yolo_map_obj_scale);
+				#endif
 				largest_shared_objectlandmark->allDynamicPoses[refframe] = make_pair(cubeglobalpose, false);
 				largest_shared_objectlandmark->SetWorldPos(cubeglobalpose);
 				largest_shared_objectlandmark->pose_Twc_latestKF = cubeglobalpose; //if want to test without BA

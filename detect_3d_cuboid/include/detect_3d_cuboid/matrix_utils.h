@@ -7,6 +7,16 @@
 // LL: Added config header to pass macro that switches Leander's code off and on
 #include "detect_3d_cuboid/at3dcv_config.h"
 
+// LL: Added by Leander
+#ifdef at3dcv_leander_depth
+#include <boost/geometry.hpp>
+#include <boost/geometry/io/io.hpp>
+#include <boost/geometry/algorithms/area.hpp>
+#include <boost/geometry/geometries/point_xy.hpp>
+#include <boost/geometry/geometries/polygon.hpp>
+#endif
+// LL: Added by Leander
+
 template <class T>
 Eigen::Quaternion<T> zyx_euler_to_quat(const T &roll, const T &pitch, const T &yaw);
 
@@ -48,7 +58,16 @@ bool read_all_number_txt(const std::string txt_file_name, Eigen::Matrix<T, Eigen
 
 // LL: Added by Leander
 #ifdef at3dcv_leander
-bool read_inst_segment_vertices(const std::string txt_file_name, std::vector<Eigen::MatrixXd> &read_number_mat);
+bool read_inst_segment_vertices(const std::string txt_file_name, std::vector<Eigen::Matrix2Xd> &read_number_mat);
+# ifdef at3dcv_leander_depth
+typedef boost::geometry::model::polygon<boost::geometry::model::d2::point_xy<double>> polygon;
+typedef boost::geometry::model::d2::point_xy<double> point_type;
+void poly_eigen_to_string_rep(Eigen::MatrixXi convex_hull_vertices, std::string &poly_string_rep);
+void poly_vec_eigen_to_string_rep(std::vector<Eigen::MatrixXi> raw_all_obj2d_ss_vertix, std::vector<std::string> &geometries);
+int poly_string_to_boost_pooly(std::string poly_txt_rep, polygon &poly);
+double perc_poly2_covered_by_poly1(polygon poly1, polygon poly2);
+int visualize_polygons(std::string file_name, std::vector<polygon> polygons, std::vector<std::string> colors);
+# endif
 #endif
 // LL: Added by Leander
 

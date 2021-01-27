@@ -551,19 +551,31 @@ double box_edge_alignment_angle_error(const MatrixXd &all_vp_bound_edge_angles, 
 void fuse_normalize_scores_v2(const VectorXd &dist_error, const VectorXd &angle_error, VectorXd &combined_scores, std::vector<int> &final_keep_inds,
                               double weight_vp_angle, bool whether_normalize)
 {
+    // LL: Retrive number of 2D vanishing point proposal sets
     int raw_data_size = dist_error.rows();
     if (raw_data_size > 4)
     {
+
+        // LL: breaking_num is used to only consider the xth first/best proposels 
         int breaking_num = round(float(raw_data_size) / 3.0 * 2.0);
+        
+        // LL: Vector that for the indices of distance errors sorted by size
         std::vector<int> dist_sorted_inds(raw_data_size);
+
+        // LL: File the index vector with indices start at zero and going till raw_data_size-1: [0, 1, 2, ..., raw_data_size-1]
         std::iota(dist_sorted_inds.begin(), dist_sorted_inds.end(), 0);
+        
+        // LL: Duplicate the vector for the angle error
         std::vector<int> angle_sorted_inds = dist_sorted_inds;
 
+        // LL: Identify smallest `breaking_num` distance and angle errors and sort the index vectors accordingly 
         sort_indexes(dist_error, dist_sorted_inds, breaking_num);
         sort_indexes(angle_error, angle_sorted_inds, breaking_num);
 
+        // LL: Only keep the best and sorted `breaking_num` distance errors
         std::vector<int> dist_keep_inds = std::vector<int>(dist_sorted_inds.begin(), dist_sorted_inds.begin() + breaking_num - 1); // keep best 2/3
 
+        // LL: Only consider the angle error in case that their is a considerable difference between the errors in angle_error - "angle error has maximum. may already saturate at breaking pt."
         if (angle_error(angle_sorted_inds[breaking_num - 1]) > angle_error(angle_sorted_inds[breaking_num - 2]))
         {
             std::vector<int> angle_keep_inds = std::vector<int>(angle_sorted_inds.begin(), angle_sorted_inds.begin() + breaking_num - 1); // keep best 2/3
@@ -585,6 +597,7 @@ void fuse_normalize_scores_v2(const VectorXd &dist_error, const VectorXd &angle_
         std::iota(final_keep_inds.begin(), final_keep_inds.end(), 0);
     }
 
+
     int new_data_size = final_keep_inds.size();
     // find max/min of kept errors.
     double min_dist_error = 1e6;
@@ -593,6 +606,9 @@ void fuse_normalize_scores_v2(const VectorXd &dist_error, const VectorXd &angle_
     double max_angle_error = -1;
     VectorXd dist_kept(new_data_size);
     VectorXd angle_kept(new_data_size);
+
+    // LL: Identify the max and min distance and angle error, necessary for normalization
+    // LL: Save the smallest errors, which correspond to the indices in the two prior creates index vectors
     for (int i = 0; i < new_data_size; i++)
     {
         double temp_dist = dist_error(final_keep_inds[i]);
@@ -663,11 +679,21 @@ void getVanishingPoints(const Matrix3d &KinvR, double yaw_esti, Vector2d &vp_1, 
 }
 
 // box_corners_2d_float is 2*8    change to my object struct from 2D box corners.
-// AC: Keypoints here?!?!?!
+// AC: Keypoints here?!?!?
 void change_2d_corner_to_3d_object(const MatrixXd &box_corners_2d_float, const Vector3d &configs, const Vector4d &ground_plane_sensor,
                                    const Matrix4d &transToWolrd, const Matrix3d &invK, Eigen::Matrix<double, 3, 4> &projectionMatrix,
                                    cuboid &sample_obj)
 {
+    /* Args:
+    * 		box_corners_2d_float: Matrix of 2*8, the eight 2D corners for cuboid proposal calculated via the vanishing point approach
+    *		configs: Vector with config_id, vp_1_position, obj_yaw_esti
+    *		ground_plane_sensor: The ground plane in sensor coordinates: Vector4d ground_plane_sensor = cam_pose.transToWolrd.transpose() * ground_plane_world;
+    *		transToWolrd: Matrix for the transition to world coordinates: cam_pose.transToWolrd
+    *		invK: Inverse camera intrinsic matrix
+    *		projectionMatrix: Projects world coordinates to camera
+    *       sample_obj: An instance of the cuboid class that should be populated. 
+    */
+
     // LL: Derive the 3D vertices of the bottom of the cuboid proposels
     Matrix3Xd obj_gnd_pt_world_3d;
     plane_hits_3d(transToWolrd, invK, ground_plane_sensor, box_corners_2d_float.rightCols(4), obj_gnd_pt_world_3d); //% 3*n each column is a 3D point  floating point

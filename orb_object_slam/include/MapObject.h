@@ -103,9 +103,10 @@ public:
     Vector6d velocityTwist;                                    //general 6dof twist. for cars can assume no roll pitch   pose_Twc*exp(twist)=newpose
     g2o::SE3Quat getMovePose(KeyFrame *kf, double deltaT = 0); // deltaT relative to kf. works for short period where velocity doesn't change much
 
-    // LL: Added by Leander
+    // LL: Added by Leander 
+    // LL: Init with deafault value
     #ifdef at3dcv_leander
-    Eigen::Vector3d yolo_map_obj_scale;
+    Eigen::Vector3d yolo_map_obj_scale = Eigen::Vector3d(1.9420, 0.8143, 0.7631);
     #endif
     // LL: Added by Leander
     

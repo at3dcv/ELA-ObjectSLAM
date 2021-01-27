@@ -1581,7 +1581,6 @@ void Optimizer::LocalBACameraPointObjects(KeyFrame *pKF, bool *pbStopFlag, Map *
     }
 }
 
-// similar to localBA, add objects
 void Optimizer::LocalBACameraPointObjectsDynamic(KeyFrame *pKF, bool *pbStopFlag, Map *pMap, bool fixCamera, bool fixPoint)
 {
     // Local KeyFrames to optimize: First Breath Search from Current Keyframe
@@ -1769,7 +1768,10 @@ void Optimizer::LocalBACameraPointObjectsDynamic(KeyFrame *pKF, bool *pbStopFlag
 
     // Set MapObject vertices
     long int maxObjectid = 0;
-    Eigen::Vector3d objfixscale = Eigen::Vector3d(1.9420, 0.8143, 0.7631);
+    // LL: Removed by Leander
+    // Fixed scale was set here. Pushed it down in to the loop
+    // LL: Removed by Leander
+
     long int maxIdTillObject = ++maxKFid;
     for (vector<MapObject *>::iterator lit = lLocalMapObjects.begin(), lend = lLocalMapObjects.end(); lit != lend; lit++)
     {
@@ -1801,7 +1803,15 @@ void Optimizer::LocalBACameraPointObjectsDynamic(KeyFrame *pKF, bool *pbStopFlag
 
 #ifdef ObjectFixScale
             if (scene_unique_id == kitti)
-                vObject->fixedscale = Eigen::Vector3d(1.9420, 0.8143, 0.7631); // for kitti object, scale may don't need to set...
+            {
+               // LL: Added by Leander
+            #ifndef at3dcv_leander
+               vObject->fixedscale = Eigen::Vector3d(1.9420, 0.8143, 0.7631);
+            #else
+               vObject->fixedscale = pMObject->yolo_map_obj_scale;
+            #endif
+               // LL: Added by Leander
+            }
             else
                 ROS_ERROR_STREAM("Please see cuboid scale!!!, otherwise use VertexCuboid()");
 
@@ -1997,6 +2007,13 @@ void Optimizer::LocalBACameraPointObjectsDynamic(KeyFrame *pKF, bool *pbStopFlag
             Eigen::Matrix3d info;
             info.setIdentity();
             e2->setInformation(info * 10);
+            // LL: Added by Leander
+            #ifndef at3dcv_leander
+                Eigen::Vector3d objfixscale = Eigen::Vector3d(1.9420, 0.8143, 0.7631);
+            #else
+                Eigen::Vector3d objfixscale = belongedobj->yolo_map_obj_scale;
+            #endif
+            // LL: Added by Leander
             e2->objectscale = objfixscale;
             e2->max_outside_margin_ratio = 2;
             optimizer.addEdge(e2);
@@ -2158,7 +2175,13 @@ void Optimizer::LocalBACameraPointObjectsDynamic(KeyFrame *pKF, bool *pbStopFlag
                     if (scene_unique_id == kitti)
                     {
                         e->max_outside_margin_ratio = 2;
-                        e->prior_object_half_size = Eigen::Vector3d(1.9420, 0.8143, 0.7631);
+                        // LL: Added by Leander
+                        #ifndef at3dcv_leander
+                            e->prior_object_half_size = Eigen::Vector3d(1.9420, 0.8143, 0.7631);
+                        #else
+                            e->prior_object_half_size = pMO->yolo_map_obj_scale;
+                        #endif
+                        // LL: Added by Leander
                     }
                     optimizer.addEdge(e);
                 }
@@ -2622,6 +2645,7 @@ void Optimizer::LocalBACameraPointObjectsDynamic(KeyFrame *pKF, bool *pbStopFlag
         }
 }
 
+// similar to localBA, add objects
 void Optimizer::OptimizeEssentialGraph(Map *pMap, KeyFrame *pLoopKF, KeyFrame *pCurKF,
                                        const LoopClosing::KeyFrameAndPose &NonCorrectedSim3,
                                        const LoopClosing::KeyFrameAndPose &CorrectedSim3,

@@ -36,13 +36,13 @@
    <param name="remove_dynamic_features" value="false" />
    <param name="use_dynamic_klt_features" value="false" />	# not orb features
    <param name="object_velocity_BA_weight" value="0.5" />
-
    <param name="use_truth_trackid" value="false" />   # use offline tracking id  if false, need to initialize feature point, tracking, obj depth init.
    <param name="triangulate_dynamic_pts" value="false" />
    <param name="ba_dyna_pt_obj_cam" value="true" />  # need depth init
    <param name="ba_dyna_obj_velo" value="true" />
    <param name="ba_dyna_obj_cam" value="true" />
    
+
    # for depth initialization
    <param name="mono_firstframe_truth_depth_init" value="false" />
    <param name="mono_firstframe_Obj_depth_init" value="false" />

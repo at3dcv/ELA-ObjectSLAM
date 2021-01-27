@@ -243,7 +243,7 @@ template bool read_all_number_txt(const std::string, MatrixXi &);
 
 // LL: Added by Leander 
 #ifdef at3dcv_leander
-bool read_inst_segment_vertices(const std::string txt_file_name, std::vector<Eigen::MatrixXd> &read_inst_segment_vert)
+bool read_inst_segment_vertices(const std::string txt_file_name, std::vector<Eigen::Matrix2Xd> &read_inst_segment_vert)
 {
     // LL: Check if the file can be read
     if (!std::ifstream(txt_file_name))
@@ -268,7 +268,7 @@ bool read_inst_segment_vertices(const std::string txt_file_name, std::vector<Eig
     
         // LL: Matrix to hold the vertices of the polygon from the current x and y row  
         // LL: Carful: This configuration expects a polygon to have a maximum of a 100 vertices
-        Eigen::MatrixXd single_object_is_vertices(2,100);
+        Eigen::Matrix2Xd single_object_is_vertices(2,100);
     
         // LL: Variable to which we pass the x and the y value of the current and the next row
         double t1;
@@ -300,6 +300,99 @@ bool read_inst_segment_vertices(const std::string txt_file_name, std::vector<Eig
     filetxt.close();  
     return true;
 }
+
+# ifdef at3dcv_leander_depth
+void poly_eigen_to_string_rep(Eigen::MatrixXi convex_hull_vertices, std::string &poly_string_rep){
+    // LL: Convert polygon to the string format required by boost/geometry.
+    // LL: Important: First and last point allways have to be the same to get a correct result.
+    // LL: Important: There should not be any taps before and after each ','.  
+    poly_string_rep = "POLYGON((";
+    for(int j = 0 ; j != convex_hull_vertices.cols(); j++)
+    {
+        poly_string_rep = poly_string_rep + std::to_string(convex_hull_vertices(0,j)) + " " + std::to_string(convex_hull_vertices(1,j)) + ","; 
+    }
+    // LL: Add the first vertix to the end to ensure a closed polygon
+    poly_string_rep = poly_string_rep + std::to_string(convex_hull_vertices(0,0)) + " " + std::to_string(convex_hull_vertices(1,0)) + "))";
+}
+
+void poly_vec_eigen_to_string_rep(std::vector<Eigen::MatrixXi> raw_all_obj2d_ss_vertix, std::vector<std::string> &geometries){
+    // LL: Convert all polygons from current file to the string format required by boost/geometry and write them to geometries
+    // LL: Important: First and last point allways have to be the same to get a correct result.
+    // LL: Important: There should not be any taps before and after every ',' 
+    for(int i = 0; i != raw_all_obj2d_ss_vertix.size(); i++) 
+    {   
+        std::string geo = "POLYGON((";
+        for(int j = 0 ; j != raw_all_obj2d_ss_vertix[i].cols(); j++)
+        {
+            geo = geo + std::to_string(raw_all_obj2d_ss_vertix[i](0,j)) + " " + std::to_string(raw_all_obj2d_ss_vertix[i](1,j)) + ",";
+        }
+        // LL: Add the first vertix to the end to ensure a closed polygon
+        geo = geo + std::to_string(raw_all_obj2d_ss_vertix[i](0,0)) + " " + std::to_string(raw_all_obj2d_ss_vertix[i](1,0)) + "))";
+        geometries.push_back(geo);
+    }
+}
+
+int poly_string_to_boost_pooly(std::string poly_txt_rep, polygon &poly){
+    
+    // LL: Convert txt representation to boost polygon
+    std::string reason;
+    boost::geometry::read<boost::geometry::format_wkt>(poly, poly_txt_rep);
+
+    // LL: Ensure that the geomtry is valid (e.g. correct the orientation)
+    if (!boost::geometry::is_valid(poly))
+    {
+        boost::geometry::correct(poly);
+        if (!boost::geometry::is_valid(poly, reason))
+        {   
+            std::cout << "The geometry is not a valid geometry for the following reason: " + reason << std::endl;
+            return 1;
+        }
+    }
+    return 0;
+}
+
+double perc_poly2_covered_by_poly1(polygon poly1, polygon poly2)
+{
+    // LL: Double-ended queue - an indexed sequence container that allows fast insertion and deletion at both
+    std::deque<polygon> output;
+    // LL: Given two geometries identify their intersecting geometries a write them to output
+    boost::geometry::intersection(poly1, poly2, output);
+    // LL: Sum the area of all intersecting geomtries 
+    double area = 0;
+    for (auto& p : output)
+        area += boost::geometry::area(p);
+
+    return (area/boost::geometry::area(poly2));
+}
+
+
+int visualize_polygons(std::string file_name, std::vector<polygon> polygons, std::vector<std::string> colors)
+{
+
+    if(polygons.size() != colors.size())
+        {
+            std::cout << "The vector polygons and colors must be of same length.";
+            return 1;
+        }
+    // LL: Map the two polygons to a svg file
+    // Declare a stream and an SVG mapper
+    std::ofstream svg(file_name + ".svg");
+    boost::geometry::svg_mapper<point_type> mapper(svg, 400, 400);
+    // Add geometries such that all these geometries fit on the map
+    for (int i = 0; i != polygons.size(); ++i)
+        {
+            mapper.add(polygons[i]);
+        }
+
+    // Draw the geometries on the SVG map, using a specific SVG style
+    for (int i = 0; i != polygons.size(); ++i)
+        {
+            mapper.map(polygons[i], "fill-opacity:0.3;fill:"+colors[i]+";stroke:rgb" +colors[i]+ ";stroke-width:2", 5);
+        }
+
+    return 0;
+}
+# endif
 // LL: Added by Leander 
 #endif
 
