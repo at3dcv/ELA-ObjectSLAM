@@ -13,7 +13,7 @@
 9.  `source /opt/ros/kinetic/setup.bash`
 10. `catkin_make -j1`
 11. `source devel/setup.bash`
-12. `roslaunch object_slam object_slam_example.launch > roslaunch.log`
+12. `roslaunch orb_object_slam object_slam_example.launch > roslaunch.log`
 
 ## Start ROS
 1. download the `ORBvoc.txt` file from the original ORB Slam 2 Vocabulary folder or from our now updated master branch.

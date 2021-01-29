@@ -365,6 +365,7 @@ cv::Mat Tracking::GrabImageStereo(const cv::Mat &imRectLeft, const cv::Mat &imRe
 	return mCurrentFrame.mTcw.clone();
 }
 
+#ifdef at3dcv_andy
 cv::Mat Tracking::GrabImageRGBD(const cv::Mat &imRGB, const cv::Mat &imD, const double &timestamp, int msg_seq_id)
 {
 	mImGray = imRGB;
@@ -428,6 +429,50 @@ cv::Mat Tracking::GrabImageRGBD(const cv::Mat &imRGB, const cv::Mat &imD, const 
 
 	return mCurrentFrame.mTcw.clone();
 }
+#else
+cv::Mat Tracking::GrabImageRGBD(const cv::Mat &imRGB, const cv::Mat &imD, const double &timestamp)
+{
+	mImGray = imRGB;
+	cv::Mat imDepth = imD;
+
+	if (mImGray.channels() == 3)
+	{
+		if (mbRGB)
+			cvtColor(mImGray, mImGray, CV_RGB2GRAY);
+		else
+			cvtColor(mImGray, mImGray, CV_BGR2GRAY);
+	}
+	else if (mImGray.channels() == 4)
+	{
+		if (mbRGB)
+			cvtColor(mImGray, mImGray, CV_RGBA2GRAY);
+		else
+			cvtColor(mImGray, mImGray, CV_BGRA2GRAY);
+	}
+
+	if (mDepthMapFactor != 1 || imDepth.type() != CV_32F)
+		;
+	imDepth.convertTo(imDepth, CV_32F, mDepthMapFactor);
+
+	mCurrentFrame = Frame(mImGray, imDepth, timestamp, mpORBextractorLeft, mpORBVocabulary, mK, mDistCoef, mbf, mThDepth);
+
+	if (mCurrentFrame.mnId == 0)
+	{
+		mpMap->img_height = mImGray.rows;
+		mpMap->img_width = mImGray.cols;
+	}
+	
+	if (whether_detect_object)
+	{
+		mCurrentFrame.raw_img = mImGray; // I clone in Keyframe.cc  don't need to clone here.
+		mCurrentFrame.raw_depth = imDepth;
+	}
+
+	Track();
+
+	return mCurrentFrame.mTcw.clone();
+}
+#endif
 
 cv::Mat Tracking::GrabImageMonocular(const cv::Mat &im, const double &timestamp, int msg_seq_id)
 {
@@ -995,6 +1040,7 @@ void Tracking::MonocularInitialization()
 		// call important map initializer here. either homograpy or fundamental
 		if (mpInitializer->Initialize(mCurrentFrame, mvIniMatches, Rcw, tcw, mvIniP3D, vbTriangulated))
 		{
+			if (enable_debugging_comments) std::cout << "Tracking::MonocularInitialization:Initialize success" << std::endl;
 			for (size_t i = 0, iend = mvIniMatches.size(); i < iend; i++)
 			{
 				if (mvIniMatches[i] >= 0 && !vbTriangulated[i])

@@ -174,6 +174,7 @@ cv::Mat System::TrackStereo(const cv::Mat &imLeft, const cv::Mat &imRight, const
     return mpTracker->GrabImageStereo(imLeft, imRight, timestamp);
 }
 
+#ifdef at3dcv_andy
 cv::Mat System::TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const double &timestamp, int msg_seq_id)
 {
 
@@ -215,6 +216,49 @@ cv::Mat System::TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const doub
 
     return mpTracker->GrabImageRGBD(im, depthmap, timestamp, msg_seq_id);
 }
+#else
+cv::Mat System::TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const double &timestamp)
+{
+
+    // AC: Deleted system check mSensor != RGBD...
+
+    // Check mode change
+    {
+        unique_lock<mutex> lock(mMutexMode);
+        if (mbActivateLocalizationMode)
+        {
+            mpLocalMapper->RequestStop();
+
+            // Wait until Local Mapping has effectively stopped
+            while (!mpLocalMapper->isStopped())
+            {
+                usleep(1000);
+            }
+
+            mpTracker->InformOnlyTracking(true);
+            mbActivateLocalizationMode = false;
+        }
+        if (mbDeactivateLocalizationMode)
+        {
+            mpTracker->InformOnlyTracking(false);
+            mpLocalMapper->Release();
+            mbDeactivateLocalizationMode = false;
+        }
+    }
+
+    // Check reset
+    {
+        unique_lock<mutex> lock(mMutexReset);
+        if (mbReset)
+        {
+            mpTracker->Reset();
+            mbReset = false;
+        }
+    }
+
+    return mpTracker->GrabImageRGBD(im, depthmap, timestamp);
+}
+#endif
 
 cv::Mat System::TrackMonocular(const cv::Mat &im, const double &timestamp, int msg_seq_id)
 {

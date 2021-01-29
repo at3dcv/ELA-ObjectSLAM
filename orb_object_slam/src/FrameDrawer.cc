@@ -300,7 +300,6 @@ void FrameDrawer::Update(Tracking *pTracker)
         box_corners_2ds.clear();
         edge_markers_2ds.clear();
         point_Object_AssoID.clear();
-        
         if (pTracker->mCurrentFrame.mpReferenceKF != NULL)
         {
             if ((pTracker->mCurrentFrame.mnId - pTracker->mCurrentFrame.mpReferenceKF->mnFrameId) < 1) // if current frame is a keyframe
