@@ -74,9 +74,15 @@ int main(int argc, char **argv)
     nh.param<bool>("whether_read_offline_cuboidtxt", ORB_SLAM2::whether_read_offline_cuboidtxt, false);
     nh.param<bool>("associate_point_with_object", ORB_SLAM2::associate_point_with_object, false);
 
+    nh.param<bool>("whether_dynamic_object", ORB_SLAM2::whether_dynamic_object, false);
+    nh.param<bool>("remove_dynamic_features", ORB_SLAM2::remove_dynamic_features, false);
+
     nh.param<bool>("mono_firstframe_truth_depth_init", ORB_SLAM2::mono_firstframe_truth_depth_init, false);
     nh.param<bool>("mono_firstframe_Obj_depth_init", ORB_SLAM2::mono_firstframe_Obj_depth_init, false);
     nh.param<bool>("mono_allframe_Obj_depth_init", ORB_SLAM2::mono_allframe_Obj_depth_init, false);
+
+    nh.param<bool>("enable_ground_height_scale", ORB_SLAM2::enable_ground_height_scale, false);
+    nh.param<bool>("use_dynamic_klt_features", ORB_SLAM2::use_dynamic_klt_features, false);
 
     nh.param<bool>("bundle_object_opti", ORB_SLAM2::bundle_object_opti, false);
     nh.param<double>("camera_object_BA_weight", ORB_SLAM2::camera_object_BA_weight, 1.0);
@@ -85,9 +91,11 @@ int main(int argc, char **argv)
     nh.param<bool>("draw_map_truth_paths", ORB_SLAM2::draw_map_truth_paths, true);
     nh.param<bool>("draw_nonlocal_mappoint", ORB_SLAM2::draw_nonlocal_mappoint, true);
 
-    nh.param<bool>("enable_ground_height_scale", ORB_SLAM2::enable_ground_height_scale, false);
+    // temp debug
+    nh.param<bool>("ba_dyna_pt_obj_cam", ORB_SLAM2::ba_dyna_pt_obj_cam, false);
+    nh.param<bool>("ba_dyna_obj_velo", ORB_SLAM2::ba_dyna_obj_velo, true);
+    nh.param<bool>("ba_dyna_obj_cam", ORB_SLAM2::ba_dyna_obj_cam, true);
 
-    nh.param<bool>("parallel_mapping", ORB_SLAM2::parallel_mapping, true);
     std::string scene_name;
     ros::param::get("/scene_name", scene_name);
     ros::param::get("/base_data_folder", ORB_SLAM2::base_data_folder);
@@ -95,29 +103,37 @@ int main(int argc, char **argv)
     if (scene_name.compare(std::string("kitti")) == 0)
         ORB_SLAM2::scene_unique_id = ORB_SLAM2::kitti;
 
+    cout << "Base_data_folder:  " << ORB_SLAM2::base_data_folder << endl;
+
+    std::string packagePath = ros::package::getPath("orb_object_slam");
+
     if (!enable_loop_closing)
         ROS_WARN_STREAM("Turn off global loop closing!!");
+    else
+        ROS_WARN_STREAM("Turn on global loop closing!!");
     // Create SLAM system. It initializes all system threads and gets ready to process frames.
-    ORB_SLAM2::System SLAM(argv[1], argv[2], ORB_SLAM2::System::RGBD, enable_loop_closing);
+    // AC: Set System to MONOCULAR as we don't leverage the depth data
+    ORB_SLAM2::System SLAM(argv[1], argv[2], ORB_SLAM2::System::MONOCULAR, enable_loop_closing);
 
     ImageGrabber igb(&SLAM);
 
-    message_filters::Subscriber<sensor_msgs::Image> rgb_sub(nh, "/camera/rgb/image_raw", 1);
+    message_filters::Subscriber<sensor_msgs::Image> rgb_sub(nh, "/camera/image_raw", 1);
     message_filters::Subscriber<sensor_msgs::Image> depth_sub(nh, "/camera/depth_registered/image_raw", 1);
     typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::Image> sync_pol;
     message_filters::Synchronizer<sync_pol> sync(sync_pol(10), rgb_sub, depth_sub);
     sync.registerCallback(boost::bind(&ImageGrabber::GrabRGBD, &igb, _1, _2));
 
-    ros::spin();
+    ros::spin(); //block here till I ctrl-C
 
     // Stop all threads
     SLAM.Shutdown();
 
     // Save camera trajectory
-    std::string packagePath = ros::package::getPath("orb_slam2");
     //     SLAM.SaveKeyFrameTrajectoryTUM(packagePath+"/Outputs/KeyFrameTrajectory.txt");
     // Save camera trajectory
     SLAM.SaveTrajectoryTUM(packagePath + "/Outputs/AllFrameTrajectory.txt");
+    if (ORB_SLAM2::scene_unique_id == ORB_SLAM2::kitti)
+        SLAM.SaveTrajectoryKITTI(packagePath + "/Outputs/AllFrameTrajectoryKITTI.txt");
 
     ca::Profiler::print_aggregated(std::cout);
     ros::shutdown();
@@ -157,5 +173,5 @@ void ImageGrabber::GrabRGBD(const sensor_msgs::ImageConstPtr &msgRGB, const sens
         return;
     }
 
-    cv::Mat pose = mpSLAM->TrackRGBD(cv_ptrRGB->image, depth_mat, cv_ptrRGB->header.stamp.toSec());
+    cv::Mat pose = mpSLAM->TrackRGBD(cv_ptrRGB->image, depth_mat, cv_ptrRGB->header.stamp.toSec(), msgRGB->header.seq);
 }

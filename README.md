@@ -11,9 +11,9 @@
 7. In the docker image open Terminal
 8. cd cube_slam_ws
 9.  `source /opt/ros/kinetic/setup.bash`
-10. catkin_make -j1
-11. source devel/setup.bash
-12. roslaunch object_slam object_slam_example.launch > roslaunch.log
+10. `catkin_make -j1`
+11. `source devel/setup.bash`
+12. `roslaunch orb_object_slam object_slam_example.launch > roslaunch.log`
 
 ## Start ROS
 1. download the `ORBvoc.txt` file from the original ORB Slam 2 Vocabulary folder or from our now updated master branch.
@@ -23,10 +23,8 @@
 5. Edit the path of the parameter `base_data_folder` with in the mono.launch file to point to the `seq7` folder
 6. Change `ORBvoc.bin` to `ORBvoc.txt` with in the mono.launch file (fifth line).
 7. Open two terminals and in all three source the setup fill: `source <path_to_cu  be_slam>/devel/setup.bash`
-8. Terminal one run: roslaunch orb_object_slam mono.launch and wait for two windows to pop up
-9. Terminal two run: rosbag play /mnt/datasets/freiburg3_walking_xyz.bag /camera/rgb/image_color:=/kitti/left/image_raw --clock -r 0.5
-
-
+8. Terminal one run: `roslaunch orb_object_slam xxxx.launch` and wait for two windows to pop up
+9. Terminal two run: `rosbag play /mnt/datasets/freiburg3_walking_xyz/rgbd_dataset_freiburg3_walking_xyz.bag --clock -r 0.5 `
 
 #### Architecture for 3D dense map reconstruction - brainstorming session 05.11.2020
 

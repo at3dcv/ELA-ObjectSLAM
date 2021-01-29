@@ -365,6 +365,71 @@ cv::Mat Tracking::GrabImageStereo(const cv::Mat &imRectLeft, const cv::Mat &imRe
 	return mCurrentFrame.mTcw.clone();
 }
 
+#ifdef at3dcv_andy
+cv::Mat Tracking::GrabImageRGBD(const cv::Mat &imRGB, const cv::Mat &imD, const double &timestamp, int msg_seq_id)
+{
+	mImGray = imRGB;
+	cv::Mat imDepth = imD;
+
+	if (mImGray.channels() == 3)
+	{
+		if (mbRGB)
+			cvtColor(mImGray, mImGray, CV_RGB2GRAY);
+		else
+			cvtColor(mImGray, mImGray, CV_BGR2GRAY);
+	}
+	else if (mImGray.channels() == 4)
+	{
+		if (mbRGB)
+			cvtColor(mImGray, mImGray, CV_RGBA2GRAY);
+		else
+			cvtColor(mImGray, mImGray, CV_BGRA2GRAY);
+	}
+
+	if (mDepthMapFactor != 1 || imDepth.type() != CV_32F)
+		;
+	imDepth.convertTo(imDepth, CV_32F, mDepthMapFactor);
+
+	mCurrentFrame = Frame(mImGray, imDepth, timestamp, mpORBextractorLeft, mpORBVocabulary, mK, mDistCoef, mbf, mThDepth);
+
+	// AC: copied from GrabImageMonocular
+	if (whether_dynamic_object)
+	{
+		object_detection_frame_id = object_detection_frame_id + 1;
+		mCurrentFrame.FilterOutMovingPoints(mImRGB, mImGray, object_detection_frame_id);
+	}
+	
+	// AC: Current frame id
+	if (mCurrentFrame.mnId == 0)
+		start_msg_seq_id = msg_seq_id;
+	// if read offline txts, frame id must match!!!
+	if (all_offline_object_cubes.size() > 0)
+	{
+		if ((mCurrentFrame.mnId > 0) && (msg_seq_id > 0))					// if msg_seq_id=0 may because the value is not set.
+			if (int(mCurrentFrame.mnId) != (msg_seq_id - start_msg_seq_id)) // can use frame->IdinRawImages = msg_seq_id-start_msg_seq_id  need to change lots of stuff.
+			{
+				ROS_ERROR_STREAM("Different frame ID, might due to lost frame from bag.   " << mCurrentFrame.mnId << "  " << msg_seq_id - start_msg_seq_id);
+				exit(0);
+			}
+	}
+
+	if (mCurrentFrame.mnId == 0)
+	{
+		mpMap->img_height = mImGray.rows;
+		mpMap->img_width = mImGray.cols;
+	}
+	
+	if (whether_detect_object)
+	{
+		mCurrentFrame.raw_img = mImGray; // I clone in Keyframe.cc  don't need to clone here.
+		mCurrentFrame.raw_depth = imDepth;
+	}
+
+	Track();
+
+	return mCurrentFrame.mTcw.clone();
+}
+#else
 cv::Mat Tracking::GrabImageRGBD(const cv::Mat &imRGB, const cv::Mat &imD, const double &timestamp)
 {
 	mImGray = imRGB;
@@ -391,21 +456,23 @@ cv::Mat Tracking::GrabImageRGBD(const cv::Mat &imRGB, const cv::Mat &imD, const 
 
 	mCurrentFrame = Frame(mImGray, imDepth, timestamp, mpORBextractorLeft, mpORBVocabulary, mK, mDistCoef, mbf, mThDepth);
 
-	// AC: whether_detect_object flag is set in mono.launch
-	// AC: I guess here the image is being copied in an array to be used for the object detectiong
-	if (whether_detect_object)
-		mCurrentFrame.raw_img = mImGray.clone();
-
 	if (mCurrentFrame.mnId == 0)
 	{
 		mpMap->img_height = mImGray.rows;
 		mpMap->img_width = mImGray.cols;
+	}
+	
+	if (whether_detect_object)
+	{
+		mCurrentFrame.raw_img = mImGray; // I clone in Keyframe.cc  don't need to clone here.
+		mCurrentFrame.raw_depth = imDepth;
 	}
 
 	Track();
 
 	return mCurrentFrame.mTcw.clone();
 }
+#endif
 
 cv::Mat Tracking::GrabImageMonocular(const cv::Mat &im, const double &timestamp, int msg_seq_id)
 {
@@ -506,30 +573,8 @@ void Tracking::Track()
 
 	if (mState == NOT_INITIALIZED) // initialization
 	{
-		if (mSensor == System::STEREO || mSensor == System::RGBD)
-			StereoInitialization(); // for stereo or RGBD, the first frame is used to initialize the keyframe and map
-		else
-		{
-			bool special_initialization = false;
-			if (mCurrentFrame.mnId == 0)
-			{
-				if (mono_firstframe_truth_depth_init)
-				{
-					special_initialization = true;
-					cout << "3" << endl;
-					StereoInitialization(); // if first frame has truth depth, we can initialize simiar to stereo/rgbd. create keyframe for it.
-				}
-				else if (mono_firstframe_Obj_depth_init)
-				{
-					special_initialization = true;
-					// similar to stereo initialization, but directly create map point. don't create stereo right coordinate
-					// have less effect on g2o optimization.  because depth initialization is not accurate
-					MonoObjDepthInitialization();
-				}
-			}
-			if (!special_initialization)
-				MonocularInitialization(); // usually for monocular, need to wait for several frames, with enough parallax
-		}
+		// AC: skip all other initializations as we only want the monocular initialization!
+		MonocularInitialization();
 
 		mpFrameDrawer->Update(this);
 
@@ -995,6 +1040,7 @@ void Tracking::MonocularInitialization()
 		// call important map initializer here. either homograpy or fundamental
 		if (mpInitializer->Initialize(mCurrentFrame, mvIniMatches, Rcw, tcw, mvIniP3D, vbTriangulated))
 		{
+			if (enable_debugging_comments) std::cout << "Tracking::MonocularInitialization:Initialize success" << std::endl;
 			for (size_t i = 0, iend = mvIniMatches.size(); i < iend; i++)
 			{
 				if (mvIniMatches[i] >= 0 && !vbTriangulated[i])

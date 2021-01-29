@@ -71,7 +71,7 @@ public:
 
     // Preprocess the input and call Track(). Extract features and performs stereo matching.
     cv::Mat GrabImageStereo(const cv::Mat &imRectLeft, const cv::Mat &imRectRight, const double &timestamp);
-    cv::Mat GrabImageRGBD(const cv::Mat &imRGB, const cv::Mat &imD, const double &timestamp);
+    cv::Mat GrabImageRGBD(const cv::Mat &imRGB, const cv::Mat &imD, const double &timestamp, int msg_seq_id);
     cv::Mat GrabImageMonocular(const cv::Mat &im, const double &timestamp, int msg_seq_id = -1);
 
     void SetLocalMapper(LocalMapping *pLocalMapper);
@@ -112,6 +112,7 @@ public:
     Eigen::MatrixXd kitti_sequence_img_to_object_detect_ind;
     std::string kitti_raw_sequence_name;
 
+    bool enable_debugging_comments;
     bool whether_save_online_detected_cuboids;
     bool whether_save_final_optimized_cuboids;
     std::ofstream save_online_detected_cuboids;

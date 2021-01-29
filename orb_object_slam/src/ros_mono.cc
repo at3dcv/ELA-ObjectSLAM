@@ -138,6 +138,7 @@ int main(int argc, char **argv)
 
 void ImageGrabber::GrabImage(const sensor_msgs::ImageConstPtr &msg)
 {
+    cout << "2" << endl;
     // Copy the ros image message to cv::Mat.
     cv_bridge::CvImageConstPtr cv_ptr;
     try

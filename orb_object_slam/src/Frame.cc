@@ -86,7 +86,10 @@ Frame::Frame(const Frame &frame)
         SetPose(frame.mTcw);
 
     if (whether_detect_object)
+    {
         raw_img = frame.raw_img.clone();
+        raw_depth = frame.raw_depth.clone();
+    }
     if (whether_dynamic_object)
     {
         KeysStatic = frame.KeysStatic;
@@ -176,6 +179,17 @@ Frame::Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeSt
 
     // ORB extraction
     ExtractORB(0, imGray);
+
+    // AC: Copied from DS-SLAM
+    if(imGrayPre.data)
+    {
+        DetectMovingKeypoints(imGray);
+        imGrayPre = imGray.clone();
+    }
+    else
+    {
+        imGrayPre = imGray.clone();
+    }
 
     N = mvKeys.size();
 
@@ -292,7 +306,7 @@ void Frame::FilterOutMovingPoints(cv::Mat &imRGB, const cv::Mat &imGray, int fra
     mCurrentObjDetection = ObjDetectionHelper();
     char frame_index_c[256];
     sprintf(frame_index_c, "%04d", (int)frame_id); // format into 4 digit
-    mCurrentObjDetection.ReadFile(base_data_folder + "results/" + frame_index_c + "_mrcnn.txt");
+    mCurrentObjDetection.ReadFile(base_data_folder + "mats/filter_match_2d_boxes_txts/" + frame_index_c + "_mrcnn.txt");
     mCurrentBBoxes = mCurrentObjDetection.GetBBoxesWithPerson();
 
     if (!T_M.empty() && mCurrentBBoxes.size() > 0) {
