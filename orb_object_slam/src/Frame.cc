@@ -260,10 +260,17 @@ Frame::Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor *extra
     if(imGrayPre.data)
     {
         DetectMovingKeypoints(imGray);
+<<<<<<< HEAD
         if (whether_dynamic_object) {
             FilterOutMovingPoints(imGray);
             ROS_DEBUG_STREAM("Frame::Frame FilterOutMovingPoints END " << N);
         }
+||||||| cfedd4d
+=======
+        if (whether_dynamic_object) {
+            FilterOutMovingPoints(imGray);
+        }
+>>>>>>> 9bea82533bdb633fee92108e617c4d8d425f2581
         imGrayPre = imGray.clone();
     }
     else
@@ -332,7 +339,12 @@ void Frame::FilterOutMovingPoints(const cv::Mat &imGray)
 
     if (!T_M.empty() && mCurrentBBoxes.size() > 0)
         CheckMovingKeyPoints(imGray, mCurrentBBoxes);
+<<<<<<< HEAD
     ROS_DEBUG_STREAM("Frame::FilterOutMovingPoints END");
+||||||| cfedd4d
+    }
+=======
+>>>>>>> 9bea82533bdb633fee92108e617c4d8d425f2581
 }
 
 // AC: The generated keypoints are ONLY used to determine whether a frame has a moving object or not!
