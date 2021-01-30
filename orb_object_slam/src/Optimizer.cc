@@ -1584,6 +1584,7 @@ void Optimizer::LocalBACameraPointObjects(KeyFrame *pKF, bool *pbStopFlag, Map *
 // similar to localBA, add objects
 void Optimizer::LocalBACameraPointObjectsDynamic(KeyFrame *pKF, bool *pbStopFlag, Map *pMap, bool fixCamera, bool fixPoint)
 {
+    ROS_DEBUG_STREAM("Optimizer::LocalBACameraPointObjectsDynamic");
     // Local KeyFrames to optimize: First Breath Search from Current Keyframe
     vector<KeyFrame *> lLocalKeyFrames; // local KFs which share map points with current frame.
 
@@ -2191,6 +2192,7 @@ void Optimizer::LocalBACameraPointObjectsDynamic(KeyFrame *pKF, bool *pbStopFlag
     vector<g2o::EdgeObjectMotion *> allmotionedges;
     if (ba_dyna_obj_velo)
     {
+        ROS_DEBUG_STREAM("Optimizer::LocalBACameraPointObjectsDynamic ba_dyna_obj_velo");
         Eigen::Vector3d inv_sigma;
         inv_sigma.setOnes();
         inv_sigma(2) = inv_sigma(2) * 5.0; //0.1 angle error is usually much smaller compared to position.
@@ -2237,9 +2239,7 @@ void Optimizer::LocalBACameraPointObjectsDynamic(KeyFrame *pKF, bool *pbStopFlag
                     }
                     else // add velocity edge
                     {
-                        cout << "Edge Object Motion" << endl;
                         g2o::EdgeObjectMotion *e = new g2o::EdgeObjectMotion();
-                        cout << "END" << endl;
                         e->setVertex(0, dynamic_cast<g2o::OptimizableGraph::Vertex *>(optimizer.vertex(pMObject->bundle_vertex_ids[prevgoodobsframe])));
                         e->setVertex(1, dynamic_cast<g2o::OptimizableGraph::Vertex *>(optimizer.vertex(pMObject->bundle_vertex_ids[obskf])));
                         e->setVertex(2, dynamic_cast<g2o::OptimizableGraph::Vertex *>(vVelocity));
@@ -2620,6 +2620,7 @@ void Optimizer::LocalBACameraPointObjectsDynamic(KeyFrame *pKF, bool *pbStopFlag
             MapObject *pMObject = *lit;
             pMObject->mnBALocalForKF = 0;
         }
+    ROS_DEBUG_STREAM("Optimizer::LocalBACameraPointObjectsDynamic END");
 }
 
 void Optimizer::OptimizeEssentialGraph(Map *pMap, KeyFrame *pLoopKF, KeyFrame *pCurKF,

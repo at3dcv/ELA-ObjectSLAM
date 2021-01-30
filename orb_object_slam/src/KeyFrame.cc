@@ -77,7 +77,6 @@ KeyFrame::KeyFrame(Frame &F, Map *pMap, KeyFrameDatabase *pKFDB) : mnFrameId(F.m
     {
         KeysStatic = F.KeysStatic;
         keypoint_associate_objectID = F.keypoint_associate_objectID;
-        std::cout << "KeyFrame " << keypoint_associate_objectID.size() << std::endl;
     }
 }
 

@@ -188,7 +188,7 @@ Frame::Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeSt
         DetectMovingKeypoints(imGray);
         if (whether_dynamic_object) {
             FilterOutMovingPoints(imGray);
-            ROS_DEBUG_STREAM("Frame::Frame FilterOutMovingPoints END " << N);
+            ROS_DEBUG_STREAM("Frame::Frame FilterOutMovingPoints END");
         }
         imGrayPre = imGray.clone();
     }
@@ -231,7 +231,6 @@ Frame::Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeSt
 
     AssignFeaturesToGrid();
 
-    std::cout << "KeyFrame " << keypoint_associate_objectID.size() << std::endl;
     ROS_DEBUG_STREAM("Frame::Frame Depth END");
 }
 
@@ -313,7 +312,6 @@ Frame::Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor *extra
 
     AssignFeaturesToGrid();
 
-    std::cout << "KeyFrame " << keypoint_associate_objectID.size() << std::endl;
     ROS_DEBUG_STREAM("Frame::Frame END");
 }
 
@@ -454,7 +452,7 @@ void Frame::CheckMovingKeyPoints(const cv::Mat &imGray, const std::vector<std::v
     }
 
     numobject = 0;
-
+    int dynamicKeypointsCounter = 0;
     for (int j = 0; j < mCurrentBBoxes.size(); j++)
     {
         if (objectsAreMoving[j])
@@ -471,39 +469,9 @@ void Frame::CheckMovingKeyPoints(const cv::Mat &imGray, const std::vector<std::v
                     KeysStatic[i] = 0; //0 is background, static >0 object id
                     numobject = max(numobject, 1);
                     keypoint_associate_objectID[i] = 0;
+                    dynamicKeypointsCounter++;
                 }
             }
-        }
-    }
-
-    if (remove_dynamic_features)
-    {
-        std::vector<cv::KeyPoint> mvKeys_cp;
-        cv::Mat mDescriptors_cp;
-
-        for (int l = 0; l < KeysStatic.size(); l++)
-        {
-            if (KeysStatic[l]) {
-                mvKeys_cp.push_back(mvKeys[l]);
-                mDescriptors_cp.push_back(mDescriptors.row(l));
-            }
-        }
-
-        cout << "Kept " << mvKeys_cp.size() << "/" << mvKeys.size() << " keypoints" << endl;
-
-        mvKeys = mvKeys_cp;
-        mDescriptors = mDescriptors_cp;
-        KeysStatic = vector<bool>(mvKeys.size(), true);
-        keypoint_associate_objectID = vector<int>(mvKeys.size(), -1);
-        return;
-    }
-
-    // AC: For debugging
-    int dynamicKeypointsCounter = 0;
-    for (int k = 0; k < KeysStatic.size(); k++)
-    {
-        if (!KeysStatic[k]) {
-            dynamicKeypointsCounter++;
         }
     }
 

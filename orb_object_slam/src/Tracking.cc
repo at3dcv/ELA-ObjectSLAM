@@ -1618,7 +1618,6 @@ bool Tracking::NeedNewKeyFrame()
 void Tracking::DetectCuboid(KeyFrame *pKF)
 {
 	ROS_DEBUG_STREAM("Tracking::DetectCuboid");
-	std::cout << pKF->keypoint_associate_objectID.size() << " " << pKF->mvKeys.size() << std::endl;
 	cv::Mat pop_pose_to_ground;			  // pop frame pose to ground frame.  for offline txt, usually local ground.  for online detect, usually init ground.
 	std::vector<ObjectSet> all_obj_cubes; // in ground frame, no matter read or online detect
 	std::vector<Vector4d> all_obj2d_bbox;
@@ -1928,8 +1927,6 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 				ROS_DEBUG_STREAM("Tracking::DetectCuboid whether_dynamic_object if 2");
 				std::vector<MapPoint *> framePointMatches = pKF->GetMapPointMatches();
 
-				std::cout << "KAOID " << pKF->keypoint_associate_objectID.size() << " " << pKF->mvKeys.size() << std::endl;
-
 				if (pKF->keypoint_associate_objectID.size() < pKF->mvKeys.size())
 				{
 					ROS_DEBUG_STREAM("Tracking::DetectCuboid whether_dynamic_object if 3");
@@ -2197,7 +2194,6 @@ void Tracking::CreateNewKeyFrame()
 	KeyFrame *pKF = new KeyFrame(mCurrentFrame, mpMap, mpKeyFrameDB);
 
 	ROS_WARN_STREAM("Created new keyframe!   " << pKF->mnId << "   total ID  " << pKF->mnFrameId);
-	std::cout << "KAOID " << pKF->keypoint_associate_objectID.size() << " " << pKF->mvKeys.size() << std::endl;
 
 	mpReferenceKF = pKF;
 	mCurrentFrame.mpReferenceKF = pKF;

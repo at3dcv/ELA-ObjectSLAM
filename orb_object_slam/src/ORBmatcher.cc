@@ -724,6 +724,7 @@ int ORBmatcher::SearchForTriangulation(KeyFrame *pKF1, KeyFrame *pKF2, cv::Mat F
                 if (pMP1)
                     continue;
 
+                // AC: Rule out dynamic keypoints
                 if (pKF1->KeysStatic.size() > 0 && !pKF1->KeysStatic[idx1])
                     continue;
 
@@ -1601,8 +1602,10 @@ int ORBmatcher::SearchByTrackingHarris(Frame &CurrentFrame, const Frame &LastFra
     CurrentFrame.featuresklt_thisframe = currobjpts;
 }
 
+// AC: This function is doing something with the dynamic points
 int ORBmatcher::SearchByTracking(Frame &CurrentFrame, const Frame &LastFrame, const float th, const bool bMono)
 {
+    // AC: if no static keys exist, exit
     if (LastFrame.KeysStatic.size() == 0)
         return 0;
 
@@ -1611,6 +1614,7 @@ int ORBmatcher::SearchByTracking(Frame &CurrentFrame, const Frame &LastFrame, co
     vector<int> lastptsinds;
     lastptsinds.reserve(LastFrame.N);
     
+    // AC: Create list of points that are worth tracking
     for (int i = 0; i < LastFrame.N; i++)
     {
         if (LastFrame.mvpMapPoints[i])          //last map point should exist, otherwise no need to track it anymore.

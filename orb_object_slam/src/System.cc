@@ -35,6 +35,7 @@
 #include "Parameters.h"
 #include "ORBVocabulary.h"
 
+#include "ros/ros.h"
 #include <time.h>
 
 bool has_suffix(const std::string &str, const std::string &suffix)
@@ -102,9 +103,14 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
                              mpMap, mpKeyFrameDatabase, strSettingsFile, mSensor); // setting file read by tracker, not by mapper!
 
     //Initialize the Local Mapping thread and launch
+    // AC: Entry point of local mapping
+    // AC: Called once and then loops over LocalMapping::Run
     mpLocalMapper = new LocalMapping(mpMap, mSensor == MONOCULAR);
     if (parallel_mapping)
+    {
+        ROS_DEBUG_STREAM("System::System LocalMapping::Run");
         mptLocalMapping = new thread(&ORB_SLAM2::LocalMapping::Run, mpLocalMapper);
+    }
 
     //Initialize the Loop Closing thread and launch
     mpLoopCloser = new LoopClosing(mpMap, mpKeyFrameDatabase, mpVocabulary, mSensor != MONOCULAR);
