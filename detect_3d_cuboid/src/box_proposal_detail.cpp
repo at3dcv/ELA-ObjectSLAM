@@ -1152,10 +1152,6 @@ void detect_3d_cuboid::detect_cuboid(const cv::Mat &rgb_img, const Matrix4d &tra
 				if(iter != sample_obj->obj_class_scales.end())
 				{
 				    sample_obj->yolo_obj_scale = iter->second;
-<<<<<<< HEAD
-					std::cout << sample_obj->yolo_obj_scale << std::endl;
-=======
->>>>>>> finalized the extention of the cuboid proposel cost function for 2D BBs
 				}
 				else
 				{
