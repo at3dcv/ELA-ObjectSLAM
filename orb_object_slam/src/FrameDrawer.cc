@@ -24,6 +24,8 @@
 #include "Map.h"
 #include "KeyFrame.h"
 
+#include <ros/ros.h>
+
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 
@@ -246,6 +248,8 @@ void FrameDrawer::DrawTextInfo(cv::Mat &im, int nState, cv::Mat &imText)
 
 void FrameDrawer::Update(Tracking *pTracker)
 {
+    ROS_DEBUG_STREAM("FrameDrawer::Update");
+
     if (!enable_viewimage)
         return;
 
@@ -300,10 +304,13 @@ void FrameDrawer::Update(Tracking *pTracker)
         box_corners_2ds.clear();
         edge_markers_2ds.clear();
         point_Object_AssoID.clear();
+        ROS_DEBUG_STREAM("FrameDrawer::Update if 2");
         if (pTracker->mCurrentFrame.mpReferenceKF != NULL)
         {
+            ROS_DEBUG_STREAM("FrameDrawer::Update if 3");
             if ((pTracker->mCurrentFrame.mnId - pTracker->mCurrentFrame.mpReferenceKF->mnFrameId) < 1) // if current frame is a keyframe
             {
+                ROS_DEBUG_STREAM("FrameDrawer::Update if 4");
                 if (whether_detect_object)
                 {
                     for (const MapObject *object : pTracker->mCurrentFrame.mpReferenceKF->local_cuboids)
@@ -330,5 +337,6 @@ void FrameDrawer::Update(Tracking *pTracker)
                 potential_ground_fit_inds = pTracker->mCurrentFrame.mpReferenceKF->ground_region_potential_pts;
             }
     }
+    ROS_DEBUG_STREAM("FrameDrawer::Update END");
 }
 } // namespace ORB_SLAM2

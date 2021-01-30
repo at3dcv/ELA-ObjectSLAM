@@ -1102,6 +1102,7 @@ void detect_3d_cuboid::detect_cuboid(const cv::Mat &rgb_img, const Matrix4d &tra
 					std::cout << object_id << std::endl;
 					std::cout << "#### sample_obj->yolo_obj_scale ####" << std::endl;
 					std::cout << sample_obj->yolo_obj_scale << std::endl;
+
 				}
 				else
 				{

@@ -23,6 +23,8 @@
 #include "Frame.h"
 #include "Thirdparty/DBoW2/DUtils/Random.h"
 
+#include <ros/ros.h>
+
 #include "Optimizer.h"
 #include "ORBmatcher.h"
 
@@ -45,6 +47,7 @@ Initializer::Initializer(const Frame &ReferenceFrame, float sigma, int iteration
 bool Initializer::Initialize(const Frame &CurrentFrame, const vector<int> &vMatches12, cv::Mat &R21, cv::Mat &t21,
                              vector<cv::Point3f> &vP3D, vector<bool> &vbTriangulated)
 {
+    ROS_DEBUG_STREAM("Initializer::Initialize");
     // Fill structures with current keypoints and matches with reference frame
     // Reference Frame: 1, Current Frame: 2
     mvKeys2 = CurrentFrame.mvKeysUn;
@@ -580,6 +583,7 @@ bool Initializer::ReconstructF(vector<bool> &vbMatchesInliers, cv::Mat &F21, cv:
 bool Initializer::ReconstructH(vector<bool> &vbMatchesInliers, cv::Mat &H21, cv::Mat &K,
                                cv::Mat &R21, cv::Mat &t21, vector<cv::Point3f> &vP3D, vector<bool> &vbTriangulated, float minParallax, int minTriangulated)
 {
+    ROS_DEBUG_STREAM("Initializer::ReconstructH");
     int N = 0;
     for (size_t i = 0, iend = vbMatchesInliers.size(); i < iend; i++)
         if (vbMatchesInliers[i])
@@ -723,6 +727,7 @@ bool Initializer::ReconstructH(vector<bool> &vbMatchesInliers, cv::Mat &H21, cv:
             secondBestGood = nGood;
         }
     }
+    ROS_DEBUG_STREAM("Initializer::ReconstructH END");
 
     if (secondBestGood < 0.75 * bestGood && bestParallax >= minParallax && bestGood > minTriangulated && bestGood > 0.9 * N)
     {

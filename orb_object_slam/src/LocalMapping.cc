@@ -30,6 +30,7 @@
 
 #include "Parameters.h"
 #include <mutex>
+#include "ros/ros.h"
 
 // by me
 #include <ctime>
@@ -59,6 +60,7 @@ void LocalMapping::SetTracker(Tracking *pTracker)
 
 void LocalMapping::bundle_adjustment_caller()
 {
+    ROS_DEBUG_STREAM("LocalMapping::bundle_adjustment_caller");
     if (whether_detect_object && bundle_object_opti)
     {
         ca::Profiler::tictoc("BA Total Object");
@@ -74,6 +76,7 @@ void LocalMapping::bundle_adjustment_caller()
         Optimizer::LocalBundleAdjustment(mpCurrentKeyFrame, &mbAbortBA, mpMap);
         ca::Profiler::tictoc("Normal BA");
     }
+    ROS_DEBUG_STREAM("LocalMapping::bundle_adjustment_caller END");
 }
 
 bool LocalMapping::RunMappingIteration()
@@ -84,6 +87,7 @@ bool LocalMapping::RunMappingIteration()
     //     Check if there are keyframes in the queue
     if (CheckNewKeyFrames())
     {
+        ROS_DEBUG_STREAM("LocalMapping::RunMappingIteration CheckNewKeyFrames");
         // BoW conversion and insertion in Map
         ProcessNewKeyFrame();
 
@@ -150,6 +154,7 @@ bool LocalMapping::RunMappingIteration()
 
 void LocalMapping::Run()
 {
+    ROS_DEBUG_STREAM("LocalMapping::Run");
     mbFinished = false;
     while (1)
     {
@@ -318,22 +323,28 @@ BidiIter random_unique(BidiIter begin, BidiIter end, size_t num_random)
 
 void LocalMapping::CreateNewMapPoints()
 {
+    ROS_DEBUG_STREAM("LocalMapping::CreateNewMapPoints");
     // Retrieve neighbor keyframes in covisibility graph
+    // AC: nn are the numbers of keyframes to be retrieved
     int nn = 10;
     if (mbMonocular)
         nn = 20;
+    // AC: I guess, get Keyframes with most common keypoints
     const vector<KeyFrame *> vpNeighKFs = mpCurrentKeyFrame->GetBestCovisibilityKeyFrames(nn);
 
     ORBmatcher matcher(0.6, false);
 
+    // AC: Get transformation matrices
     cv::Mat Rcw1 = mpCurrentKeyFrame->GetRotation(); //world to camera
     cv::Mat Rwc1 = Rcw1.t();                         //camera to world
     cv::Mat tcw1 = mpCurrentKeyFrame->GetTranslation();
     cv::Mat Tcw1(3, 4, CV_32F);
     Rcw1.copyTo(Tcw1.colRange(0, 3));
     tcw1.copyTo(Tcw1.col(3));
+    // AC: World to Camera transformation
     cv::Mat Ow1 = mpCurrentKeyFrame->GetCameraCenter();
 
+    // AC: Get camera intrinsics
     const float &fx1 = mpCurrentKeyFrame->fx;
     const float &fy1 = mpCurrentKeyFrame->fy;
     const float &cx1 = mpCurrentKeyFrame->cx;
@@ -346,8 +357,10 @@ void LocalMapping::CreateNewMapPoints()
     int nnew = 0;
 
     // Search matches with epipolar restriction and triangulate
+    // AC: loop through the neighboring keyframes
     for (size_t i = 0; i < vpNeighKFs.size(); i++)
     {
+        // AC: Check whether a new keyframe arrived from other thread
         if (i > 0 && CheckNewKeyFrames())
             return;
 
@@ -375,6 +388,8 @@ void LocalMapping::CreateNewMapPoints()
         cv::Mat F12 = ComputeF12(mpCurrentKeyFrame, pKF2);
 
         // Search matches that fullfil epipolar constraint
+        // AC: vMatches12[idx1] = bestIdx2;
+        // AC: vMatchedPairs.push_back(make_pair(i, vMatches12[i])), where i = idx1
         vector<pair<size_t, size_t>> vMatchedIndices;
         matcher.SearchForTriangulation(mpCurrentKeyFrame, pKF2, F12, vMatchedIndices, false);
 
@@ -638,6 +653,7 @@ void LocalMapping::CreateNewMapPoints()
                             mlpRecentAddedMapPoints.push_back(pNewMP);
                             if (whether_dynamic_object && actually_use_obj_depth)
                             {
+                                // AC: How is it termined that a map point is dynamic??
                                 pNewMP->is_dynamic = true;
                                 pNewMP->SetWorldPos(x3D); // compute dynamic point to object pose
                             }
@@ -645,7 +661,7 @@ void LocalMapping::CreateNewMapPoints()
                         vector_counter++;
                     }
                     object_initialized_pts = nPoints;
-                    std::cout << "Online depth initilaized mappoints!!  " << nPoints << std::endl;
+                    std::cout << "Online depth initialized mappoints!!  " << nPoints << std::endl;
                 }
             }
         }
