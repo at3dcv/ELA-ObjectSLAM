@@ -301,7 +301,7 @@ bool read_inst_segment_vertices(const std::string txt_file_name, std::vector<Eig
     return true;
 }
 
-# ifdef at3dcv_leander_depth
+# ifdef at3dcv_leander
 void poly_eigen_to_string_rep(Eigen::MatrixXi convex_hull_vertices, std::string &poly_string_rep){
     // LL: Convert polygon to the string format required by boost/geometry.
     // LL: Important: First and last point allways have to be the same to get a correct result.
@@ -366,31 +366,73 @@ double perc_poly2_covered_by_poly1(polygon poly1, polygon poly2)
 }
 
 
-int visualize_polygons(std::string file_name, std::vector<polygon> polygons, std::vector<std::string> colors)
+int visualize_polygons(std::string file_name, std::vector<polygon> polygons)
 {
-
-    if(polygons.size() != colors.size())
-        {
-            std::cout << "The vector polygons and colors must be of same length.";
-            return 1;
-        }
     // LL: Map the two polygons to a svg file
     // Declare a stream and an SVG mapper
     std::ofstream svg(file_name + ".svg");
     boost::geometry::svg_mapper<point_type> mapper(svg, 400, 400);
     // Add geometries such that all these geometries fit on the map
-    for (int i = 0; i != polygons.size(); ++i)
+    int poly_vec_length = polygons.size();
+    for (int i = 0; i != poly_vec_length; ++i)
         {
             mapper.add(polygons[i]);
         }
 
     // Draw the geometries on the SVG map, using a specific SVG style
-    for (int i = 0; i != polygons.size(); ++i)
+    for (int i = 0; i != poly_vec_length; ++i)
         {
-            mapper.map(polygons[i], "fill-opacity:0.3;fill:"+colors[i]+";stroke:rgb" +colors[i]+ ";stroke-width:2", 5);
+            std::string color = std::to_string((255/poly_vec_length)*i);
+            std::string color_rgb = "("+color+","+color+","+color+")"; 
+            mapper.map(polygons[i], "fill-opacity:0.3;fill:"+color_rgb+";stroke:rgb" +color_rgb+ ";stroke-width:2", 5);
         }
 
     return 0;
+}
+
+void sort_2d_cuboid_vertices(double vp_1_position, Eigen::Matrix2Xi all_configs_error_one_objH_int, Eigen::MatrixXi &cub_prop_2di)
+{
+    //LL: Retrive the current 2d bb proposal
+    //LL: Order the vectors to be: top_front_left, top_front_...
+    //LL: Convert vertices to int    
+    Eigen::VectorXi cuboid_to_raw_boxstructIds(8);
+    if (vp_1_position == 1) // vp1 on left, for all configurations
+    	cuboid_to_raw_boxstructIds << 1, 4, 3, 2, 7, 8, 5, 6;
+    if (vp_1_position == 2) // vp1 on right, for all configurations
+        cuboid_to_raw_boxstructIds << 4, 1, 2, 3, 8, 7, 6, 5;
+
+    for (int i = 0; i < 8; i++)
+        cub_prop_2di.col(i) = all_configs_error_one_objH_int.col(cuboid_to_raw_boxstructIds(i) - 1); // minius one to match index
+
+}
+
+void cuboid_2d_vertices_to_2d_surfaces(Eigen::Matrix2Xi cub_prop_2d, std::vector<Eigen::MatrixXi> &eigen_2d_surfaces)
+{
+    Eigen::MatrixXi sqr_1(2, 4);
+    Eigen::MatrixXi sqr_2(2, 4);
+    Eigen::MatrixXi sqr_3(2, 4);
+    Eigen::MatrixXi sqr_4(2, 4);
+    Eigen::MatrixXi sqr_5(2, 4);
+    Eigen::MatrixXi sqr_6(2, 4); 
+    sqr_1 << cub_prop_2d.col(0), cub_prop_2d.col(1), cub_prop_2d.col(2), cub_prop_2d.col(3);
+    sqr_2 << cub_prop_2d.col(0), cub_prop_2d.col(1), cub_prop_2d.col(5), cub_prop_2d.col(4);
+    sqr_3 << cub_prop_2d.col(0), cub_prop_2d.col(3), cub_prop_2d.col(7), cub_prop_2d.col(4);
+    sqr_4 << cub_prop_2d.col(4), cub_prop_2d.col(5), cub_prop_2d.col(6), cub_prop_2d.col(7);
+    sqr_5 << cub_prop_2d.col(6), cub_prop_2d.col(7), cub_prop_2d.col(3), cub_prop_2d.col(2);
+    sqr_6 << cub_prop_2d.col(1), cub_prop_2d.col(2), cub_prop_2d.col(6), cub_prop_2d.col(5);
+    eigen_2d_surfaces.insert(eigen_2d_surfaces.end(),{sqr_1, sqr_2, sqr_3, sqr_4, sqr_5, sqr_6});
+}
+
+void eigen_2d_cub_surfaces_to_boost_poly_surfaces(std::vector<Eigen::MatrixXi> eigen_2d_surfaces, std::vector<polygon> &boost_poly_surfaces)
+{
+    std::string boost_string_rep;
+    for (int i = 0; i != eigen_2d_surfaces.size(); ++i)
+    {
+        polygon poly;
+        poly_eigen_to_string_rep(eigen_2d_surfaces[i], boost_string_rep);
+        poly_string_to_boost_pooly(boost_string_rep, poly);
+        boost_poly_surfaces.push_back(poly);
+    }
 }
 # endif
 // LL: Added by Leander 

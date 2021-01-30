@@ -1700,7 +1700,7 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 		// LL: Added by Leander - read detected cuboids vertices
 		std::string data_inst_seg_vertices_dir = base_data_folder + "/mats/instance_segmentation_vertices/";
 		std::vector<Eigen::Matrix2Xd> raw_read_inst_segment_vert;
-		if (!read_inst_segment_vertices(data_inst_seg_vertices_dir + frame_index_c + "_obj_vertices.txt", raw_read_inst_segment_vert))
+		if (!read_inst_segment_vertices(data_inst_seg_vertices_dir + frame_index_c + "_ch.txt", raw_read_inst_segment_vert))
 			ROS_ERROR_STREAM("Cannot read the polygon vertices txt " << data_inst_seg_vertices_dir + frame_index_c + "_obj_vertices.txt");
 
 		// LL: Added by Leander: Filter the raw_read_inst_segment_vert and read_inst_segment_vert
@@ -1730,7 +1730,7 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 		detect_cuboid_obj->detect_cuboid(pKF->raw_img, cam_transToGround.cast<double>(), all_obj2d_bbox_infov_mat, all_lines_raw, all_obj_cubes);
 #else
 		// LL: Added by Leander: Added `object_classes` and `read_inst_segment_vert` to this function call
-		detect_cuboid_obj->detect_cuboid(pKF->raw_img, cam_transToGround.cast<double>(), all_obj2d_bbox_infov_mat, all_lines_raw, all_obj_cubes, read_inst_segment_vert, object_classes);
+		detect_cuboid_obj->detect_cuboid(pKF->raw_img, cam_transToGround.cast<double>(), all_obj2d_bbox_infov_mat, all_lines_raw, all_obj_cubes, read_inst_segment_vert, object_classes, frame_index_c);
 #endif
 	}
 
