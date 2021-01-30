@@ -1047,9 +1047,7 @@ void Tracking::MonocularInitialization()
 		ROS_DEBUG_STREAM("Tracking::MonocularInitialization:Initialize");
 		
 		// call important map initializer here. either homograpy or fundamental
-		bool debug = mpInitializer->Initialize(mCurrentFrame, mvIniMatches, Rcw, tcw, mvIniP3D, vbTriangulated);
-		std::cout << debug << std::endl;
-		if (debug)
+		if (mpInitializer->Initialize(mCurrentFrame, mvIniMatches, Rcw, tcw, mvIniP3D, vbTriangulated))
 		{
 			ROS_DEBUG_STREAM("Tracking::MonocularInitialization:Initialize success");
 

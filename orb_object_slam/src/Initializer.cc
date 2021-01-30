@@ -120,9 +120,7 @@ bool Initializer::Initialize(const Frame &CurrentFrame, const vector<int> &vMatc
     if (RH > 0.40)
     {
         std::cout << "come to compute Homography" << std::endl;
-        bool debug = ReconstructH(vbMatchesInliersH, H, mK, R21, t21, vP3D, vbTriangulated, min_parallax, 50);
-        std::cout << "ReconstructH: " << debug << std::endl;
-        return debug;
+        return ReconstructH(vbMatchesInliersH, H, mK, R21, t21, vP3D, vbTriangulated, min_parallax, 50);
     }
     else //if(pF_HF>0.6)
     {
