@@ -391,13 +391,6 @@ cv::Mat Tracking::GrabImageRGBD(const cv::Mat &imRGB, const cv::Mat &imD, const 
 	imDepth.convertTo(imDepth, CV_32F, mDepthMapFactor);
 
 	mCurrentFrame = Frame(mImGray, imDepth, timestamp, mpORBextractorLeft, mpORBVocabulary, mK, mDistCoef, mbf, mThDepth);
-
-	// AC: copied from GrabImageMonocular
-	if (whether_dynamic_object)
-	{
-		object_detection_frame_id = object_detection_frame_id + 1;
-		mCurrentFrame.FilterOutMovingPoints(mImRGB, mImGray, object_detection_frame_id);
-	}
 	
 	// AC: Current frame id
 	if (mCurrentFrame.mnId == 0)
@@ -553,6 +546,8 @@ cv::Mat Tracking::GrabImageMonocular(const cv::Mat &im, const double &timestamp,
 
 void Tracking::Track()
 {
+	ROS_DEBUG_STREAM("Tracking::Track");
+
 	if (mState == NO_IMAGES_YET)
 	{
 		mState = NOT_INITIALIZED;
@@ -567,6 +562,7 @@ void Tracking::Track()
 
 	if (mState == NOT_INITIALIZED) // initialization
 	{
+		ROS_DEBUG_STREAM("Tracking::Track NOT_INITIALIZED");
 		// AC: skip all other initializations as we only want the monocular initialization!
 		MonocularInitialization();
 
@@ -576,10 +572,14 @@ void Tracking::Track()
 			std::cout << "Finish initialisation!!" << std::endl;
 
 		if (mState != OK)
+		{
+			std::cout << "Unsuccessful initialization!!" << std::endl;
 			return;
+		}
 	}
 	else
 	{
+		ROS_DEBUG_STREAM("Tracking::Track Initialized");
 		ca::Profiler::tictoc("Tracking time");
 
 		// System is initialized. Track Frame.
@@ -588,6 +588,7 @@ void Tracking::Track()
 		// Initial camera pose estimation using motion model or relocalization (if tracking is lost)
 		if (!mbOnlyTracking)
 		{
+			ROS_DEBUG_STREAM("Tracking::Track !mbOnlyTracking");
 			// Local Mapping is activated. This is the normal behaviour, unless explicitly activate the "only tracking" mode.
 			if (mState == OK)
 			{
@@ -617,6 +618,8 @@ void Tracking::Track()
 		}
 		else // Only Tracking: Local Mapping is deactivated, usually not happening.
 		{
+			ROS_DEBUG_STREAM("Tracking::Track mbOnlyTracking");
+
 			if (mState == LOST)
 			{
 				bOK = Relocalization();
@@ -718,6 +721,7 @@ void Tracking::Track()
 		// If tracking were good, check if we insert a keyframe
 		if (bOK)
 		{
+			ROS_DEBUG_STREAM("Tracking::Track bOK insert keyframe");
 			// Update motion model
 			if (!mLastFrame.mTcw.empty())
 			{
@@ -773,6 +777,7 @@ void Tracking::Track()
 		}
 		else
 		{
+			ROS_DEBUG_STREAM("Tracking::Track bOK else");
 			mpFrameDrawer->Update(this);
 		}
 
@@ -795,6 +800,7 @@ void Tracking::Track()
 		ca::Profiler::tictoc("Tracking time");
 	}
 
+	ROS_DEBUG_STREAM("Tracking::Track !mCurrentFrame.mTcw.empty()");
 	// Store frame pose information to retrieve the complete camera trajectory afterwards.
 	if (!mCurrentFrame.mTcw.empty())
 	{
@@ -813,6 +819,8 @@ void Tracking::Track()
 		mlbLost.push_back(mState == LOST);
 	}
 
+	ROS_DEBUG_STREAM("Tracking::Track whether_save_final_optimized_cuboids");
+
 	if (whether_save_final_optimized_cuboids)
 	{
 		if ((mCurrentFrame.mnId >= final_object_record_frame_ind) && (!done_save_obj_to_txt))
@@ -830,6 +838,7 @@ void Tracking::Track()
 		mpLocalMapper->RunMappingIteration();
 		ca::Profiler::tictoc("Mapping time");
 	}
+	ROS_DEBUG_STREAM("Tracking::Track END");
 }
 
 void Tracking::StereoInitialization()
@@ -985,6 +994,7 @@ void Tracking::MonocularInitialization()
 	std::cout << "Come to normal monocular initialization !" << std::endl;
 	if (!mpInitializer)
 	{
+		ROS_DEBUG_STREAM("Tracking::MonocularInitialization if");
 		// Set Reference Frame
 		if (mCurrentFrame.mvKeys.size() > 100)
 		{
@@ -1006,6 +1016,7 @@ void Tracking::MonocularInitialization()
 	}
 	else
 	{
+		ROS_DEBUG_STREAM("Tracking::MonocularInitialization else");
 		// Try to initialize
 		if ((int)mCurrentFrame.mvKeys.size() <= 100)
 		{
@@ -1019,6 +1030,8 @@ void Tracking::MonocularInitialization()
 		ORBmatcher matcher(0.9, true);
 		int nmatches = matcher.SearchForInitialization(mInitialFrame, mCurrentFrame, mvbPrevMatched, mvIniMatches, 100); // 100 is pixel area
 
+		ROS_DEBUG_STREAM("Tracking::MonocularInitialization SearchForInitialization");
+
 		// Check if there are enough correspondences
 		if (nmatches < 100)
 		{
@@ -1031,10 +1044,15 @@ void Tracking::MonocularInitialization()
 		cv::Mat tcw;				 // Current Camera Translation
 		vector<bool> vbTriangulated; // Triangulated Correspondences (mvIniMatches)
 
+		ROS_DEBUG_STREAM("Tracking::MonocularInitialization:Initialize");
+		
 		// call important map initializer here. either homograpy or fundamental
-		if (mpInitializer->Initialize(mCurrentFrame, mvIniMatches, Rcw, tcw, mvIniP3D, vbTriangulated))
+		bool debug = mpInitializer->Initialize(mCurrentFrame, mvIniMatches, Rcw, tcw, mvIniP3D, vbTriangulated);
+		std::cout << debug << std::endl;
+		if (debug)
 		{
-			if (enable_debugging_comments) std::cout << "Tracking::MonocularInitialization:Initialize success" << std::endl;
+			ROS_DEBUG_STREAM("Tracking::MonocularInitialization:Initialize success");
+
 			for (size_t i = 0, iend = mvIniMatches.size(); i < iend; i++)
 			{
 				if (mvIniMatches[i] >= 0 && !vbTriangulated[i])
@@ -1599,6 +1617,8 @@ bool Tracking::NeedNewKeyFrame()
 
 void Tracking::DetectCuboid(KeyFrame *pKF)
 {
+	ROS_DEBUG_STREAM("Tracking::DetectCuboid");
+	std::cout << pKF->keypoint_associate_objectID.size() << " " << pKF->mvKeys.size() << std::endl;
 	cv::Mat pop_pose_to_ground;			  // pop frame pose to ground frame.  for offline txt, usually local ground.  for online detect, usually init ground.
 	std::vector<ObjectSet> all_obj_cubes; // in ground frame, no matter read or online detect
 	std::vector<Vector4d> all_obj2d_bbox;
@@ -1827,6 +1847,9 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 		}
 	}
 
+	ROS_DEBUG_STREAM("Tracking::DetectCuboid associate_point_with_object");
+	std::cout << pKF->keypoint_associate_objectID.size() << " " << pKF->mvKeys.size() << std::endl;
+
 	// LL: Test if a feautre point lies with in an object or not
 	if (associate_point_with_object)
 	{
@@ -1896,15 +1919,22 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 			}
 		}
 
+		ROS_DEBUG_STREAM("Tracking::DetectCuboid whether_dynamic_object");
 		if (whether_dynamic_object) //  for dynamic object, I use instance segmentation
 		{
+			ROS_DEBUG_STREAM("Tracking::DetectCuboid whether_dynamic_object if 1");
 			if (pKF->local_cuboids.size() > 0) // if there is object
 			{
+				ROS_DEBUG_STREAM("Tracking::DetectCuboid whether_dynamic_object if 2");
 				std::vector<MapPoint *> framePointMatches = pKF->GetMapPointMatches();
 
-				if (pKF->keypoint_associate_objectID.size() < pKF->mvKeys.size())
-					ROS_ERROR_STREAM("Tracking Bad keypoint associate ID size   " << pKF->keypoint_associate_objectID.size() << "  " << pKF->mvKeys.size());
+				std::cout << "KAOID " << pKF->keypoint_associate_objectID.size() << " " << pKF->mvKeys.size() << std::endl;
 
+				if (pKF->keypoint_associate_objectID.size() < pKF->mvKeys.size())
+				{
+					ROS_DEBUG_STREAM("Tracking::DetectCuboid whether_dynamic_object if 3");
+					ROS_ERROR_STREAM("Tracking Bad keypoint associate ID size   " << pKF->keypoint_associate_objectID.size() << "  " << pKF->mvKeys.size());
+				}
 				for (size_t i = 0; i < pKF->mvKeys.size(); i++)
 				{
 					if (pKF->keypoint_associate_objectID[i] >= 0 && pKF->keypoint_associate_objectID[i] >= pKF->local_cuboids.size())
@@ -1921,6 +1951,7 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 			}
 		}
 	}
+	ROS_DEBUG_STREAM("Tracking::DetectCuboid associate_point_with_object END");
 
 	std::vector<KeyFrame *> checkframes = mvpLocalKeyFrames; // only check recent to save time
 
@@ -1958,6 +1989,7 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 			}
 		}
 	}
+	ROS_DEBUG_STREAM("Tracking::DetectCuboid END");
 }
 
 void Tracking::AssociateCuboids(KeyFrame *pKF)
@@ -2165,6 +2197,7 @@ void Tracking::CreateNewKeyFrame()
 	KeyFrame *pKF = new KeyFrame(mCurrentFrame, mpMap, mpKeyFrameDB);
 
 	ROS_WARN_STREAM("Created new keyframe!   " << pKF->mnId << "   total ID  " << pKF->mnFrameId);
+	std::cout << "KAOID " << pKF->keypoint_associate_objectID.size() << " " << pKF->mvKeys.size() << std::endl;
 
 	mpReferenceKF = pKF;
 	mCurrentFrame.mpReferenceKF = pKF;

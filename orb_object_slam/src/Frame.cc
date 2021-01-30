@@ -35,6 +35,7 @@
 
 #include "detect_3d_cuboid/matrix_utils.h"
 
+#include <ros/ros.h>
 #include <fstream>
 #include <iostream>
 #include <string>
@@ -163,8 +164,9 @@ Frame::Frame(const cv::Mat &imLeft, const cv::Mat &imRight, const double &timeSt
 // for RGBD
 Frame::Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeStamp, ORBextractor *extractor, ORBVocabulary *voc, cv::Mat &K, cv::Mat &distCoef, const float &bf, const float &thDepth)
     : mpORBvocabulary(voc), mpORBextractorLeft(extractor), mpORBextractorRight(static_cast<ORBextractor *>(NULL)),
-      mTimeStamp(timeStamp), mK(K.clone()), mDistCoef(distCoef.clone()), mbf(bf), mThDepth(thDepth)
+      mTimeStamp(timeStamp), mK(K.clone()), mDistCoef(distCoef.clone()), mbf(bf), mThDepth(thDepth), mpReferenceKF(static_cast<KeyFrame *>(NULL))
 {
+    ROS_DEBUG_STREAM("Frame::Frame Depth");
     // Frame ID
     mnId = nNextId++;
 
@@ -184,6 +186,10 @@ Frame::Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeSt
     if(imGrayPre.data)
     {
         DetectMovingKeypoints(imGray);
+        if (whether_dynamic_object) {
+            FilterOutMovingPoints(imGray);
+            ROS_DEBUG_STREAM("Frame::Frame FilterOutMovingPoints END " << N);
+        }
         imGrayPre = imGray.clone();
     }
     else
@@ -224,6 +230,9 @@ Frame::Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeSt
     mb = mbf / fx;
 
     AssignFeaturesToGrid();
+
+    std::cout << "KeyFrame " << keypoint_associate_objectID.size() << std::endl;
+    ROS_DEBUG_STREAM("Frame::Frame Depth END");
 }
 
 // for monocular
@@ -232,6 +241,7 @@ Frame::Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor *extra
     : mpORBvocabulary(voc), mpORBextractorLeft(extractor), mpORBextractorRight(static_cast<ORBextractor *>(NULL)),
       mTimeStamp(timeStamp), mK(K.clone()), mDistCoef(distCoef.clone()), mbf(bf), mThDepth(thDepth), mpReferenceKF(static_cast<KeyFrame *>(NULL))
 {
+    ROS_DEBUG_STREAM("Frame::Frame Mono");
     // Frame ID
     mnId = nNextId++;
 
@@ -252,6 +262,7 @@ Frame::Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor *extra
         DetectMovingKeypoints(imGray);
         if (whether_dynamic_object) {
             FilterOutMovingPoints(imGray);
+            ROS_DEBUG_STREAM("Frame::Frame FilterOutMovingPoints END " << N);
         }
         imGrayPre = imGray.clone();
     }
@@ -264,10 +275,12 @@ Frame::Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor *extra
     // AC: with only dynamic objects
 
     N = mvKeys.size();
+    ROS_DEBUG_STREAM("Keypoint count: " << N);
 
     if (mvKeys.empty())
         return;
         
+    ROS_DEBUG_STREAM("Frame::Frame Undistort");
     UndistortKeyPoints();
 
     // Set no stereo information
@@ -277,6 +290,7 @@ Frame::Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor *extra
     mvpMapPoints = vector<MapPoint *>(N, static_cast<MapPoint *>(NULL));
     mvbOutlier = vector<bool>(N, false);
 
+    ROS_DEBUG_STREAM("Frame::Frame if");
     // This is done only for the first Frame (or after a change in the calibration)
     if (mbInitialComputations)
     {
@@ -298,10 +312,14 @@ Frame::Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor *extra
     mb = mbf / fx;
 
     AssignFeaturesToGrid();
+
+    std::cout << "KeyFrame " << keypoint_associate_objectID.size() << std::endl;
+    ROS_DEBUG_STREAM("Frame::Frame END");
 }
 
 void Frame::FilterOutMovingPoints(const cv::Mat &imGray)
 {
+    ROS_DEBUG_STREAM("Frame::FilterOutMovingPoints");
     // AC: If yes, erase points in given objects
     KeysStatic = vector<bool>(mvKeys.size(), true); // all points are static now.
     keypoint_associate_objectID = vector<int>(mvKeys.size(), -1);
@@ -314,6 +332,7 @@ void Frame::FilterOutMovingPoints(const cv::Mat &imGray)
 
     if (!T_M.empty() && mCurrentBBoxes.size() > 0)
         CheckMovingKeyPoints(imGray, mCurrentBBoxes);
+    ROS_DEBUG_STREAM("Frame::FilterOutMovingPoints END");
 }
 
 // AC: The generated keypoints are ONLY used to determine whether a frame has a moving object or not!
@@ -473,7 +492,7 @@ void Frame::CheckMovingKeyPoints(const cv::Mat &imGray, const std::vector<std::v
         cout << "Kept " << mvKeys_cp.size() << "/" << mvKeys.size() << " keypoints" << endl;
 
         mvKeys = mvKeys_cp;
-        mDescriptors = mDescriptors_cp.clone();
+        mDescriptors = mDescriptors_cp;
         KeysStatic = vector<bool>(mvKeys.size(), true);
         keypoint_associate_objectID = vector<int>(mvKeys.size(), -1);
         return;

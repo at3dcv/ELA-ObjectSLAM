@@ -9,9 +9,6 @@
  	# /kitti/left/image_raw   /camera/rgb/image_raw /camera/rgb/image_color  /mono/image_rect_color /kinect2/qhd/image_color_rect /camera/mono/image_raw
    </node>
 
-   # AC: For debugging
-   <param name="enable_debugging_comments" value="true" />
-
    <param name="enable_loop_closing" value="false" />  # false true
    <param name="enable_viewer" value="true" />   <param name="enable_viewmap" value="true" />   <param name="enable_viewimage" value="true" />
    
