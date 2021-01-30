@@ -1098,11 +1098,10 @@ void detect_3d_cuboid::detect_cuboid(const cv::Mat &rgb_img, const Matrix4d &tra
 				if(iter != sample_obj->obj_class_scales.end())
 				{
 				    sample_obj->yolo_obj_scale = iter->second;
-					// AC: clean up terminal
-					// std::cout << "#### object_id ####" << std::endl;
-					// std::cout << object_id << std::endl;
-					// std::cout << "#### sample_obj->yolo_obj_scale ####" << std::endl;
-					// std::cout << sample_obj->yolo_obj_scale << std::endl;
+					std::cout << "#### object_id ####" << std::endl;
+					std::cout << object_id << std::endl;
+					std::cout << "#### sample_obj->yolo_obj_scale ####" << std::endl;
+					std::cout << sample_obj->yolo_obj_scale << std::endl;
 
 				}
 				else
