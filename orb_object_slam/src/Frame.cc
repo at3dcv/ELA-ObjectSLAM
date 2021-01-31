@@ -35,6 +35,7 @@
 
 #include "detect_3d_cuboid/matrix_utils.h"
 
+#include <ros/ros.h>
 #include <fstream>
 #include <iostream>
 #include <string>
@@ -163,8 +164,9 @@ Frame::Frame(const cv::Mat &imLeft, const cv::Mat &imRight, const double &timeSt
 // for RGBD
 Frame::Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeStamp, ORBextractor *extractor, ORBVocabulary *voc, cv::Mat &K, cv::Mat &distCoef, const float &bf, const float &thDepth)
     : mpORBvocabulary(voc), mpORBextractorLeft(extractor), mpORBextractorRight(static_cast<ORBextractor *>(NULL)),
-      mTimeStamp(timeStamp), mK(K.clone()), mDistCoef(distCoef.clone()), mbf(bf), mThDepth(thDepth)
+      mTimeStamp(timeStamp), mK(K.clone()), mDistCoef(distCoef.clone()), mbf(bf), mThDepth(thDepth), mpReferenceKF(static_cast<KeyFrame *>(NULL))
 {
+    ROS_DEBUG_STREAM("Frame::Frame Depth");
     // Frame ID
     mnId = nNextId++;
 
@@ -184,6 +186,10 @@ Frame::Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeSt
     if(imGrayPre.data)
     {
         DetectMovingKeypoints(imGray);
+        if (whether_dynamic_object) {
+            FilterOutMovingPoints(imGray);
+            ROS_DEBUG_STREAM("Frame::Frame FilterOutMovingPoints END");
+        }
         imGrayPre = imGray.clone();
     }
     else
@@ -224,6 +230,8 @@ Frame::Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeSt
     mb = mbf / fx;
 
     AssignFeaturesToGrid();
+
+    ROS_DEBUG_STREAM("Frame::Frame Depth END");
 }
 
 // for monocular
@@ -232,6 +240,7 @@ Frame::Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor *extra
     : mpORBvocabulary(voc), mpORBextractorLeft(extractor), mpORBextractorRight(static_cast<ORBextractor *>(NULL)),
       mTimeStamp(timeStamp), mK(K.clone()), mDistCoef(distCoef.clone()), mbf(bf), mThDepth(thDepth), mpReferenceKF(static_cast<KeyFrame *>(NULL))
 {
+    ROS_DEBUG_STREAM("Frame::Frame Mono");
     // Frame ID
     mnId = nNextId++;
 
@@ -250,6 +259,10 @@ Frame::Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor *extra
     if(imGrayPre.data)
     {
         DetectMovingKeypoints(imGray);
+        if (whether_dynamic_object) {
+            FilterOutMovingPoints(imGray);
+            ROS_DEBUG_STREAM("Frame::Frame FilterOutMovingPoints END " << N);
+        }
         imGrayPre = imGray.clone();
     }
     else
@@ -261,10 +274,12 @@ Frame::Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor *extra
     // AC: with only dynamic objects
 
     N = mvKeys.size();
+    ROS_DEBUG_STREAM("Keypoint count: " << N);
 
     if (mvKeys.empty())
         return;
         
+    ROS_DEBUG_STREAM("Frame::Frame Undistort");
     UndistortKeyPoints();
 
     // Set no stereo information
@@ -274,6 +289,7 @@ Frame::Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor *extra
     mvpMapPoints = vector<MapPoint *>(N, static_cast<MapPoint *>(NULL));
     mvbOutlier = vector<bool>(N, false);
 
+    ROS_DEBUG_STREAM("Frame::Frame if");
     // This is done only for the first Frame (or after a change in the calibration)
     if (mbInitialComputations)
     {
@@ -295,23 +311,26 @@ Frame::Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor *extra
     mb = mbf / fx;
 
     AssignFeaturesToGrid();
+
+    ROS_DEBUG_STREAM("Frame::Frame END");
 }
 
-void Frame::FilterOutMovingPoints(cv::Mat &imRGB, const cv::Mat &imGray, int frame_id)
+void Frame::FilterOutMovingPoints(const cv::Mat &imGray)
 {
+    ROS_DEBUG_STREAM("Frame::FilterOutMovingPoints");
     // AC: If yes, erase points in given objects
     KeysStatic = vector<bool>(mvKeys.size(), true); // all points are static now.
     keypoint_associate_objectID = vector<int>(mvKeys.size(), -1);
 
     mCurrentObjDetection = ObjDetectionHelper();
     char frame_index_c[256];
-    sprintf(frame_index_c, "%04d", (int)frame_id); // format into 4 digit
+    sprintf(frame_index_c, "%04d", (int)mnId); // format into 4 digit
     mCurrentObjDetection.ReadFile(base_data_folder + "mats/filter_match_2d_boxes_txts/" + frame_index_c + "_mrcnn.txt");
     mCurrentBBoxes = mCurrentObjDetection.GetBBoxesWithPerson();
 
-    if (!T_M.empty() && mCurrentBBoxes.size() > 0) {
+    if (!T_M.empty() && mCurrentBBoxes.size() > 0)
         CheckMovingKeyPoints(imGray, mCurrentBBoxes);
-    }
+    ROS_DEBUG_STREAM("Frame::FilterOutMovingPoints END");
 }
 
 // AC: The generated keypoints are ONLY used to determine whether a frame has a moving object or not!
@@ -433,7 +452,7 @@ void Frame::CheckMovingKeyPoints(const cv::Mat &imGray, const std::vector<std::v
     }
 
     numobject = 0;
-
+    int dynamicKeypointsCounter = 0;
     for (int j = 0; j < mCurrentBBoxes.size(); j++)
     {
         if (objectsAreMoving[j])
@@ -450,37 +469,9 @@ void Frame::CheckMovingKeyPoints(const cv::Mat &imGray, const std::vector<std::v
                     KeysStatic[i] = 0; //0 is background, static >0 object id
                     numobject = max(numobject, 1);
                     keypoint_associate_objectID[i] = 0;
+                    dynamicKeypointsCounter++;
                 }
             }
-        }
-    }
-
-    if (remove_dynamic_features)
-    {
-        std::vector<cv::KeyPoint> mvKeys_cp;
-        cv::Mat mDescriptors_cp;
-
-        for (int l = 0; l < KeysStatic.size(); l++)
-        {
-            if (KeysStatic[l]) {
-                mvKeys_cp.push_back(mvKeys[l]);
-                mDescriptors_cp.push_back(mDescriptors.row(l));
-            }
-        }
-        cout << "Kept " << mvKeys_cp.size() << "/" << mvKeys.size() << " keypoints" << endl;
-
-        mvKeys = mvKeys_cp;
-        mDescriptors = mDescriptors_cp.clone();
-        KeysStatic = vector<bool>(mvKeys.size(), true);
-        return;
-    }
-
-    // AC: For debugging
-    int dynamicKeypointsCounter = 0;
-    for (int k = 0; k < KeysStatic.size(); k++)
-    {
-        if (!KeysStatic[k]) {
-            dynamicKeypointsCounter++;
         }
     }
 
@@ -762,8 +753,10 @@ void Frame::UndistortKeyPoints()
     }
 }
 
+// AC: Frame boundaries
 void Frame::ComputeImageBounds(const cv::Mat &imLeft)
 {
+    // AC: if distortion is present
     if (mDistCoef.at<float>(0) != 0.0)
     {
         cv::Mat mat(4, 2, CV_32F);
@@ -786,6 +779,7 @@ void Frame::ComputeImageBounds(const cv::Mat &imLeft)
         mnMinY = min(mat.at<float>(0, 1), mat.at<float>(1, 1));
         mnMaxY = max(mat.at<float>(2, 1), mat.at<float>(3, 1));
     }
+    // AC: for TUM RGBD no distortion!
     else
     {
         mnMinX = 0.0f;

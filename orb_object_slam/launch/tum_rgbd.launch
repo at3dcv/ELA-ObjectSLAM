@@ -9,9 +9,6 @@
  	# /kitti/left/image_raw   /camera/rgb/image_raw /camera/rgb/image_color  /mono/image_rect_color /kinect2/qhd/image_color_rect /camera/mono/image_raw
    </node>
 
-   # AC: For debugging
-   <param name="enable_debugging_comments" value="true" />
-
    <param name="enable_loop_closing" value="false" />  # false true
    <param name="enable_viewer" value="true" />   <param name="enable_viewmap" value="true" />   <param name="enable_viewimage" value="true" />
    
@@ -33,7 +30,7 @@
 
    # for dynamic object
    <param name="whether_dynamic_object" value="true" />
-   <param name="remove_dynamic_features" value="false" />
+   <param name="remove_dynamic_features" value="true" />
    <param name="use_dynamic_klt_features" value="false" />	# not orb features
    <param name="object_velocity_BA_weight" value="0.5" />
    <param name="use_truth_trackid" value="false" />   # use offline tracking id  if false, need to initialize feature point, tracking, obj depth init.

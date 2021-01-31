@@ -112,7 +112,6 @@ public:
     Eigen::MatrixXd kitti_sequence_img_to_object_detect_ind;
     std::string kitti_raw_sequence_name;
 
-    bool enable_debugging_comments;
     bool whether_save_online_detected_cuboids;
     bool whether_save_final_optimized_cuboids;
     std::ofstream save_online_detected_cuboids;
