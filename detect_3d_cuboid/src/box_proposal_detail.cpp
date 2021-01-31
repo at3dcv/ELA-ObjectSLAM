@@ -3,7 +3,6 @@
 #include <math.h>
 #include <iostream>
 #include <fstream>
-#include <iostream>
 #include <string>
 #include <sstream>
 #include <ctime>
@@ -568,7 +567,7 @@ void detect_3d_cuboid::detect_cuboid(const cv::Mat &rgb_img, const Matrix4d &tra
 #ifdef at3dcv_leander
 // LL: Added by Leander: Overloaded function by adding `read_inst_segment_vert` and `yolo_obj_class`
 void detect_3d_cuboid::detect_cuboid(const cv::Mat &rgb_img, const Matrix4d &transToWolrd, const MatrixXd &obj_bbox_coors, MatrixXd all_lines_raw, 
-									std::vector<ObjectSet> &all_object_cuboids, std::vector<Eigen::MatrixXd> read_inst_segment_vert, std::vector<std::string> yolo_obj_class)
+									std::vector<ObjectSet> &all_object_cuboids, std::vector<Eigen::Matrix2Xd> read_inst_segment_vert, std::vector<std::string> yolo_obj_class, char frame_number[256])
 {
 	/* Args:
 	* 		rgb_img: Raw RGB image
@@ -1048,7 +1047,7 @@ void detect_3d_cuboid::detect_cuboid(const cv::Mat &rgb_img, const Matrix4d &tra
 								
 								valid_config_number_one_objH++;
 
-								// LL: Resize the matrices when the nub
+								// LL: Resize the matrices
 								if (valid_config_number_one_objH >= all_configs_error_one_objH.rows())
 								{
 									all_configs_error_one_objH.conservativeResize(2 * valid_config_number_one_objH, NoChange);
@@ -1058,20 +1057,21 @@ void detect_3d_cuboid::detect_cuboid(const cv::Mat &rgb_img, const Matrix4d &tra
 						}	 //end of top id
 					}		  //end of yaw
 
-			// 	      std::cout<<"valid_config_number_one_hseight  "<<valid_config_number_one_objH<<std::endl;
-			// 	      std::cout<<"all_configs_error_one_objH  \n"<<all_configs_error_one_objH.topRows(valid_config_number_one_objH)<<std::endl;
-			// 	      MatrixXd all_corners = all_box_corners_2d_one_objH.topRows(2*valid_config_number_one_objH);
-			// 	      std::cout<<"all corners   "<<all_corners<<std::endl;
-
 			VectorXd normalized_score;
 			vector<int> good_proposal_ids;
+			// LL: The function takes the distance error, angle error, weight factor for the angle error and a boolean whether to normalize or not (default is normalize).
+			// LL: The errors are fused based on the function argument values and written to normalized_score
+			// LL: The output is a vector of a limited number of the smallest values derived through following calculation: (dist_error + weight_vp_angle * angle_error) / (1 + weight_vp_angle)
+			// LL: with the distance error and the angle error normalized.
 			fuse_normalize_scores_v2(all_configs_error_one_objH.col(4).head(valid_config_number_one_objH), all_configs_error_one_objH.col(5).head(valid_config_number_one_objH),
 									 normalized_score, good_proposal_ids, weight_vp_angle, whether_normalize_two_errors);
 
+			// LL: Iterate over all proposels with a small enough normalized score.
 			for (int box_id = 0; box_id < good_proposal_ids.size(); box_id++)
 			{
 				int raw_cube_ind = good_proposal_ids[box_id];
 
+				// LL: In case that the roll and pitch got sampled use the information to update the transformation matrix for cam->world.
 				if (whether_sample_cam_roll_pitch)
 				{
 					Matrix4d transToWolrd_new = transToWolrd;
@@ -1080,7 +1080,62 @@ void detect_3d_cuboid::detect_cuboid(const cv::Mat &rgb_img, const Matrix4d &tra
 					ground_plane_sensor = cam_pose.transToWolrd.transpose() * ground_plane_world;
 				}
 
+				// LL: Added by Leander
+				// Incase that no depth data is provided 
+			#ifdef at3dcv_leander_no_depth_all_proposals
+				
+				// ###### 2D eigen vector BB proposels to boost polygon surfaces
+				
+				Eigen::MatrixXi cub_prop_2i(2, 8);
+				double vp_1_position = all_configs_error_one_objH.row(raw_cube_ind)(1);
+				sort_2d_cuboid_vertices(vp_1_position, all_box_corners_2d_one_objH.block(2 * raw_cube_ind, 0, 2, 8).cast<int>(), cub_prop_2i);
+				std::vector<Eigen::MatrixXi> eigen_2d_surfaces;
+				cuboid_2d_vertices_to_2d_surfaces(cub_prop_2i, eigen_2d_surfaces);
+				// LL: Convert the six eigen matrix representations of the rectangles to boost styled strings
+				std::vector<polygon> boost_poly_surfaces;
+				eigen_2d_cub_surfaces_to_boost_poly_surfaces(eigen_2d_surfaces, boost_poly_surfaces);
+				
+				// ###### Convex hull of instance segmentation mask to boost polygon
+				
+				std::vector<Eigen::MatrixXi> inst_segment_vert;
+				inst_segment_vert.push_back(read_inst_segment_vert[object_id].cast<int>());
+				// LL: Retrive the convex hull of the objects segmentation mask and convert the vertices to int
+				eigen_2d_cub_surfaces_to_boost_poly_surfaces(inst_segment_vert, boost_poly_surfaces);
+
+				// ###### Document vertices and plot polygons
+				
+				// LL: Document the text boost styled polygon representations
+				std::string poly_file = "/mnt/datasets/output/polygons/"+frame_number+"_"+std::to_string(raw_cube_ind)+"_"+std::to_string(object_id)+"_poly";
+				std::string vertices_file = "/mnt/datasets/output/vertices/"+frame_number+"_"+std::to_string(raw_cube_ind)+"_"+std::to_string(object_id)+"_poly";
+				std::ofstream out(poly_file+".txt");
+				for(int i = 0; i != boost_poly_surfaces.size(); ++i)
+					out << boost::geometry::wkt(boost_poly_surfaces[i]) << "\n";
+				out.close();
+
+				// LL: Plot the polygons and write the plot to a file of name <poly_file>.svg 
+				visualize_polygons(poly_file, boost_poly_surfaces);
+
+				// ###### Calculate overlap and adopt cost function 
+				double percent_covered = 0.0;
+				for (int i = 0; i != boost_poly_surfaces.size()-1; ++i)
+				{
+				    // LL: Calculate how much percent of the are of poly2 is covered by poly1
+				    percent_covered += perc_poly2_covered_by_poly1(boost_poly_surfaces[i], boost_poly_surfaces[boost_poly_surfaces.size()-1]);
+				}
+				// LL: Do to geometrical constrains the six distinct sides of a rectangle can cover the surface of 
+				// an object at most twice. => percent_covered/2 is a element of [0,1].
+				percent_covered = percent_covered/2;
+
+				// LL: Update the costfunction
+				double weight_fac_cv_hull = 0.2;
+				normalized_score(box_id) = (normalized_score(box_id)+ (weight_fac_cv_hull * percent_covered))/(1+weight_fac_cv_hull);
+			#endif
+
+				// LL: Added by Leander
+
 				cuboid *sample_obj = new cuboid();
+
+
 				change_2d_corner_to_3d_object(all_box_corners_2d_one_objH.block(2 * raw_cube_ind, 0, 2, 8), all_configs_error_one_objH.row(raw_cube_ind).head<3>(),
 											  ground_plane_sensor, cam_pose.transToWolrd, cam_pose.invK, cam_pose.projectionMatrix, *sample_obj);
 				// sample_obj->print_cuboid();
@@ -1089,20 +1144,14 @@ void detect_3d_cuboid::detect_cuboid(const cv::Mat &rgb_img, const Matrix4d &tra
 					
 				// LL: Added by Leander
 				// - Check if class name is in dic.
-				// -- If not: Take default value: Eigen::Vector3d(1.9420, 0.8143, 0.7631);
+				// -- If not: Take default value estimated scale
 				// -- If yes: Read value from dic
-				
 				std::unordered_map<std::string, Eigen::Vector3d>::iterator iter;  
 				iter = sample_obj->obj_class_scales.find(yolo_obj_class[object_id]);
 
 				if(iter != sample_obj->obj_class_scales.end())
 				{
 				    sample_obj->yolo_obj_scale = iter->second;
-					std::cout << "#### object_id ####" << std::endl;
-					std::cout << object_id << std::endl;
-					std::cout << "#### sample_obj->yolo_obj_scale ####" << std::endl;
-					std::cout << sample_obj->yolo_obj_scale << std::endl;
-
 				}
 				else
 				{
@@ -1152,7 +1201,50 @@ void detect_3d_cuboid::detect_cuboid(const cv::Mat &rgb_img, const Matrix4d &tra
 		sort_indexes(all_combined_score, sort_idx_small, actual_cuboid_num_small);
 		for (int ii = 0; ii < actual_cuboid_num_small; ii++) // use sorted index
 		{
+			# ifdef at3dcv_leander_no_depth_best_proposal
+			// LL: Retrive sorted 2d bb vertices from current sample object
+			std::vector<Eigen::MatrixXi> eigen_2d_surfaces;
+			cuboid_2d_vertices_to_2d_surfaces(raw_obj_proposals[sort_idx_small[ii]]->box_corners_2d, eigen_2d_surfaces);
+			// LL: Convert the six eigen matrix representations of the rectangles to boost styled strings
+			std::vector<polygon> boost_poly_surfaces;
+			eigen_2d_cub_surfaces_to_boost_poly_surfaces(eigen_2d_surfaces, boost_poly_surfaces);
+
+			// ###### Convex hull of instance segmentation mask to boost polygo
+			std::vector<Eigen::MatrixXi> inst_segment_vert;
+			inst_segment_vert.push_back(read_inst_segment_vert[object_id].cast<int>());
+			// LL: Retrive the convex hull of the objects segmentation mask and convert the vertices to int
+			eigen_2d_cub_surfaces_to_boost_poly_surfaces(inst_segment_vert, boost_poly_surfaces);
+
+			// ###### Document vertices and plot polygons
+			// LL: Document the text boost styled polygon representations
+			std::string poly_file = "/mnt/datasets/output/polygons/"+std::to_string(object_id)+"_"+frame_number+"_poly";
+			std::string vertices_file = "/mnt/datasets/output/vertices/"+std::to_string(object_id)+"_"+frame_number+"_poly";
+			std::ofstream out(vertices_file+".txt");
+			for(int i = 0; i != boost_poly_surfaces.size(); ++i)
+				out << boost::geometry::wkt(boost_poly_surfaces[i]) << "\n";
+			out.close();
+
+			// LL: Plot the polygons and write the plot to a file of name <poly_file>.svg 
+			visualize_polygons(poly_file, boost_poly_surfaces);
+
+			// ###### Calculate overlap and only add cuboid proposal if > 0.5
+			double percent_covered = 0.0;
+			for (int i = 0; i != boost_poly_surfaces.size()-1; ++i)
+			{
+			    // LL: Calculate how much percent of the are of poly2 is covered by poly1
+			    percent_covered += perc_poly2_covered_by_poly1(boost_poly_surfaces[i], boost_poly_surfaces[boost_poly_surfaces.size()-1]);
+			}
+			// LL: Do to geometrical constrains the six distinct sides of a rectangle can cover the surface of 
+			// an object at most twice. => percent_covered/2 is a element of [0,1].
+			percent_covered = percent_covered/2;
+			std::cout << "#### percent_covered ####" << std::endl;
+			std::cout << "OID:" <<  std::to_string(object_id) << ", FN:" << frame_number << ",  PC " << percent_covered << std::endl;
+			std::cout << "#### percent_covered ####" << std::endl;
+			if (percent_covered > 0.5)
+				all_object_cuboids[object_id].push_back(raw_obj_proposals[sort_idx_small[ii]]);
+			# else
 			all_object_cuboids[object_id].push_back(raw_obj_proposals[sort_idx_small[ii]]);
+			# endif
 		}
 
 		ca::Profiler::tictoc("One 3D object total time");
