@@ -301,7 +301,7 @@ bool read_inst_segment_vertices(const std::string txt_file_name, std::vector<Eig
     return true;
 }
 
-# ifdef at3dcv_leander
+# ifdef at3dcv_leander_no_depth
 void poly_eigen_to_string_rep(Eigen::MatrixXi convex_hull_vertices, std::string &poly_string_rep){
     // LL: Convert polygon to the string format required by boost/geometry.
     // LL: Important: First and last point allways have to be the same to get a correct result.

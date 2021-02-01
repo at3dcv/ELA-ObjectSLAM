@@ -567,7 +567,7 @@ void detect_3d_cuboid::detect_cuboid(const cv::Mat &rgb_img, const Matrix4d &tra
 #ifdef at3dcv_leander
 // LL: Added by Leander: Overloaded function by adding `read_inst_segment_vert` and `yolo_obj_class`
 void detect_3d_cuboid::detect_cuboid(const cv::Mat &rgb_img, const Matrix4d &transToWolrd, const MatrixXd &obj_bbox_coors, MatrixXd all_lines_raw, 
-									std::vector<ObjectSet> &all_object_cuboids, std::vector<Eigen::Matrix2Xd> read_inst_segment_vert, std::vector<std::string> yolo_obj_class, char frame_number[256])
+									std::vector<ObjectSet> &all_object_cuboids, std::vector<Eigen::Matrix2Xd> read_inst_segment_vert, std::vector<std::string> yolo_obj_class, char frame_number[256], cv::Mat depth_map)
 {
 	/* Args:
 	* 		rgb_img: Raw RGB image
@@ -583,9 +583,9 @@ void detect_3d_cuboid::detect_cuboid(const cv::Mat &rgb_img, const Matrix4d &tra
 	// LL: Added by Leander: Ensure both vectors (vertices and cuboids) have the same length (same number of objects).
 	if ((int)all_object_cuboids.size() != (int)read_inst_segment_vert.size() && (int)yolo_obj_class.size() != (int)read_inst_segment_vert.size())
 	{
-		std::cout << "all_object_cuboids.size" << (int)all_object_cuboids.size() << std::endl;
-		std::cout << "read_inst_segment_vert.size" << (int)read_inst_segment_vert.size() << std::endl;
-		std::cout << "yolo_obj_class.size" << (int)yolo_obj_class.size() << std::endl;
+		ROS_DEBUG_STREAM("box_proposal_detail: all_object_cuboids.size" << (int)all_object_cuboids.size() );
+		ROS_DEBUG_STREAM("box_proposal_detail: read_inst_segment_vert.size" << (int)read_inst_segment_vert.size());
+		ROS_DEBUG_STREAM("box_proposal_detail: yolo_obj_class.size" << (int)yolo_obj_class.size() );
 		ROS_ERROR_STREAM("The number of cuboids, instance segmentation masks and class names does not match");
 	}
 
@@ -1237,12 +1237,50 @@ void detect_3d_cuboid::detect_cuboid(const cv::Mat &rgb_img, const Matrix4d &tra
 			// LL: Do to geometrical constrains the six distinct sides of a rectangle can cover the surface of 
 			// an object at most twice. => percent_covered/2 is a element of [0,1].
 			percent_covered = percent_covered/2;
-			std::cout << "#### percent_covered ####" << std::endl;
-			std::cout << "OID:" <<  std::to_string(object_id) << ", FN:" << frame_number << ",  PC " << percent_covered << std::endl;
-			std::cout << "#### percent_covered ####" << std::endl;
-			if (percent_covered > 0.5)
+			ROS_DEBUG_STREAM("box_proposal_detail: OID:" <<  std::to_string(object_id) << ", FN:" << frame_number << ",  PC " << percent_covered);
+			if (percent_covered >= 0.5)
 				all_object_cuboids[object_id].push_back(raw_obj_proposals[sort_idx_small[ii]]);
-			# else
+			
+			# elif defined at3dcv_leander_depth
+
+			// LL: Convex hull of instance segmentation mask
+			Eigen::MatrixXd cv_hull;
+			cv_hull = read_inst_segment_vert[object_id];
+
+			// LL: Convert to 3D and add the depth information
+			cv_hull.conservativeResize(3, Eigen::NoChange);
+			for(int j = 0; j != cv_hull.cols(); j++)
+			{   int x = cv_hull(0,j);
+			    int y = cv_hull(1,j);
+			    cv_hull(2,j) = static_cast<double>(depth_map.at<float>(x,y));
+			}
+
+			// LL: Pixel to sensor to world frame
+			Eigen::MatrixXd cv_hulls_3d_camera;
+			cv_hulls_3d_camera = cam_pose.invK * cv_hull; //each column is a 3D world coordinate  3*n
+			Eigen::MatrixXd cv_hulls_3d_world;
+			cv_hulls_3d_world = homo_to_real_coord<double>(cam_pose.transToWolrd * real_to_homo_coord<double>(cv_hulls_3d_camera));
+
+			// x,y,z max and min values of the cuboid bb proposal
+			Eigen::Vector3d maxVal = raw_obj_proposals[sort_idx_small[ii]]->box_corners_3d_world.rowwise().maxCoeff();
+			Eigen::Vector3d minVal = raw_obj_proposals[sort_idx_small[ii]]->box_corners_3d_world.rowwise().minCoeff();
+			
+			// check how many values are insight and how many values are outside the bb
+			int point_inside_bb = 0;
+			for(int i = 0; i != cv_hulls_3d_world.cols(); ++i)
+			    {
+					double x = cv_hulls_3d_world(0,i);
+					double y = cv_hulls_3d_world(1,i);
+					double z = cv_hulls_3d_world(2,i);
+					ROS_DEBUG_STREAM("box_proposal_detail: x, y, z convex hull:" << x << " - " << y << " - " << z );
+			        if ((x <= maxVal[0] && x >= minVal[0]) && (y <= maxVal[1] && y >= minVal[1]) && (z <= maxVal[2] && z >= minVal[2]))
+			            point_inside_bb += 1;
+			    }
+			// LL: Save the object as relevant landmark if 50% or more points of the 3D convex hull lie insight the 3D BB proposal
+			if (point_inside_bb/cv_hulls_3d_world.cols() >= 0.5)
+				ROS_DEBUG_STREAM("box_proposal_detail: Convex hull points insight 3d bb:" << point_inside_bb/cv_hulls_3d_world.cols());
+				all_object_cuboids[object_id].push_back(raw_obj_proposals[sort_idx_small[ii]]);
+			# else 
 			all_object_cuboids[object_id].push_back(raw_obj_proposals[sort_idx_small[ii]]);
 			# endif
 		}

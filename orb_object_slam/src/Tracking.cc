@@ -1742,7 +1742,7 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 		detect_cuboid_obj->detect_cuboid(pKF->raw_img, cam_transToGround.cast<double>(), all_obj2d_bbox_infov_mat, all_lines_raw, all_obj_cubes);
 #else
 		// LL: Added by Leander: Added `object_classes` and `read_inst_segment_vert` to this function call
-		detect_cuboid_obj->detect_cuboid(pKF->raw_img, cam_transToGround.cast<double>(), all_obj2d_bbox_infov_mat, all_lines_raw, all_obj_cubes, read_inst_segment_vert, object_classes, frame_index_c);
+		detect_cuboid_obj->detect_cuboid(pKF->raw_img, cam_transToGround.cast<double>(), all_obj2d_bbox_infov_mat, all_lines_raw, all_obj_cubes, read_inst_segment_vert, object_classes, frame_index_c, pKF->raw_depth);
 #endif
 	}
 
