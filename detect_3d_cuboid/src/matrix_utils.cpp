@@ -332,7 +332,7 @@ void poly_vec_eigen_to_string_rep(std::vector<Eigen::MatrixXi> raw_all_obj2d_ss_
     }
 }
 
-int poly_string_to_boost_pooly(std::string poly_txt_rep, polygon &poly){
+int poly_string_to_boost_poly(std::string poly_txt_rep, polygon &poly){
     
     // LL: Convert txt representation to boost polygon
     std::string reason;
@@ -430,7 +430,7 @@ void eigen_2d_cub_surfaces_to_boost_poly_surfaces(std::vector<Eigen::MatrixXi> e
     {
         polygon poly;
         poly_eigen_to_string_rep(eigen_2d_surfaces[i], boost_string_rep);
-        poly_string_to_boost_pooly(boost_string_rep, poly);
+        poly_string_to_boost_poly(boost_string_rep, poly);
         boost_poly_surfaces.push_back(poly);
     }
 }

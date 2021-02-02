@@ -65,7 +65,7 @@ typedef boost::geometry::model::d2::point_xy<double> point_type;
 
 void poly_eigen_to_string_rep(Eigen::MatrixXi convex_hull_vertices, std::string &poly_string_rep);
 void poly_vec_eigen_to_string_rep(std::vector<Eigen::MatrixXi> raw_all_obj2d_ss_vertix, std::vector<std::string> &geometries);
-int poly_string_to_boost_pooly(std::string poly_txt_rep, polygon &poly);
+int poly_string_to_boost_poly(std::string poly_txt_rep, polygon &poly);
 double perc_poly2_covered_by_poly1(polygon poly1, polygon poly2);
 int visualize_polygons(std::string file_name, std::vector<polygon> polygons);
 

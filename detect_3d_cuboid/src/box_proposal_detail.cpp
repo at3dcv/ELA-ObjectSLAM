@@ -1209,11 +1209,16 @@ void detect_3d_cuboid::detect_cuboid(const cv::Mat &rgb_img, const Matrix4d &tra
 			std::vector<polygon> boost_poly_surfaces;
 			eigen_2d_cub_surfaces_to_boost_poly_surfaces(eigen_2d_surfaces, boost_poly_surfaces);
 
-			// ###### Convex hull of instance segmentation mask to boost polygo
-			std::vector<Eigen::MatrixXi> inst_segment_vert;
-			inst_segment_vert.push_back(read_inst_segment_vert[object_id].cast<int>());
+			// ###### Convex hull of instance segmentation mask to boost polygon
+			// LL: Switch x and y axis
+			Eigen::MatrixXi inst_segment_vert_mat(2, read_inst_segment_vert[object_id].cols());
+			inst_segment_vert_mat << read_inst_segment_vert[object_id].row(1).cast<int>(), read_inst_segment_vert[object_id].row(0).cast<int>();
+
+
+			std::vector<Eigen::MatrixXi> inst_segment_vert_vec;
+			inst_segment_vert_vec.push_back(inst_segment_vert_mat);
 			// LL: Retrive the convex hull of the objects segmentation mask and convert the vertices to int
-			eigen_2d_cub_surfaces_to_boost_poly_surfaces(inst_segment_vert, boost_poly_surfaces);
+			eigen_2d_cub_surfaces_to_boost_poly_surfaces(inst_segment_vert_vec, boost_poly_surfaces);
 
 			// ###### Document vertices and plot polygons
 			// LL: Document the text boost styled polygon representations
@@ -1238,26 +1243,42 @@ void detect_3d_cuboid::detect_cuboid(const cv::Mat &rgb_img, const Matrix4d &tra
 			// an object at most twice. => percent_covered/2 is a element of [0,1].
 			percent_covered = percent_covered/2;
 			ROS_DEBUG_STREAM("box_proposal_detail: OID:" <<  std::to_string(object_id) << ", FN:" << frame_number << ",  PC " << percent_covered);
-			if (percent_covered >= 0.5)
+			if (percent_covered >= 0.9)
 				all_object_cuboids[object_id].push_back(raw_obj_proposals[sort_idx_small[ii]]);
 			
 			# elif defined at3dcv_leander_depth
 
-			// LL: Convex hull of instance segmentation mask
-			Eigen::MatrixXd cv_hull;
-			cv_hull = read_inst_segment_vert[object_id];
+			ROS_INFO_STREAM("box_proposal_detail: # image columns:" << rgb_img.cols );
+			ROS_INFO_STREAM("box_proposal_detail: # image rows:" << rgb_img.rows );
 
-			// LL: Convert to 3D and add the depth information
+			ROS_INFO_STREAM("box_proposal_detail: # depth map columns:" << depth_map.cols );
+			ROS_INFO_STREAM("box_proposal_detail: # depth map rows:" << depth_map.rows );
+
+			// LL: Convex hull of instance segmentation mask
+			// LL: Switch x and y axis
+			Eigen::MatrixXd cv_hull(2, read_inst_segment_vert[object_id].cols());
+			cv_hull << read_inst_segment_vert[object_id].row(1), read_inst_segment_vert[object_id].row(0);
+
+			// LL: Convert to 3D and add the depth information and fill z row with onces
 			cv_hull.conservativeResize(3, Eigen::NoChange);
-			for(int j = 0; j != cv_hull.cols(); j++)
-			{   int x = cv_hull(0,j);
-			    int y = cv_hull(1,j);
-			    cv_hull(2,j) = static_cast<double>(depth_map.at<float>(x,y));
-			}
+			cv_hull.row(2) = VectorXd::Ones(cv_hull.cols());
 
 			// LL: Pixel to sensor to world frame
 			Eigen::MatrixXd cv_hulls_3d_camera;
 			cv_hulls_3d_camera = cam_pose.invK * cv_hull; //each column is a 3D world coordinate  3*n
+
+			
+			// LL: Add the depth information
+			for(int j = 0; j != cv_hulls_3d_camera.cols(); j++)
+			{   double x = cv_hulls_3d_camera(0,j);
+			    double y = cv_hulls_3d_camera(1,j);
+			    cv_hulls_3d_camera(2,j) = static_cast<double>(depth_map.at<float>(x,y));
+			}
+			
+			std::cout << "######" << std::endl;
+			std::cout << cv_hulls_3d_camera << std::endl;
+			std::cout << "######" << std::endl;
+
 			Eigen::MatrixXd cv_hulls_3d_world;
 			cv_hulls_3d_world = homo_to_real_coord<double>(cam_pose.transToWolrd * real_to_homo_coord<double>(cv_hulls_3d_camera));
 
@@ -1267,18 +1288,23 @@ void detect_3d_cuboid::detect_cuboid(const cv::Mat &rgb_img, const Matrix4d &tra
 			
 			// check how many values are insight and how many values are outside the bb
 			int point_inside_bb = 0;
+			ROS_INFO_STREAM("box_proposal_detail: BB propsal max values:" << maxVal );
+			ROS_INFO_STREAM("box_proposal_detail: BB propsal min values:" << minVal );
 			for(int i = 0; i != cv_hulls_3d_world.cols(); ++i)
 			    {
 					double x = cv_hulls_3d_world(0,i);
 					double y = cv_hulls_3d_world(1,i);
 					double z = cv_hulls_3d_world(2,i);
-					ROS_DEBUG_STREAM("box_proposal_detail: x, y, z convex hull:" << x << " - " << y << " - " << z );
+					ROS_INFO_STREAM("box_proposal_detail: Convex hull vertic:" << cv_hulls_3d_world.col(i) );
 			        if ((x <= maxVal[0] && x >= minVal[0]) && (y <= maxVal[1] && y >= minVal[1]) && (z <= maxVal[2] && z >= minVal[2]))
 			            point_inside_bb += 1;
 			    }
 			// LL: Save the object as relevant landmark if 50% or more points of the 3D convex hull lie insight the 3D BB proposal
-			if (point_inside_bb/cv_hulls_3d_world.cols() >= 0.5)
-				ROS_DEBUG_STREAM("box_proposal_detail: Convex hull points insight 3d bb:" << point_inside_bb/cv_hulls_3d_world.cols());
+			ROS_INFO_STREAM("box_proposal_detail: Convex hull Percentage points insight 3d bb:" << point_inside_bb/cv_hulls_3d_world.cols());
+			ROS_INFO_STREAM("box_proposal_detail: Convex hull points insight 3d bb:" << point_inside_bb);
+			ROS_INFO_STREAM("box_proposal_detail: Convex hull total number of points insight 3d bb:" << cv_hulls_3d_world.cols());
+			if (point_inside_bb/cv_hulls_3d_world.cols() >= 0.9)
+				ROS_INFO_STREAM("box_proposal_detail: Convex hull points insight 3d bb:" << point_inside_bb/cv_hulls_3d_world.cols());
 				all_object_cuboids[object_id].push_back(raw_obj_proposals[sort_idx_small[ii]]);
 			# else 
 			all_object_cuboids[object_id].push_back(raw_obj_proposals[sort_idx_small[ii]]);
