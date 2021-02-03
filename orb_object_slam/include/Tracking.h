@@ -36,9 +36,6 @@
 
 #include "unordered_map"
 
-// LL: Added config header to pass macro that switches Leander's code off and on
-#include "At3dcv_config.h"
-
 class detect_3d_cuboid;
 
 namespace ORB_SLAM2
@@ -71,7 +68,7 @@ public:
 
     // Preprocess the input and call Track(). Extract features and performs stereo matching.
     cv::Mat GrabImageStereo(const cv::Mat &imRectLeft, const cv::Mat &imRectRight, const double &timestamp);
-    cv::Mat GrabImageRGBD(const cv::Mat &imRGB, const cv::Mat &imD, const double &timestamp, int msg_seq_id);
+    cv::Mat GrabImageRGBD(const cv::Mat &imRGB, const cv::Mat &imD, const double &timestamp);
     cv::Mat GrabImageMonocular(const cv::Mat &im, const double &timestamp, int msg_seq_id = -1);
 
     void SetLocalMapper(LocalMapping *pLocalMapper);
@@ -87,9 +84,6 @@ public:
     void InformOnlyTracking(const bool &flag);
 
 public:
-    // keep track of object detection frame id
-    int object_detection_frame_id = 0;
-
     // by me
     Eigen::Matrix3d Kalib;
     Eigen::Matrix3f Kalib_f;
@@ -158,7 +152,6 @@ public:
     // Current Frame
     Frame mCurrentFrame;
     cv::Mat mImGray;
-    cv::Mat mImRGB;
 
     // Initialization Variables (Monocular)
     std::vector<int> mvIniLastMatches;

@@ -35,7 +35,6 @@
 #include "Parameters.h"
 #include "ORBVocabulary.h"
 
-#include "ros/ros.h"
 #include <time.h>
 
 bool has_suffix(const std::string &str, const std::string &suffix)
@@ -103,14 +102,9 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
                              mpMap, mpKeyFrameDatabase, strSettingsFile, mSensor); // setting file read by tracker, not by mapper!
 
     //Initialize the Local Mapping thread and launch
-    // AC: Entry point of local mapping
-    // AC: Called once and then loops over LocalMapping::Run
     mpLocalMapper = new LocalMapping(mpMap, mSensor == MONOCULAR);
     if (parallel_mapping)
-    {
-        ROS_DEBUG_STREAM("System::System LocalMapping::Run");
         mptLocalMapping = new thread(&ORB_SLAM2::LocalMapping::Run, mpLocalMapper);
-    }
 
     //Initialize the Loop Closing thread and launch
     mpLoopCloser = new LoopClosing(mpMap, mpKeyFrameDatabase, mpVocabulary, mSensor != MONOCULAR);
@@ -180,53 +174,13 @@ cv::Mat System::TrackStereo(const cv::Mat &imLeft, const cv::Mat &imRight, const
     return mpTracker->GrabImageStereo(imLeft, imRight, timestamp);
 }
 
-#ifdef at3dcv_andy
-cv::Mat System::TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const double &timestamp, int msg_seq_id)
-{
-    ROS_DEBUG_STREAM("System::TrackRGBD");
-    // AC: Deleted system check mSensor != RGBD...
-
-    // Check mode change
-    {
-        unique_lock<mutex> lock(mMutexMode);
-        if (mbActivateLocalizationMode)
-        {
-            mpLocalMapper->RequestStop();
-
-            // Wait until Local Mapping has effectively stopped
-            while (!mpLocalMapper->isStopped())
-            {
-                usleep(1000);
-            }
-
-            mpTracker->InformOnlyTracking(true);
-            mbActivateLocalizationMode = false;
-        }
-        if (mbDeactivateLocalizationMode)
-        {
-            mpTracker->InformOnlyTracking(false);
-            mpLocalMapper->Release();
-            mbDeactivateLocalizationMode = false;
-        }
-    }
-
-    // Check reset
-    {
-        unique_lock<mutex> lock(mMutexReset);
-        if (mbReset)
-        {
-            mpTracker->Reset();
-            mbReset = false;
-        }
-    }
-
-    return mpTracker->GrabImageRGBD(im, depthmap, timestamp, msg_seq_id);
-}
-#else
 cv::Mat System::TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const double &timestamp)
 {
-
-    // AC: Deleted system check mSensor != RGBD...
+    if (mSensor != RGBD)
+    {
+        cerr << "ERROR: you called TrackRGBD but input sensor was not set to RGBD." << endl;
+        exit(-1);
+    }
 
     // Check mode change
     {
@@ -264,7 +218,6 @@ cv::Mat System::TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const doub
 
     return mpTracker->GrabImageRGBD(im, depthmap, timestamp);
 }
-#endif
 
 cv::Mat System::TrackMonocular(const cv::Mat &im, const double &timestamp, int msg_seq_id)
 {

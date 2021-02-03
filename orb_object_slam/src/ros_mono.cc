@@ -143,7 +143,6 @@ void ImageGrabber::GrabImage(const sensor_msgs::ImageConstPtr &msg)
     try
     {
         cv_ptr = cv_bridge::toCvShare(msg);
-        ROS_DEBUG_STREAM(cv_ptr->image);
     }
     catch (cv_bridge::Exception &e)
     {

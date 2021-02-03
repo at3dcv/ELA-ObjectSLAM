@@ -1,31 +1,6 @@
 
 ## AT3DCV
 
-## Quick Start
-1. Download this repo: https://github.com/ct2034/docker-ubuntu-vnc-desktop
-2. Change the Dockerfile with the Dockerfile uploaded here
-3. Open terminal and go to the folder where the Dockerfile is located
-4. sudo docker build -t at3dcv_2020 .
-5. `docker run -it --rm -p 6080:80 -v ~/at3dcv/:/mnt/ at3dcv_2020:latest`
-6. Browse to http://127.0.0.1:6080/
-7. In the docker image open Terminal
-8. cd cube_slam_ws
-9.  `source /opt/ros/kinetic/setup.bash`
-10. `catkin_make -j1`
-11. `source devel/setup.bash`
-12. `roslaunch orb_object_slam object_slam_example.launch > roslaunch.log`
-
-## Start ROS
-1. download the `ORBvoc.txt` file from the original ORB Slam 2 Vocabulary folder or from our now updated master branch.
-2. copy the file to your Vocabulary folder with in the orb_object_slam folder with in your mounted objectslam folder.
-3. download the whole `seq7` data folder from here: https://drive.google.com/drive/folders/1FrBdmYxrrM6XeBe_vIXCuBTfZeCMgApL
-4. copy the `seq7` folder to a folder with in your mounted volume.
-5. Edit the path of the parameter `base_data_folder` with in the mono.launch file to point to the `seq7` folder
-6. Change `ORBvoc.bin` to `ORBvoc.txt` with in the mono.launch file (fifth line).
-7. Open two terminals and in all three source the setup fill: `source <path_to_cu  be_slam>/devel/setup.bash`
-8. Terminal one run: `roslaunch orb_object_slam xxxx.launch` and wait for two windows to pop up
-9. Terminal two run: `rosbag play /mnt/datasets/freiburg3_walking_xyz/rgbd_dataset_freiburg3_walking_xyz.bag --clock -r 0.5 `
-
 #### Architecture for 3D dense map reconstruction - brainstorming session 05.11.2020
 
 ![3D dense map architecture](./resources/architecture/architecture_dense_map.png)

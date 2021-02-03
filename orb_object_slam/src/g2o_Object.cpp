@@ -16,7 +16,6 @@
 #include <Eigen/Dense>
 #include <math.h>
 #include <algorithm> // std::swap
-#include <ros/ros.h>
 
 
 namespace g2o
@@ -263,8 +262,8 @@ Vector2d EdgeDynamicPointCuboidCamera::computeError_debug()
 
 void EdgeObjectMotion::computeError()
 {
-    // AC: cuboidVertexfrom = pointer to cuboid vertex of past frame
-    // AC: cuboidVertexTo = pointer to cuboid vertex of current frame
+    // ANDY: cuboidVertexfrom = pointer to cuboid vertex of past frame
+    // ANDY: cuboidVertexTo = pointer to cuboid vertex of current frame
     const VertexCuboidFixScale *cuboidVertexfrom = dynamic_cast<const VertexCuboidFixScale *>(_vertices[0]);   // object to world pose
     const VertexCuboidFixScale *cuboidVertexto = dynamic_cast<const VertexCuboidFixScale *>(_vertices[1]);     // object to world pose
     const VelocityPlanarVelocity *velocityVertex = dynamic_cast<const VelocityPlanarVelocity *>(_vertices[2]); // object to world pose
@@ -283,8 +282,6 @@ void EdgeObjectMotion::computeError()
 
     const double vehicle_length = 2.71; // front and back wheels distance
     // vehicle motion model is applied to back wheel center
-    // AC: Here's the main motion model!
-    ROS_DEBUG_STREAM("EdgeObjectMotion::computeError motion model");
     Vector3d trans_back_pred = posefrom.translation() + (velocity(0) * delta_t - vehicle_length * 0.5) * Vector3d(cos(yaw_from), sin(yaw_from), 0);
     double yaw_pred = yaw_from + tan(velocity(1)) * delta_t / vehicle_length * velocity(0);
 
