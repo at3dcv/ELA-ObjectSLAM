@@ -13,7 +13,7 @@
    <param name="parallel_mapping" value="true" />  # if false, may reduce bag rate
    
    <rosparam file="$(find orb_object_slam)/launch/object_params/kitti.yaml" command="load"/>   # initial pose, folder name
-   <param name="base_data_folder" value="/mnt/datasets/freiburg3_walking_xyz/" />
+   <param name="base_data_folder" value="/mnt/datasets/freiburg3_walking_xyz" />
 
    <param name="whether_detect_object" value="true" />
    <param name="whether_read_offline_cuboidtxt" value="false" />  # for kitti, I read offline data.

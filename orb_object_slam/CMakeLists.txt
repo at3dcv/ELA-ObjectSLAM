@@ -117,6 +117,7 @@ target_link_libraries(ros_mono  ${PROJECT_NAME} ${catkin_LIBRARIES} )
 add_executable(ros_rgbd
 src/ros_rgbd.cc
 )
+
 target_link_libraries(ros_rgbd  ${PROJECT_NAME} ${catkin_LIBRARIES} )
 # 
 # # Node for Stereo camera

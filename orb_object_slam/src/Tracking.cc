@@ -368,6 +368,7 @@ cv::Mat Tracking::GrabImageStereo(const cv::Mat &imRectLeft, const cv::Mat &imRe
 #ifdef at3dcv_andy
 cv::Mat Tracking::GrabImageRGBD(const cv::Mat &imRGB, const cv::Mat &imD, const double &timestamp, int msg_seq_id)
 {
+	ROS_DEBUG_STREAM("Tracking::GrabImageRGBD");
 	mImGray = imRGB;
 	cv::Mat imDepth = imD;
 
@@ -386,10 +387,15 @@ cv::Mat Tracking::GrabImageRGBD(const cv::Mat &imRGB, const cv::Mat &imD, const 
 			cvtColor(mImGray, mImGray, CV_BGRA2GRAY);
 	}
 
-	if (mDepthMapFactor != 1 || imDepth.type() != CV_32F)
-		;
-	imDepth.convertTo(imDepth, CV_32F, mDepthMapFactor);
-
+	// AC: cv::Mat type 5 corresponds to CV_32F
+	// https://stackoverflow.com/questions/10167534/how-to-find-out-what-type-of-a-mat-object-is-with-mattype-in-opencv
+	// AC: TODO: if change to RGBD init uncomment this: mDepthMapFactor != 1 || 
+	if (imDepth.type() != 5) // imDepth.type() != CV_32F || 
+	{
+		ROS_DEBUG_STREAM("Depth map is converted");
+		imDepth.convertTo(imDepth, CV_32F, mDepthMapFactor);
+	}	
+	
 	mCurrentFrame = Frame(mImGray, imDepth, timestamp, mpORBextractorLeft, mpORBVocabulary, mK, mDistCoef, mbf, mThDepth);
 	
 	// AC: Current frame id
