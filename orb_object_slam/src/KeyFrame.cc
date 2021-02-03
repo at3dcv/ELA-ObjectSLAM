@@ -36,6 +36,7 @@
 #include "MapObject.h"
 #include <ctime>
 #include "math.h"
+#include "ros/ros.h"
 
 namespace ORB_SLAM2
 {
@@ -71,6 +72,8 @@ KeyFrame::KeyFrame(Frame &F, Map *pMap, KeyFrameDatabase *pKFDB) : mnFrameId(F.m
     if (whether_detect_object) {
         raw_img = F.raw_img.clone();
         raw_depth = F.raw_depth.clone();
+        // AC: Replace NaN with 0s
+        cv::patchNaNs(raw_depth, 0);
     }
 
     if (whether_dynamic_object)
