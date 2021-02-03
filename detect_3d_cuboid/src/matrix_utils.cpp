@@ -12,12 +12,6 @@
 #include <sstream>
 #include <ctime>
 
-// LL: Added by Leander
-#ifdef at3dcv_leander
-#include <vector>
-#endif
-// LL: Added by Leander
-
 using namespace Eigen;
 
 template <class T>
@@ -199,7 +193,6 @@ void vert_stack_m_self(MatrixXf &a_in, const MatrixXf &b_in)
 }
 
 // make sure column size is given. no checks here. row will be adjusted automatically. if more cols given, will be zero.
-// AC: the offline values of bboxes and segmentation are read here!
 template <class T>
 bool read_all_number_txt(const std::string txt_file_name, Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> &read_number_mat)
 {
@@ -240,239 +233,30 @@ bool read_all_number_txt(const std::string txt_file_name, Eigen::Matrix<T, Eigen
 template bool read_all_number_txt(const std::string, MatrixXd &);
 template bool read_all_number_txt(const std::string, MatrixXi &);
 
-
-// LL: Added by Leander 
-#ifdef at3dcv_leander
-bool read_inst_segment_vertices(const std::string txt_file_name, std::vector<Eigen::Matrix2Xd> &read_inst_segment_vert)
-{
-    // LL: Check if the file can be read
-    if (!std::ifstream(txt_file_name))
-    {
-        std::cout << "ERROR!!! Cannot read txt file " << txt_file_name << std::endl;
-        return false;
-    }
-        
-    // LL: Read the text file to `filetxt`
-    std::ifstream filetxt(txt_file_name.c_str());
-    
-    std::string line_x;
-    std::string line_y;
-
-    // LL: Track the number of columns 
-    int row_counter = 0;
-	
-    // LL: Loop over the current and the next line (x and y value)
-    while (getline(filetxt, line_x))
-    {
-        getline(filetxt, line_y);
-    
-        // LL: Matrix to hold the vertices of the polygon from the current x and y row  
-        // LL: Carful: This configuration expects a polygon to have a maximum of a 100 vertices
-        Eigen::Matrix2Xd single_object_is_vertices(2,100);
-    
-        // LL: Variable to which we pass the x and the y value of the current and the next row
-        double t1;
-        double t2;
-    
-        // LL: Retrive the first string (column) in the current line and write it to `classname`
-        std::stringstream ss1(line_x);
-        std::stringstream ss2(line_y);
-    
-        // LL: Keep track at what column we are currently at.
-        int colu = 0;
-    
-        // LL: Extracts one by one all remaining columns of the current row and writes them to read_number_mat
-        while (ss1 >> t1 && ss2 >> t2 && colu < 99 )
-        {
-            single_object_is_vertices(0, colu) = t1;
-            single_object_is_vertices(1, colu) = t2;
-    
-            colu++;
-        }
-        // LL: Since reading two lines at the time increase the row counter by two
-        row_counter += 2;
-    
-        // LL: Reduce the number of columns from a hundred to the actual number
-        single_object_is_vertices.conservativeResize(3,colu);
-        // LL: Push the vertices matrix of the current object to the vector containing the info. on all the objects in the frame.
-        read_inst_segment_vert.push_back(single_object_is_vertices);
-    }
-    filetxt.close();  
-    return true;
-}
-
-# ifdef at3dcv_leander
-void poly_eigen_to_string_rep(Eigen::MatrixXi convex_hull_vertices, std::string &poly_string_rep){
-    // LL: Convert polygon to the string format required by boost/geometry.
-    // LL: Important: First and last point allways have to be the same to get a correct result.
-    // LL: Important: There should not be any taps before and after each ','.  
-    poly_string_rep = "POLYGON((";
-    for(int j = 0 ; j != convex_hull_vertices.cols(); j++)
-    {
-        poly_string_rep = poly_string_rep + std::to_string(convex_hull_vertices(0,j)) + " " + std::to_string(convex_hull_vertices(1,j)) + ","; 
-    }
-    // LL: Add the first vertix to the end to ensure a closed polygon
-    poly_string_rep = poly_string_rep + std::to_string(convex_hull_vertices(0,0)) + " " + std::to_string(convex_hull_vertices(1,0)) + "))";
-}
-
-void poly_vec_eigen_to_string_rep(std::vector<Eigen::MatrixXi> raw_all_obj2d_ss_vertix, std::vector<std::string> &geometries){
-    // LL: Convert all polygons from current file to the string format required by boost/geometry and write them to geometries
-    // LL: Important: First and last point allways have to be the same to get a correct result.
-    // LL: Important: There should not be any taps before and after every ',' 
-    for(int i = 0; i != raw_all_obj2d_ss_vertix.size(); i++) 
-    {   
-        std::string geo = "POLYGON((";
-        for(int j = 0 ; j != raw_all_obj2d_ss_vertix[i].cols(); j++)
-        {
-            geo = geo + std::to_string(raw_all_obj2d_ss_vertix[i](0,j)) + " " + std::to_string(raw_all_obj2d_ss_vertix[i](1,j)) + ",";
-        }
-        // LL: Add the first vertix to the end to ensure a closed polygon
-        geo = geo + std::to_string(raw_all_obj2d_ss_vertix[i](0,0)) + " " + std::to_string(raw_all_obj2d_ss_vertix[i](1,0)) + "))";
-        geometries.push_back(geo);
-    }
-}
-
-int poly_string_to_boost_pooly(std::string poly_txt_rep, polygon &poly){
-    
-    // LL: Convert txt representation to boost polygon
-    std::string reason;
-    boost::geometry::read<boost::geometry::format_wkt>(poly, poly_txt_rep);
-
-    // LL: Ensure that the geomtry is valid (e.g. correct the orientation)
-    if (!boost::geometry::is_valid(poly))
-    {
-        boost::geometry::correct(poly);
-        if (!boost::geometry::is_valid(poly, reason))
-        {   
-            std::cout << "The geometry is not a valid geometry for the following reason: " + reason << std::endl;
-            return 1;
-        }
-    }
-    return 0;
-}
-
-double perc_poly2_covered_by_poly1(polygon poly1, polygon poly2)
-{
-    // LL: Double-ended queue - an indexed sequence container that allows fast insertion and deletion at both
-    std::deque<polygon> output;
-    // LL: Given two geometries identify their intersecting geometries a write them to output
-    boost::geometry::intersection(poly1, poly2, output);
-    // LL: Sum the area of all intersecting geomtries 
-    double area = 0;
-    for (auto& p : output)
-        area += boost::geometry::area(p);
-
-    return (area/boost::geometry::area(poly2));
-}
-
-
-int visualize_polygons(std::string file_name, std::vector<polygon> polygons)
-{
-    // LL: Map the two polygons to a svg file
-    // Declare a stream and an SVG mapper
-    std::ofstream svg(file_name + ".svg");
-    boost::geometry::svg_mapper<point_type> mapper(svg, 400, 400);
-    // Add geometries such that all these geometries fit on the map
-    int poly_vec_length = polygons.size();
-    for (int i = 0; i != poly_vec_length; ++i)
-        {
-            mapper.add(polygons[i]);
-        }
-
-    // Draw the geometries on the SVG map, using a specific SVG style
-    for (int i = 0; i != poly_vec_length; ++i)
-        {
-            std::string color = std::to_string((255/poly_vec_length)*i);
-            std::string color_rgb = "("+color+","+color+","+color+")"; 
-            mapper.map(polygons[i], "fill-opacity:0.3;fill:"+color_rgb+";stroke:rgb" +color_rgb+ ";stroke-width:2", 5);
-        }
-
-    return 0;
-}
-
-void sort_2d_cuboid_vertices(double vp_1_position, Eigen::Matrix2Xi all_configs_error_one_objH_int, Eigen::MatrixXi &cub_prop_2di)
-{
-    //LL: Retrive the current 2d bb proposal
-    //LL: Order the vectors to be: top_front_left, top_front_...
-    //LL: Convert vertices to int    
-    Eigen::VectorXi cuboid_to_raw_boxstructIds(8);
-    if (vp_1_position == 1) // vp1 on left, for all configurations
-    	cuboid_to_raw_boxstructIds << 1, 4, 3, 2, 7, 8, 5, 6;
-    if (vp_1_position == 2) // vp1 on right, for all configurations
-        cuboid_to_raw_boxstructIds << 4, 1, 2, 3, 8, 7, 6, 5;
-
-    for (int i = 0; i < 8; i++)
-        cub_prop_2di.col(i) = all_configs_error_one_objH_int.col(cuboid_to_raw_boxstructIds(i) - 1); // minius one to match index
-
-}
-
-void cuboid_2d_vertices_to_2d_surfaces(Eigen::Matrix2Xi cub_prop_2d, std::vector<Eigen::MatrixXi> &eigen_2d_surfaces)
-{
-    Eigen::MatrixXi sqr_1(2, 4);
-    Eigen::MatrixXi sqr_2(2, 4);
-    Eigen::MatrixXi sqr_3(2, 4);
-    Eigen::MatrixXi sqr_4(2, 4);
-    Eigen::MatrixXi sqr_5(2, 4);
-    Eigen::MatrixXi sqr_6(2, 4); 
-    sqr_1 << cub_prop_2d.col(0), cub_prop_2d.col(1), cub_prop_2d.col(2), cub_prop_2d.col(3);
-    sqr_2 << cub_prop_2d.col(0), cub_prop_2d.col(1), cub_prop_2d.col(5), cub_prop_2d.col(4);
-    sqr_3 << cub_prop_2d.col(0), cub_prop_2d.col(3), cub_prop_2d.col(7), cub_prop_2d.col(4);
-    sqr_4 << cub_prop_2d.col(4), cub_prop_2d.col(5), cub_prop_2d.col(6), cub_prop_2d.col(7);
-    sqr_5 << cub_prop_2d.col(6), cub_prop_2d.col(7), cub_prop_2d.col(3), cub_prop_2d.col(2);
-    sqr_6 << cub_prop_2d.col(1), cub_prop_2d.col(2), cub_prop_2d.col(6), cub_prop_2d.col(5);
-    eigen_2d_surfaces.insert(eigen_2d_surfaces.end(),{sqr_1, sqr_2, sqr_3, sqr_4, sqr_5, sqr_6});
-}
-
-void eigen_2d_cub_surfaces_to_boost_poly_surfaces(std::vector<Eigen::MatrixXi> eigen_2d_surfaces, std::vector<polygon> &boost_poly_surfaces)
-{
-    std::string boost_string_rep;
-    for (int i = 0; i != eigen_2d_surfaces.size(); ++i)
-    {
-        polygon poly;
-        poly_eigen_to_string_rep(eigen_2d_surfaces[i], boost_string_rep);
-        poly_string_to_boost_pooly(boost_string_rep, poly);
-        boost_poly_surfaces.push_back(poly);
-    }
-}
-# endif
-// LL: Added by Leander 
-#endif
-
-
 bool read_obj_detection_txt(const std::string txt_file_name, Eigen::MatrixXd &read_number_mat, std::vector<std::string> &all_strings)
 {
-    // LL: Check if the file can be read
     if (!std::ifstream(txt_file_name))
     {
         std::cout << "ERROR!!! Cannot read txt file " << txt_file_name << std::endl;
         return false;
     }
-    
-    // LL: Clear the memory of the all_strings vector that will save the class names
     all_strings.clear();
-    
-    // LL: Read the text file to `filetxt`
     std::ifstream filetxt(txt_file_name.c_str());
-    
-    // LL: If the memory was not correctly assigned to `read_number_mat`, set rows to 100 and columns to 10 if rows==0
     if (read_number_mat.rows() == 0)
         read_number_mat.resize(100, 10);
     int row_counter = 0;
     std::string line;
-    // LL: Loop over all lines from the file
     while (getline(filetxt, line))
     {
         double t;
         if (!line.empty())
         {
-            // LL: Retrive the first string (column) in the current line and write it to `classname`
             std::stringstream ss(line);
             std::string classname;
             ss >> classname;
             all_strings.push_back(classname);
 
             int colu = 0;
-            // LL: Extracts one by one all remaining columns of the current row and writes them to read_number_mat
             while (ss >> t)
             {
                 read_number_mat(row_counter, colu) = t;

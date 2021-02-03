@@ -24,7 +24,6 @@
 #include "Thirdparty/DBoW2/DBoW2/BowVector.h"
 #include "Thirdparty/DBoW2/DBoW2/FeatureVector.h"
 #include "ORBVocabulary.h"
-#include "ObjDetectionHelper.h"
 #include <vector>
 #include <opencv2/opencv.hpp>
 
@@ -104,25 +103,9 @@ public:
     // Backprojects a keypoint (if depth is available) into 3D world coordinates.
     cv::Mat UnprojectDepth(const int &i, float depth);
 
-    // EXTENSION
-    // detect moving points
-    void DetectMovingKeypoints(const cv::Mat &imgray);
-    std::vector<cv::Point2f> T_M;
-    double limit_dis_epi = 1; 
-    double limit_of_check = 2120;
-    int limit_edge_corner = 5;
-
-    // For semantic segmentation thread
-    void FilterOutMovingPoints(const cv::Mat &imGray);
-    ObjDetectionHelper mCurrentObjDetection;
-    std::vector<vector<float > > mCurrentBBoxes;
-
-    void CheckMovingKeyPoints(const cv::Mat &imGray, const std::vector<std::vector<float > > mCurrentBBoxes);
-
 public:
     // by me, detect_3d_cuboid needs raw image
     cv::Mat raw_img;
-    cv::Mat raw_depth;
     std::vector<bool> KeysStatic;
     std::vector<int> keypoint_associate_objectID;
     int numobject;

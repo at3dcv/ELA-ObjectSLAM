@@ -24,8 +24,6 @@
 #include "Map.h"
 #include "KeyFrame.h"
 
-#include <ros/ros.h>
-
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 
@@ -138,14 +136,10 @@ cv::Mat FrameDrawer::DrawFrame()
 
                 if (vbMap[i]) // This is a match to a MapPoint in the map    // green
                 {
-                    // AC: Dynamic keys are colored red
-                    if (mvStaticKeys[i])
-                        cv::circle(im, vCurrentKeys[i].pt, 3, cv::Scalar(0, 255, 0), -1);
-                    else
-                        cv::circle(im, vCurrentKeys[i].pt, 10, cv::Scalar(0, 0, 255), -1);
+                    cv::circle(im, vCurrentKeys[i].pt, 3, cv::Scalar(0, 255, 0), -1);
                     mnTracked++;
                 }
-                else // This is match to a "visual odometry" MapPoint created in the last frame    // red
+                else // This is match to a "visual odometry" MapPoint created in the last frame    // blue
                 {
                     cv::circle(im, vCurrentKeys[i].pt, 3, cv::Scalar(255, 0, 0), -1);
                     mnTrackedVO++;
@@ -248,15 +242,12 @@ void FrameDrawer::DrawTextInfo(cv::Mat &im, int nState, cv::Mat &imText)
 
 void FrameDrawer::Update(Tracking *pTracker)
 {
-    ROS_DEBUG_STREAM("FrameDrawer::Update");
-
     if (!enable_viewimage)
         return;
 
     unique_lock<mutex> lock(mMutex);
     pTracker->mImGray.copyTo(mIm);
     mvCurrentKeys = pTracker->mCurrentFrame.mvKeys;
-    mvStaticKeys = pTracker->mCurrentFrame.KeysStatic;
     N = mvCurrentKeys.size();
     mvbVO = vector<bool>(N, false);
     mvbMap = vector<bool>(N, false);
@@ -292,7 +283,6 @@ void FrameDrawer::Update(Tracking *pTracker)
             }
         }
     }
-    
     mState = static_cast<int>(pTracker->mLastProcessedState);
 
     if (whether_detect_object) // copy some object data for visualization
@@ -304,13 +294,9 @@ void FrameDrawer::Update(Tracking *pTracker)
         box_corners_2ds.clear();
         edge_markers_2ds.clear();
         point_Object_AssoID.clear();
-        ROS_DEBUG_STREAM("FrameDrawer::Update if 2");
-        if (pTracker->mCurrentFrame.mpReferenceKF != NULL)
-        {
-            ROS_DEBUG_STREAM("FrameDrawer::Update if 3");
+        if (pTracker->mCurrentFrame.mpReferenceKF != NULL)                                             // mCurrentFrame.mpReferenceKF
             if ((pTracker->mCurrentFrame.mnId - pTracker->mCurrentFrame.mpReferenceKF->mnFrameId) < 1) // if current frame is a keyframe
             {
-                ROS_DEBUG_STREAM("FrameDrawer::Update if 4");
                 if (whether_detect_object)
                 {
                     for (const MapObject *object : pTracker->mCurrentFrame.mpReferenceKF->local_cuboids)
@@ -326,7 +312,6 @@ void FrameDrawer::Update(Tracking *pTracker)
                         point_Object_AssoID = pTracker->mCurrentFrame.mpReferenceKF->keypoint_associate_objectID;
                 }
             }
-        } 
     }
 
     if (enable_ground_height_scale)
@@ -337,6 +322,6 @@ void FrameDrawer::Update(Tracking *pTracker)
                 potential_ground_fit_inds = pTracker->mCurrentFrame.mpReferenceKF->ground_region_potential_pts;
             }
     }
-    ROS_DEBUG_STREAM("FrameDrawer::Update END");
 }
+
 } // namespace ORB_SLAM2

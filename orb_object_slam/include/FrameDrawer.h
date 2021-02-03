@@ -62,7 +62,6 @@ protected:
 
     // just for debug visualization
     std::vector<cv::KeyPoint> mvCurrentKeys_inlastframe;
-    std::vector<bool> mvStaticKeys;
     std::vector<cv::Point2f> mvfeaturesklt_lastframe;
     std::vector<cv::Point2f> mvfeaturesklt_thisframe;
 

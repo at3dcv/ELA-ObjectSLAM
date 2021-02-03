@@ -127,7 +127,6 @@ public:
 public:
     // by me, detect_3d_cuboid needs canny edge.
     cv::Mat raw_img;
-    cv::Mat raw_depth;
 
     // NOTE the object_landmark vector need to push back, not pre-allocated vector
     // landmarks are copied from local cubes, not new-created
