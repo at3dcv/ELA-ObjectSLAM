@@ -143,6 +143,7 @@ int main(int argc, char **argv)
 
 void ImageGrabber::GrabRGBD(const sensor_msgs::ImageConstPtr &msgRGB, const sensor_msgs::ImageConstPtr &msgD)
 {
+    ROS_DEBUG_STREAM("ImageGrabber::GrabRGBD");
     // Copy the ros image message to cv::Mat.
     cv_bridge::CvImageConstPtr cv_ptrRGB;
     try
@@ -161,6 +162,7 @@ void ImageGrabber::GrabRGBD(const sensor_msgs::ImageConstPtr &msgRGB, const sens
     {
         cv_ptrD = cv_bridge::toCvShare(msgD);
         depth_mat = cv_ptrD->image;
+        ROS_DEBUG_STREAM("Depth map size: " << depth_mat.size());
         // usually TYPE_32FC1   if TYPE_16UC1, convert it.
         if (msgD->encoding == sensor_msgs::image_encodings::TYPE_16UC1) // already uint, (already multiplied by 1000)
         {

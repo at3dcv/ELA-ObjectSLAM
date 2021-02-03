@@ -183,7 +183,7 @@ cv::Mat System::TrackStereo(const cv::Mat &imLeft, const cv::Mat &imRight, const
 #ifdef at3dcv_andy
 cv::Mat System::TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const double &timestamp, int msg_seq_id)
 {
-
+    ROS_DEBUG_STREAM("System::TrackRGBD");
     // AC: Deleted system check mSensor != RGBD...
 
     // Check mode change

@@ -32,7 +32,7 @@ Camera.RGB: 1
 ThDepth: 50.0
 
 # Deptmap values factor 
-DepthMapFactor: 5000.0
+DepthMapFactor: 0
 
 #--------------------------------------------------------------------------------------------
 # ORB Parameters
