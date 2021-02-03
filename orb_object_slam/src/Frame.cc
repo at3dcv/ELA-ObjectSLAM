@@ -348,7 +348,7 @@ void Frame::FilterOutMovingPoints(const cv::Mat &imGray)
     mCurrentObjDetection = ObjDetectionHelper();
     char frame_index_c[256];
     sprintf(frame_index_c, "%04d", (int)mnId); // format into 4 digit
-    mCurrentObjDetection.ReadFile(base_data_folder + "mats/filter_match_2d_boxes_txts/" + frame_index_c + "_mrcnn.txt");
+    mCurrentObjDetection.ReadFile(base_data_folder + "/mats/filter_match_2d_boxes_txts/" + frame_index_c + "_mrcnn.txt");
     mCurrentBBoxes = mCurrentObjDetection.GetBBoxesWithPerson();
 
     if (!T_M.empty() && mCurrentBBoxes.size() > 0)
