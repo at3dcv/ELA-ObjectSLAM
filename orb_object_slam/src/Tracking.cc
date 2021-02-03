@@ -39,6 +39,7 @@
 #include "Optimizer.h"
 #include "Viewer.h"
 #include "System.h"
+#include "pointcloudmapping.h"
 
 #include "ORBmatcher.h"
 #include "ORBextractor.h"
@@ -71,8 +72,8 @@ namespace ORB_SLAM2
 
 // AC: is being called in System.cc
 // AC: pMap is a Map.h instance
-Tracking::Tracking(System *pSys, ORBVocabulary *pVoc, FrameDrawer *pFrameDrawer, MapDrawer *pMapDrawer, Map *pMap, KeyFrameDatabase *pKFDB,
-				   const string &strSettingPath, const int sensor) : mState(NO_IMAGES_YET), mSensor(sensor), mbOnlyTracking(false), mbVO(false), mpORBVocabulary(pVoc),
+Tracking::Tracking(System *pSys, ORBVocabulary *pVoc, FrameDrawer *pFrameDrawer, MapDrawer *pMapDrawer, Map *pMap,boost::shared_ptr<PointCloudMapping> pPointCloud,  KeyFrameDatabase *pKFDB,
+				   const string &strSettingPath, const int sensor) : mState(NO_IMAGES_YET), mSensor(sensor), mbOnlyTracking(false), mbVO(false), mpORBVocabulary(pVoc), mpPointCloudMapping( pPointCloud ), 
 																	 mpKeyFrameDB(pKFDB), mpInitializer(static_cast<Initializer *>(NULL)), mpSystem(pSys),
 																	 mpFrameDrawer(pFrameDrawer), mpMapDrawer(pMapDrawer), mpMap(pMap), mnLastRelocFrameId(0)
 {
@@ -2193,6 +2194,7 @@ BidiIter random_unique2(BidiIter begin, BidiIter end, int num_random)
 
 void Tracking::CreateNewKeyFrame()
 {
+	ROS_ERROR_STREAM("IN CREATENEWKEYFRAME");
 	if (!mpLocalMapper->SetNotStop(true))
 		return;
 
@@ -2814,7 +2816,15 @@ void Tracking::CreateNewKeyFrame()
 	mpLocalMapper->InsertKeyFrame(pKF); // call local mapping to insert the kew KF,  map will add it.
 
 	mpLocalMapper->SetNotStop(false);
+	//EC: insert Key Frame into point cloud viewer
+	// Semantic segmentation as this->mImS_C,this->mImS should be provided by Andy?
+	// for now original rgb image is passed
+	cv::Mat mImS_C = this->mImRGB;
+	cv::Mat mImS;
+	cv::cvtColor(mImS, mImS_C, CV_GRAY2BGR);
 
+    mpPointCloudMapping->insertKeyFrame( pKF, mImS_C, mImS , pKF->raw_img, pKF->raw_depth);
+	
 	mnLastKeyFrameId = mCurrentFrame.mnId;
 	mpLastKeyFrame = pKF;
 }

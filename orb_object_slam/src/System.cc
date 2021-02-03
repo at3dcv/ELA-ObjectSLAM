@@ -96,11 +96,16 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
     //Create Drawers. These are used by the Viewer
     mpFrameDrawer = new FrameDrawer(mpMap);
     mpMapDrawer = new MapDrawer(mpMap, strSettingsFile);
+    //EC: Initialize pointcloud mapping
+    // For point cloud resolution
+    float resolution = fsSettings["PointCloudMapping.Resolution"];
+	
+    mpPointCloudMapping = boost::make_shared<PointCloudMapping>( resolution );
 
     //Initialize the Tracking thread
     //(it will live in the main thread of execution, the one that called this constructor)
     mpTracker = new Tracking(this, mpVocabulary, mpFrameDrawer, mpMapDrawer,
-                             mpMap, mpKeyFrameDatabase, strSettingsFile, mSensor); // setting file read by tracker, not by mapper!
+                             mpMap, mpPointCloudMapping,mpKeyFrameDatabase, strSettingsFile, mSensor); // setting file read by tracker, not by mapper!
 
     //Initialize the Local Mapping thread and launch
     // AC: Entry point of local mapping
