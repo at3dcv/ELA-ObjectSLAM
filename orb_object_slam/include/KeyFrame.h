@@ -127,7 +127,8 @@ public:
 public:
     // by me, detect_3d_cuboid needs canny edge.
     cv::Mat raw_img;
-    cv::Mat raw_depth;
+    cv::Mat raw_depth;  // AC: Used for Cuboid + 3d reconstruction
+    cv::Mat raw_rgb;  // AC: Used for 3d reconstruction
 
     // NOTE the object_landmark vector need to push back, not pre-allocated vector
     // landmarks are copied from local cubes, not new-created

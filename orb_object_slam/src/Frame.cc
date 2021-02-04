@@ -92,6 +92,7 @@ Frame::Frame(const Frame &frame)
     {
         raw_img = frame.raw_img.clone();
         raw_depth = frame.raw_depth.clone();
+        raw_rgb = frame.raw_rgb.clone();
     }
     if (whether_dynamic_object)
     {
