@@ -122,7 +122,8 @@ public:
 public:
     // by me, detect_3d_cuboid needs raw image
     cv::Mat raw_img;
-    cv::Mat raw_depth;
+    cv::Mat raw_depth;  // AC: Used for Cuboid + 3d reconstruction
+    cv::Mat raw_rgb;  // AC: Used for 3d reconstruction
     std::vector<bool> KeysStatic;
     std::vector<int> keypoint_associate_objectID;
     int numobject;

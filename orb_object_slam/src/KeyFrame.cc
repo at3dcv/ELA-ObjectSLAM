@@ -74,6 +74,7 @@ KeyFrame::KeyFrame(Frame &F, Map *pMap, KeyFrameDatabase *pKFDB) : mnFrameId(F.m
         raw_depth = F.raw_depth.clone();
         // AC: Replace NaN with 0s
         cv::patchNaNs(raw_depth, 0);
+        raw_rgb = F.raw_rgb.clone();
     }
 
     if (whether_dynamic_object)

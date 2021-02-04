@@ -422,6 +422,7 @@ cv::Mat Tracking::GrabImageRGBD(const cv::Mat &imRGB, const cv::Mat &imD, const 
 	{
 		mCurrentFrame.raw_img = mImGray; // I clone in Keyframe.cc  don't need to clone here.
 		mCurrentFrame.raw_depth = imDepth;
+		mCurrentFrame.raw_rgb = imRGB; // AC: use for 3d reconstruction
 	}
 
 	Track();
