@@ -1,0 +1,10 @@
+<launch>  
+
+	<!-- orb slam  -->
+	
+	<!-- Run other launch file -->
+    <include file="Octomap.launch" />
+	<include file="transform.launch" />
+	<node pkg="rviz" name="rviz" type="rviz" /> 
+	
+</launch>
