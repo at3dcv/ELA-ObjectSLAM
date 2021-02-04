@@ -2201,7 +2201,6 @@ BidiIter random_unique2(BidiIter begin, BidiIter end, int num_random)
 
 void Tracking::CreateNewKeyFrame()
 {
-	ROS_ERROR_STREAM("IN CREATENEWKEYFRAME");
 	if (!mpLocalMapper->SetNotStop(true))
 		return;
 
@@ -2211,6 +2210,19 @@ void Tracking::CreateNewKeyFrame()
 
 	mpReferenceKF = pKF;
 	mCurrentFrame.mpReferenceKF = pKF;
+
+	//EC: insert Key Frame into point cloud viewer
+	
+	int rows = mCurrentFrame.mpReferenceKF->raw_rgb.rows;
+	int cols = mCurrentFrame.mpReferenceKF->raw_rgb.cols;
+	cv::Mat mImS_C;
+	mImS_C =  mCurrentFrame.mpReferenceKF->raw_rgb.clone();
+
+	cv::Mat mImS = cv::Mat::zeros(cv::Size(rows,cols), CV_64FC1);
+	//cv::cvtColor(mCurrentFrame.mpReferenceKF->raw_img, mImS, cv::COLOR_BGR2GRAY);
+	
+    mpPointCloudMapping->insertKeyFrame( mCurrentFrame.mpReferenceKF, mCurrentFrame.mpReferenceKF->raw_rgb, mImS, mCurrentFrame.mpReferenceKF->raw_img, mCurrentFrame.mpReferenceKF->raw_depth);
+
 
 	if (whether_detect_object)
 	{
@@ -2823,15 +2835,7 @@ void Tracking::CreateNewKeyFrame()
 	mpLocalMapper->InsertKeyFrame(pKF); // call local mapping to insert the kew KF,  map will add it.
 
 	mpLocalMapper->SetNotStop(false);
-	//EC: insert Key Frame into point cloud viewer
-	// Semantic segmentation as this->mImS_C,this->mImS should be provided by Andy?
-	// for now original rgb image is passed
-	cv::Mat mImS_C = this->mImRGB;
-	cv::Mat mImS;
-	cv::cvtColor(mImS, mImS_C, CV_GRAY2BGR);
 
-    mpPointCloudMapping->insertKeyFrame( pKF, mImS_C, mImS , pKF->raw_img, pKF->raw_depth);
-	
 	mnLastKeyFrameId = mCurrentFrame.mnId;
 	mpLastKeyFrame = pKF;
 }

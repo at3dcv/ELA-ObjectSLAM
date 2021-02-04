@@ -70,7 +70,7 @@
 
 #include "KeyFrame.h"
 //The lable of people is 15
-#define PEOPLE_LABLE 15
+#define PEOPLE_LABLE 3
 // using namespace ORB_SLAM2;
 namespace ORB_SLAM2
 {
