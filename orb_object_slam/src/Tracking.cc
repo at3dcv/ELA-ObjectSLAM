@@ -2201,6 +2201,7 @@ BidiIter random_unique2(BidiIter begin, BidiIter end, int num_random)
 
 void Tracking::CreateNewKeyFrame()
 {
+	ROS_ERROR_STREAM("IN CREATENEWKEYFRAME");
 	if (!mpLocalMapper->SetNotStop(true))
 		return;
 
@@ -2211,17 +2212,30 @@ void Tracking::CreateNewKeyFrame()
 	mpReferenceKF = pKF;
 	mCurrentFrame.mpReferenceKF = pKF;
 
-	//EC: insert Key Frame into point cloud viewer
 	
-	int rows = mCurrentFrame.mpReferenceKF->raw_rgb.rows;
-	int cols = mCurrentFrame.mpReferenceKF->raw_rgb.cols;
+//EC: insert Key Frame into point cloud viewer
+	
+	int rows = pKF->raw_rgb.rows;
+	int cols = pKF->raw_rgb.cols;
 	cv::Mat mImS_C;
-	mImS_C =  mCurrentFrame.mpReferenceKF->raw_rgb.clone();
+	mImS_C = pKF->raw_rgb.clone();
 
-	cv::Mat mImS = cv::Mat::zeros(cv::Size(rows,cols), CV_64FC1);
+	pKF->raw_rgb = mCurrentFrame.mpReferenceKF->raw_rgb.clone();
+
+	pKF->raw_depth = mCurrentFrame.mpReferenceKF->raw_depth.clone();
+
+	cv::Mat mImS = cv::Mat::zeros(cv::Size(rows,cols), CV_64FC1); 
+	//ROS_ERROR_STREAM("lalalal " << mCurrentFrame.mpReferenceKF->raw_depth.type() );
+
 	//cv::cvtColor(mCurrentFrame.mpReferenceKF->raw_img, mImS, cv::COLOR_BGR2GRAY);
+	float mDepthMapFactor = 50;
 	
-    mpPointCloudMapping->insertKeyFrame( mCurrentFrame.mpReferenceKF, mCurrentFrame.mpReferenceKF->raw_rgb, mImS, mCurrentFrame.mpReferenceKF->raw_img, mCurrentFrame.mpReferenceKF->raw_depth);
+	mDepthMapFactor = 1.0f/mDepthMapFactor;
+
+	if(mDepthMapFactor!=1 || mCurrentFrame.mpReferenceKF->raw_depth.type()!=CV_32F);
+    mCurrentFrame.mpReferenceKF->raw_depth.convertTo(mCurrentFrame.mpReferenceKF->raw_depth,CV_32F,mDepthMapFactor);
+
+    mpPointCloudMapping->insertKeyFrame( mCurrentFrame.mpReferenceKF, mCurrentFrame.mpReferenceKF->raw_rgb, mImS, mCurrentFrame.mpReferenceKF->raw_rgb, mCurrentFrame.mpReferenceKF->raw_depth);
 
 
 	if (whether_detect_object)
@@ -2299,6 +2313,7 @@ void Tracking::CreateNewKeyFrame()
 		}
 	}
 
+	
 	//copied from localMapping, only for dynamic object
 	if (mono_allframe_Obj_depth_init && whether_dynamic_object)
 	{

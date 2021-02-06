@@ -106,17 +106,16 @@ pcl::PointCloud< PointCloudMapping::PointT >::Ptr PointCloudMapping::generatePoi
     float cam_w=480;
     float cam_h = 640;
     PointCloud::Ptr tmp( new PointCloud() );
-   
     // Point cloud is null ptr
     for ( int m=0; m<depth.rows; m+=1)
     {
         for ( int n=0; n<depth.cols; n+=1)
         {
             float d = depth.ptr<float>(m)[n];
-           
+
             if (d < 0.01 || d > 8)
                 continue;
-                 
+                /* 
 	            int flag_exist=0;
 	     
 		        for (int i=-20;i <= 20; i+=3)
@@ -130,12 +129,12 @@ pcl::PointCloud< PointCloudMapping::PointT >::Ptr PointCloudMapping::generatePoi
                         if( tempx >= ( cam_w-1)  ) tempx = cam_w-1;
                         if( tempy  <= 0  ) tempy =  0;
                         if( tempy >= (cam_h -1) ) tempy = cam_h-1;
-                        /*if((int)semantic.ptr<uchar>(tempx)[tempy] == PEOPLE_LABLE)  
+                        if((int)semantic.ptr<uchar>(tempx)[tempy] == PEOPLE_LABLE)  
                         {   //EC: do nothing
                             flag_exist=1;
                             break;
                            
-                        }*/
+                        }
                     }
                     if(flag_exist==1)
                         break;
@@ -143,12 +142,13 @@ pcl::PointCloud< PointCloudMapping::PointT >::Ptr PointCloudMapping::generatePoi
 	
                 if(flag_exist == 1)
                     continue;
-
+                */
                 PointT p;
                 p.z = d;
                 p.x = ( n - kf->cx) * p.z / kf->fx;
                 p.y = ( m - kf->cy) * p.z / kf->fy;
 	            // Deal with color
+
 	            if((int)semantic.ptr<uchar>(m)[n]==0)
 	            {
                     p.b = color.ptr<uchar>(m)[n*3];
@@ -164,6 +164,7 @@ pcl::PointCloud< PointCloudMapping::PointT >::Ptr PointCloudMapping::generatePoi
 	            tmp->points.push_back(p);
                
         }
+        ROS_ERROR_STREAM("eben");
         
     }
 
@@ -172,6 +173,7 @@ pcl::PointCloud< PointCloudMapping::PointT >::Ptr PointCloudMapping::generatePoi
     PointCloud::Ptr cloud(new PointCloud);
     pcl::transformPointCloud( *tmp, *cloud, T.inverse().matrix());
     cloud->is_dense = false;
+    ROS_ERROR_STREAM("Generate point cloud for kf "<<kf->mnId<<", size="<<cloud->points.size());
     cout<<"Generate point cloud for kf "<<kf->mnId<<", size="<<cloud->points.size()<<endl;
     return cloud;
 }

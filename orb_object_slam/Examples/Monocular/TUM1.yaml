@@ -10,6 +10,12 @@ Camera.fy: 525.0
 Camera.cx: 319.5
 Camera.cy: 239.5
 
+#from DSSLAM
+#Camera.fx: 535.4
+#Camera.fy: 539.2
+#Camera.cx: 320.1
+#Camera.cy: 247.6
+
 Camera.k1: 0.0
 Camera.k2: 0.0
 Camera.p1: 0.0
@@ -32,7 +38,7 @@ Camera.RGB: 1
 ThDepth: 50.0
 
 # Deptmap values factor 
-DepthMapFactor: 0
+DepthMapFactor: 5000.0
 
 #--------------------------------------------------------------------------------------------
 # ORB Parameters
@@ -68,3 +74,4 @@ Viewer.ViewpointY: -0.7
 Viewer.ViewpointZ: -1.8
 Viewer.ViewpointF: 500
 
+PointCloudMapping.Resolution: 0.05
