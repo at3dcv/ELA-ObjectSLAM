@@ -104,6 +104,8 @@ class System
     // SaveMap(const string &filename);
     // LoadMap(const string &filename);
 
+    bool show_debug = true;
+
   private:
     // Input sensor
     eSensor mSensor;

@@ -37,6 +37,9 @@
 
 #include "tictoc_profiler/profiler.hpp"
 
+// AC: Count objects from 0 to x
+std::vector<int> detectedObjectsToId;
+
 namespace ORB_SLAM2
 {
 
@@ -252,12 +255,36 @@ Frame::Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor *extra
         {
             for (size_t i = 0; i < mvKeys.size(); i++)
             {
+                // AC: assign for each instance of segmentation a ID from 0 to n
                 int maskval = int(objmask_img.at<uint8_t>(mvKeys[i].pt.y, mvKeys[i].pt.x));
-                KeysStatic[i] = (maskval == 0); //0 is background, static >0 object id
-                numobject = max(numobject, maskval);
-                if (maskval > 0)
-                    keypoint_associate_objectID[i] = maskval - 1;
+                if (maskval == 0)
+                {
+                    keypoint_associate_objectID[i] = -1;
+                    continue;
+                }
+                bool found = false;
+                for (int j = 0; j < detectedObjectsToId.size(); j++) {
+                    if (detectedObjectsToId[j] == maskval) {
+                        found = true;
+                        KeysStatic[i] = (maskval == 0); //0 is background, static >0 object id
+                        numobject = max(numobject, maskval);
+                        if (maskval > 0)
+                            keypoint_associate_objectID[i] = j; // TODO: maskval - 1;
+                        break;
+                    }
+                }
+                if (!found) {
+                    KeysStatic[i] = (maskval == 0); //0 is background, static >0 object id
+                    numobject = max(numobject, maskval);
+                    if (maskval > 0)
+                        keypoint_associate_objectID[i] = detectedObjectsToId.size(); // TODO: maskval - 1;
+                    detectedObjectsToId.push_back(maskval);
+                }
             }
+            std::cout << "Object classes ";
+            for (int k = 0; k < detectedObjectsToId.size(); k++)
+                std::cout << detectedObjectsToId[k] << " ";
+            std::cout << std::endl;
         }
     }
 

@@ -63,6 +63,7 @@ void detect_3d_cuboid::set_cam_pose(const Matrix4d &transToWolrd)
 void detect_3d_cuboid::detect_cuboid(const cv::Mat &rgb_img, const Matrix4d &transToWolrd, const MatrixXd &obj_bbox_coors,
 									 MatrixXd all_lines_raw, std::vector<ObjectSet> &all_object_cuboids)
 {
+	std::cout << "detect_3d_cuboid::detect_cuboid" << std::endl;
 	// LL: Given the transformation matrix camera to world calibrate the camera
 	set_cam_pose(transToWolrd);
 	cam_pose_raw = cam_pose;
@@ -79,6 +80,8 @@ void detect_3d_cuboid::detect_cuboid(const cv::Mat &rgb_img, const Matrix4d &tra
 
 	int num_2d_objs = obj_bbox_coors.rows();
 	all_object_cuboids.resize(num_2d_objs);
+
+	std::cout << "detect_3d_cuboid::detect_cuboid || Found " << num_2d_objs << " objects" << std::endl;
 
 	vector<bool> all_configs;
 	all_configs.push_back(consider_config_1);
@@ -548,6 +551,7 @@ void detect_3d_cuboid::detect_cuboid(const cv::Mat &rgb_img, const Matrix4d &tra
 			all_object_cuboids[object_id].push_back(raw_obj_proposals[sort_idx_small[ii]]);
 		}
 
+		std::cout << "Found " << actual_cuboid_num_small << "/" << all_object_cuboids.size() << " cuboid proposals for " << object_id << "th object" << std::endl;
 		ca::Profiler::tictoc("One 3D object total time");
 	} // end of different objects
 

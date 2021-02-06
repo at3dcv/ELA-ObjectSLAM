@@ -235,6 +235,8 @@ public:
     // Grid over the image to speed up feature matching
     std::vector<std::vector<std::vector<size_t>>> mGrid;
 
+    bool show_debug = true;
+
     // The following variables need to be accessed trough a mutex to be thread safe.
 protected:
     // SE3 Pose and camera center

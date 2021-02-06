@@ -84,6 +84,8 @@ public:
 
     bool isFinished();
 
+    bool show_debug = true;
+
 protected:
 
     bool CheckNewKeyFrames();

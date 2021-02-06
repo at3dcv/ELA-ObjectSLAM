@@ -168,8 +168,20 @@ void MapPoint::AddObservation(KeyFrame *pKF, size_t idx)
             if (pKF->keypoint_associate_objectID.size() > 0)
             {
                 int frame_cubod_id = pKF->keypoint_associate_objectID[idx];
+
+                // AC: reset keypoint_associate_objectID if no local_cuboids were proposed
+                if ((int)frame_cubod_id >= (int)pKF->local_cuboids.size())
+                {
+                    std::cout << "Reset keypoint_associate_objectID! " << frame_cubod_id << "/" << pKF->local_cuboids.size() << std::endl;
+                    pKF->keypoint_associate_objectID[idx] = -1;
+                    frame_cubod_id = -1;
+                }
                 if (frame_cubod_id > -1)
+                {
+                    std::cout << "Found keypoint objectID association: " << frame_cubod_id << std::endl;
+                    std::cout << "Cuboid size: " << pKF->local_cuboids.size() << std::endl;
                     AddObjectObservation(pKF->local_cuboids[frame_cubod_id]);
+                }
             }
         }
     }

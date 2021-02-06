@@ -49,6 +49,8 @@ public:
     // Draw last processed frame.  called by separate Viewer thread.
     cv::Mat DrawFrame();
 
+    bool show_debug = true;
+
 protected:
     // by me  for object
     std::vector<cv::Rect> bbox_2ds;                // yolo detected 2D bbox_2d, which has 3D cuboid

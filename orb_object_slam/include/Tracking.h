@@ -172,6 +172,8 @@ public:
 
     void Reset();
 
+    bool show_debug = true;
+
 protected:
     // Main tracking function. It is independent of the input sensor.
     void Track();

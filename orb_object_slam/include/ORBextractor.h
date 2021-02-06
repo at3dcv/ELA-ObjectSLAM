@@ -84,6 +84,8 @@ public:
 
     std::vector<cv::Mat> mvImagePyramid;
 
+    bool show_debug = true;
+
 protected:
 
     void ComputePyramid(cv::Mat image);

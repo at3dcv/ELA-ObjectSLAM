@@ -118,6 +118,8 @@ public:
 
     int record_txtrow_id = -1;
 
+    bool show_debug = true;
+
 protected:
     g2o::cuboid pose_Twc; // cuboid pose to the init/world. initialized as the position from first observe frame
     g2o::cuboid pose_Tcw; //inverse, not frequently used
