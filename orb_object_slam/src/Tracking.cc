@@ -1600,10 +1600,8 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 		// read yolo object detection
 		Eigen::MatrixXd raw_all_obj2d_bbox(10, 5);
 		std::vector<string> object_classes;
-		char obj_2d_txt_postfix[256];
-		sprintf(obj_2d_txt_postfix, "_yolo2_%.2f.txt", obj_det_2d_thre);
-		if (!read_obj_detection_txt(data_yolo_obj_dir + frame_index_c + obj_2d_txt_postfix, raw_all_obj2d_bbox, object_classes))
-			ROS_ERROR_STREAM("Cannot read yolo txt  " << data_yolo_obj_dir + frame_index_c + obj_2d_txt_postfix);
+		if (!read_obj_detection_txt(data_yolo_obj_dir + frame_index_c + "_mrcnn.txt", raw_all_obj2d_bbox, object_classes))
+			ROS_ERROR_STREAM("Cannot read yolo txt  " << data_yolo_obj_dir + frame_index_c + "_mrcnn.txt");
 
 		// remove some 2d boxes too close to boundary.
 		int boundary_threshold = 20;
