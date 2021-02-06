@@ -28,6 +28,9 @@
  */
 
 #include <octomap_server/OctomapServer.h>
+#include <sensor_msgs/PointCloud.h>
+#include <sensor_msgs/PointCloud2.h>
+#include <sensor_msgs/point_cloud_conversion.h>
 
 using namespace octomap;
 using octomap_msgs::Octomap;
@@ -90,7 +93,11 @@ OctomapServer::OctomapServer(const ros::NodeHandle private_nh_, const ros::NodeH
   m_nh_private.param("min_x_size", m_minSizeX,m_minSizeX);
   m_nh_private.param("min_y_size", m_minSizeY,m_minSizeY);
 
-  m_nh_private.param("filter_speckles", m_filterSpeckles, m_filterSpeckles);
+  ROS_ERROR_STREAM("===: " << m_pointcloudMinX << " " << m_pointcloudMaxX << " " << m_pointcloudMinY
+  << " " << m_pointcloudMaxY << " " << m_pointcloudMinZ << " " <<  m_pointcloudMaxZ << " " << m_occupancyMinZ
+  << " " <<  m_occupancyMaxZ << " " << m_minSizeX << " " << m_minSizeY);
+
+  m_nh_private.param("filter_speckles", m_filterSpeckles, m_filterSpeckles); 
   m_nh_private.param("filter_ground", m_filterGroundPlane, m_filterGroundPlane);
   // distance of points from plane for RANSAC
   m_nh_private.param("ground_filter/distance", m_groundFilterDistance, m_groundFilterDistance);
@@ -258,17 +265,25 @@ bool OctomapServer::openFile(const std::string& filename){
 
 }
 
+//void OctomapServer::insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud){
+
 void OctomapServer::insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud){
   ros::WallTime startTime = ros::WallTime::now();
-  
+
+  //sensor_msgs::PointCloud out_pointcloud;
+	//sensor_msgs::convertPointCloud2ToPointCloud(cloud, out_pointcloud);
+
   //
   // ground filtering in base frame
   //
   PCLPointCloud pc; // input cloud for filtering and ground-detection
   pcl::fromROSMsg(*cloud, pc);
+	for (int i=0; i<pc.points.size(); i++) {
+		 ROS_ERROR_STREAM(pc.points[i].x << ", " << pc.points[i].y << ", " << pc.points[i].z );
+	}
   ROS_ERROR_STREAM("insertCloudCallback " << cloud->header << "skm seni " << pc.header );
-   ROS_ERROR_STREAM("eben1 " <<  " " << pc.size() <<" "<< m_baseFrameId );
-  //  ROS_ERROR_STREAM( cloud->d
+   ROS_ERROR_STREAM("eben1 " <<  " " << pc.size() <<" "<< cloud.use_count() );
+
   tf::StampedTransform sensorToWorldTf;
   try {
     m_tfListener.lookupTransform(m_worldFrameId, cloud->header.frame_id, cloud->header.stamp, sensorToWorldTf);
@@ -344,7 +359,7 @@ void OctomapServer::insertCloudCallback(const sensor_msgs::PointCloud2::ConstPtr
     // pc_nonground is empty without ground segmentation
     pc_ground.header = pc.header;
     pc_nonground.header = pc.header;
-              ROS_ERROR_STREAM("YETERRRR 22 " << pc.size() );
+    ROS_ERROR_STREAM("YETERRRR OCTO " << pc.size() );
 
   }
   ROS_ERROR_STREAM("lala " << pc_ground.size() << " " << pc_nonground.size() << " " << pc.size() );
@@ -1074,6 +1089,7 @@ void OctomapServer::handlePostNodeTraversal(const ros::Time& rostime){
 
   if (m_publish2DMap)
     m_mapPub.publish(m_gridmap);
+    ROS_ERROR_STREAM("ASIL BURASI PROJECTED_MAP PUBLISH");
 }
 
 void OctomapServer::handleOccupiedNode(const OcTreeT::iterator& it){
