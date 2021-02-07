@@ -27,6 +27,9 @@
 #include <vector>
 #include <opencv2/opencv.hpp>
 
+// AC: custom class
+#include "ObjDetectionHelper.h"
+
 namespace ORB_SLAM2
 {
 #define FRAME_GRID_ROWS 48
@@ -102,6 +105,19 @@ public:
 
     // Backprojects a keypoint (if depth is available) into 3D world coordinates.
     cv::Mat UnprojectDepth(const int &i, float depth);
+
+    // AC: EXTENSION
+    void DetectMovingKeypoints(const cv::Mat &imgray);
+    std::vector<cv::Point2f> T_M;
+    double limit_dis_epi = 1; 
+    double limit_of_check = 2120;
+    int limit_edge_corner = 5;
+
+    void FilterOutMovingPoints(const cv::Mat &imGray);
+    ObjDetectionHelper mCurrentObjDetection;
+    std::vector<vector<float > > mCurrentBBoxes;
+
+    void CheckMovingKeyPoints(const cv::Mat &imGray, const std::vector<std::vector<float > > mCurrentBBoxes);
 
 public:
     // by me, detect_3d_cuboid needs raw image

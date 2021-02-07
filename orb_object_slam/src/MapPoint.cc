@@ -170,6 +170,7 @@ void MapPoint::AddObservation(KeyFrame *pKF, size_t idx)
                 int frame_cubod_id = pKF->keypoint_associate_objectID[idx];
 
                 // AC: reset keypoint_associate_objectID if no local_cuboids were proposed
+                // AC: Otherwise, it will throw an error as it will access an empty vector
                 if ((int)frame_cubod_id >= (int)pKF->local_cuboids.size())
                 {
                     std::cout << "Reset keypoint_associate_objectID! " << frame_cubod_id << "/" << pKF->local_cuboids.size() << std::endl;

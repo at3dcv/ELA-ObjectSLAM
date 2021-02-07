@@ -37,8 +37,19 @@
 
 #include "tictoc_profiler/profiler.hpp"
 
+// AC: Added config header to pass macro that switches Leander's code off and on
+#include "At3dcv_config.h"
+
 // AC: Count objects from 0 to x
 std::vector<int> detectedObjectsToId;
+
+// AC: Used in Frame::DetectMovingKeypoints
+cv::Mat imGrayPre;
+std::vector<cv::Point2f> prepoint, nextpoint;
+std::vector<cv::Point2f> F_prepoint, F_nextpoint;
+// AC: Used in OpenCV::calcOpticalFlowPyrLK
+std::vector<uchar> state;
+std::vector<float> err;
 
 namespace ORB_SLAM2
 {
@@ -201,6 +212,94 @@ Frame::Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeSt
     AssignFeaturesToGrid();
 }
 
+#ifdef at3dcv_andy
+// for monocular
+// AC: improve dynamic keypoint/object detection inspired by DS-SLAM
+Frame::Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor *extractor, ORBVocabulary *voc, cv::Mat &K, cv::Mat &distCoef, const float &bf,
+             const float &thDepth)
+    : mpORBvocabulary(voc), mpORBextractorLeft(extractor), mpORBextractorRight(static_cast<ORBextractor *>(NULL)),
+      mTimeStamp(timeStamp), mK(K.clone()), mDistCoef(distCoef.clone()), mbf(bf), mThDepth(thDepth), mpReferenceKF(static_cast<KeyFrame *>(NULL))
+{
+    // Frame ID
+    mnId = nNextId++;
+
+    // Scale Level Info
+    mnScaleLevels = mpORBextractorLeft->GetLevels();
+    mfScaleFactor = mpORBextractorLeft->GetScaleFactor();
+    mfLogScaleFactor = log(mfScaleFactor);
+    mvScaleFactors = mpORBextractorLeft->GetScaleFactors();
+    mvInvScaleFactors = mpORBextractorLeft->GetInverseScaleFactors();
+    mvLevelSigma2 = mpORBextractorLeft->GetScaleSigmaSquares();
+    mvInvLevelSigma2 = mpORBextractorLeft->GetInverseScaleSigmaSquares();
+
+    ExtractORB(0, imGray); // orb detector   change mvKeys, mDescriptors
+
+    if (whether_dynamic_object)
+    {
+        KeysStatic = vector<bool>(mvKeys.size(), true); // all points are static now.
+        keypoint_associate_objectID = vector<int>(mvKeys.size(), -1);
+        numobject = 0;
+        
+        // AC: Check whether there is a previous frame
+        if(imGrayPre.data)
+        {
+            DetectMovingKeypoints(imGray);
+            FilterOutMovingPoints(imGray);
+            imGrayPre = imGray.clone();
+            // AC: sample 300 mvKeys for next frame
+            for (int i = 0; i < 300; i++) {
+                int randNum = rand()%(mvKeys.size() + 1);
+                prepoint.push_back(mvKeys[randNum].pt);
+            }
+        }
+        else
+        {
+            imGrayPre = imGray.clone();
+            // AC: sample 300 mvKeys for next frame
+            for (int i = 0; i < 300; i++) {
+                int randNum = rand()%(mvKeys.size() + 1);
+                prepoint.push_back(mvKeys[randNum].pt);
+            }
+        }
+    }
+
+    N = mvKeys.size();
+
+    if (mvKeys.empty())
+        return;
+
+    UndistortKeyPoints();
+
+    // Set no stereo information
+    mvuRight = vector<float>(N, -1);
+    mvDepth = vector<float>(N, -1);
+
+    mvpMapPoints = vector<MapPoint *>(N, static_cast<MapPoint *>(NULL));
+    mvbOutlier = vector<bool>(N, false);
+
+    // This is done only for the first Frame (or after a change in the calibration)
+    if (mbInitialComputations)
+    {
+        ComputeImageBounds(imGray);
+
+        mfGridElementWidthInv = static_cast<float>(FRAME_GRID_COLS) / static_cast<float>(mnMaxX - mnMinX);
+        mfGridElementHeightInv = static_cast<float>(FRAME_GRID_ROWS) / static_cast<float>(mnMaxY - mnMinY);
+
+        fx = K.at<float>(0, 0);
+        fy = K.at<float>(1, 1);
+        cx = K.at<float>(0, 2);
+        cy = K.at<float>(1, 2);
+        invfx = 1.0f / fx;
+        invfy = 1.0f / fy;
+
+        mbInitialComputations = false;
+    }
+
+    mb = mbf / fx;
+
+    AssignFeaturesToGrid();
+}
+#else
 // for monocular
 Frame::Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor *extractor, ORBVocabulary *voc, cv::Mat &K, cv::Mat &distCoef, const float &bf,
              const float &thDepth)
@@ -323,6 +422,162 @@ Frame::Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor *extra
     mb = mbf / fx;
 
     AssignFeaturesToGrid();
+}
+#endif
+
+// AC: The generated keypoints are ONLY used to determine whether a frame has a moving object or not!
+void Frame::DetectMovingKeypoints(const cv::Mat &imgray)
+{
+    std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+
+    // Clear the previous data
+	F_prepoint.clear();
+	F_nextpoint.clear();
+	T_M.clear();
+
+	// Detect dynamic target and ultimately optput the T matrix
+    cv::cornerSubPix(imGrayPre, prepoint, cv::Size(10, 10), cv::Size(-1, -1), cv::TermCriteria(CV_TERMCRIT_ITER | CV_TERMCRIT_EPS, 20, 0.03));
+	cv::calcOpticalFlowPyrLK(imGrayPre, imgray, prepoint, nextpoint, state, err, cv::Size(22, 22), 5, cv::TermCriteria(CV_TERMCRIT_ITER | CV_TERMCRIT_EPS, 20, 0.01));
+    // AC: output of state: output status vector (of unsigned chars); each element of the vector is set to 1 if the flow for the corresponding features has been found, otherwise, it is set to 0.
+	// AC: check whether the KP is too far to the edge of the image or the difference to each other is too large
+
+    for (int i = 0; i < state.size(); i++)
+    {
+        if(state[i] != 0)
+        {
+            int dx[10] = { -1, 0, 1, -1, 0, 1, -1, 0, 1 };
+            int dy[10] = { -1, -1, -1, 0, 0, 0, 1, 1, 1 };
+            int x1 = prepoint[i].x, y1 = prepoint[i].y;
+            int x2 = nextpoint[i].x, y2 = nextpoint[i].y;
+            if ((x1 < limit_edge_corner || x1 >= imgray.cols - limit_edge_corner || x2 < limit_edge_corner || x2 >= imgray.cols - limit_edge_corner
+            || y1 < limit_edge_corner || y1 >= imgray.rows - limit_edge_corner || y2 < limit_edge_corner || y2 >= imgray.rows - limit_edge_corner))
+            {
+                state[i] = 0;
+                continue;
+            }
+            double sum_check = 0;
+            for (int j = 0; j < 9; j++)
+                sum_check += abs(imGrayPre.at<uchar>(y1 + dy[j], x1 + dx[j]) - imgray.at<uchar>(y2 + dy[j], x2 + dx[j]));
+            if (sum_check > limit_of_check) state[i] = 0;
+            // If KP is not discarded (state == 0), push KP to F_[KP]
+            if (state[i])
+            {
+                F_prepoint.push_back(prepoint[i]);
+                F_nextpoint.push_back(nextpoint[i]);
+            }
+        }
+    }
+
+    if (show_debug) std::cout << "Kept: " << F_prepoint.size() << "/" << prepoint.size() << " keypoints" << std::endl;
+
+    cv::Mat mask = cv::Mat(cv::Size(1, 300), CV_8UC1);
+    cv::Mat F = cv::findFundamentalMat(F_prepoint, F_nextpoint, mask, cv::FM_RANSAC, 0.1, 0.99);
+
+    for (int i = 0; i < prepoint.size(); i++)
+    {
+        if (state[i] != 0)
+        {
+            // AC: formula of DS SLAM paper (3)
+            double A = F.at<double>(0, 0)*prepoint[i].x + F.at<double>(0, 1)*prepoint[i].y + F.at<double>(0, 2);
+            double B = F.at<double>(1, 0)*prepoint[i].x + F.at<double>(1, 1)*prepoint[i].y + F.at<double>(1, 2);
+            double C = F.at<double>(2, 0)*prepoint[i].x + F.at<double>(2, 1)*prepoint[i].y + F.at<double>(2, 2);
+            double dd = fabs(A*nextpoint[i].x + B*nextpoint[i].y + C) / sqrt(A*A + B*B);
+
+            if (dd <= limit_dis_epi) continue;
+            T_M.push_back(nextpoint[i]);
+        }
+    }
+
+    std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+    if (show_debug) std::cout << "Time difference = " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "[µs]" << std::endl;
+}
+
+void Frame::FilterOutMovingPoints(const cv::Mat &imGray)
+{
+    if(show_debug) std::cout << "Frame::FilterOutMovingPoints" << std::endl;
+
+    // AC: Read bounding boxes
+    mCurrentObjDetection = ObjDetectionHelper();
+    char frame_index_c[256];
+    sprintf(frame_index_c, "%04d", (int)mnId); // format into 4 digit
+    mCurrentObjDetection.ReadFile(base_data_folder + "/mats/filter_match_2d_boxes_txts/" + frame_index_c + "_mrcnn.txt");
+    mCurrentBBoxes = mCurrentObjDetection.GetBBoxes();
+
+    if (!T_M.empty() && mCurrentBBoxes.size() > 0)
+        CheckMovingKeyPoints(imGray, mCurrentBBoxes);
+        
+    if(show_debug) std::cout << "Frame::FilterOutMovingPoints END" << std::endl;
+}
+
+// TODO: Add semantic mask
+void Frame::CheckMovingKeyPoints(const cv::Mat &imGray, const std::vector<std::vector<float > > mCurrentBBoxes)
+{
+    std::vector<bool> objectsAreMoving = vector<bool>(mCurrentBBoxes.size(), false);
+
+    // Make further judgment
+    // AC: Check whether an object is moving
+    for (int j = 0; j < mCurrentBBoxes.size(); j++)
+    {
+        // AC: Only consider the class people
+        if (mCurrentBBoxes[j][0] != 1) continue;
+
+        float bbLeft = (float)mCurrentBBoxes[j][1];
+        float bbTop = (float)mCurrentBBoxes[j][2];
+        float bbRight = bbLeft + mCurrentBBoxes[j][3];
+        float bbBottom = bbTop - mCurrentBBoxes[j][4];
+
+        int movingKeypointCounter = 0;
+
+        for (int i = 0; i < T_M.size(); i++)
+        {
+            // AC: Check whether keypoint is in bounding box
+            if((int)T_M[i].x >= bbLeft && (int)T_M[i].x <= bbRight && (int)T_M[i].y <= bbTop && (int)T_M[i].y >= bbBottom)
+            {
+                movingKeypointCounter++;
+                // AC: if two keypoints are in object, it is considered moving
+                if (movingKeypointCounter > 1)
+                {
+                    objectsAreMoving[j] = 1;
+                    break;
+                }
+            }
+        }
+    }
+
+    int dynamicKeypointsCounter = 0;
+    for (int j = 0; j < mCurrentBBoxes.size(); j++)
+    {
+        for (size_t i = 0; i < mvKeys.size(); i++)
+        {
+            float bbLeft = (float)mCurrentBBoxes[j][1];
+            float bbTop = (float)mCurrentBBoxes[j][2];
+            float bbRight = bbLeft + mCurrentBBoxes[j][3];
+            float bbBottom = bbTop - mCurrentBBoxes[j][4];
+
+            if ((int)mvKeys[i].pt.x >= bbLeft && (int)mvKeys[i].pt.x <= bbRight && (int)mvKeys[i].pt.y <= bbTop && (int)mvKeys[i].pt.y >= bbBottom)
+            {
+                // add keypoints of each BBox to association
+                keypoint_associate_objectID[i] = 0;
+                if (objectsAreMoving[j])
+                {
+                    KeysStatic[i] = 0; //0 is background, static >0 object id
+                    numobject = max(numobject, 1);
+                    dynamicKeypointsCounter++;
+                }
+            }
+        }
+    }
+
+    int objectKeypointsCounter = 0;
+    for (int k = 0; k < keypoint_associate_objectID.size(); k++)
+    {
+        if (keypoint_associate_objectID[k] != -1)
+        {
+            objectKeypointsCounter++;
+        }
+    }
+    if (show_debug) std::cout << "Found " << objectKeypointsCounter << "/" << mvKeys.size() << " keypoints in objects" << std::endl;
+    if (show_debug) std::cout << "Found " << dynamicKeypointsCounter << "/" << mvKeys.size() << " dynamic keypoints" << std::endl;
 }
 
 void Frame::AssignFeaturesToGrid()

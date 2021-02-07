@@ -84,6 +84,7 @@ bool LocalMapping::RunMappingIteration()
     //     Check if there are keyframes in the queue
     if (CheckNewKeyFrames())
     {
+        if (show_debug) std::cout << "LocalMapping::RunMappingIteration CheckNewKeyFrames" << std::endl;
         // BoW conversion and insertion in Map
         ProcessNewKeyFrame();
 
