@@ -178,8 +178,9 @@ void MapPoint::AddObservation(KeyFrame *pKF, size_t idx)
                 }
                 if (frame_cubod_id > -1)
                 {
-                    std::cout << "Found keypoint objectID association: " << frame_cubod_id << std::endl;
-                    std::cout << "Cuboid size: " << pKF->local_cuboids.size() << std::endl;
+                    // AC: Used for debugging...
+                    // std::cout << "Found keypoint objectID association: " << frame_cubod_id << std::endl;
+                    // std::cout << "Cuboid size: " << pKF->local_cuboids.size() << std::endl;
                     AddObjectObservation(pKF->local_cuboids[frame_cubod_id]);
                 }
             }
