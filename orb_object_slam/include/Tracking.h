@@ -71,7 +71,13 @@ public:
 
     // Preprocess the input and call Track(). Extract features and performs stereo matching.
     cv::Mat GrabImageStereo(const cv::Mat &imRectLeft, const cv::Mat &imRectRight, const double &timestamp);
+    #ifdef at3dcv_andy
     cv::Mat GrabImageRGBD(const cv::Mat &imRGB, const cv::Mat &imD, const double &timestamp, int msg_seq_id);
+    #elif defined at3dcv_tum_rgbd
+    cv::Mat GrabImageRGBD(const cv::Mat &imRGB, const cv::Mat &imD, const double &timestamp, std::string timestamp_id);
+    #elif
+    cv::Mat GrabImageRGBD(const cv::Mat &imRGB, const cv::Mat &imD, const double &timestamp);
+    #endif
     cv::Mat GrabImageMonocular(const cv::Mat &im, const double &timestamp, int msg_seq_id = -1);
 
     void SetLocalMapper(LocalMapping *pLocalMapper);

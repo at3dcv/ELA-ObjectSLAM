@@ -30,6 +30,10 @@
 #include <Eigen/Geometry>
 #include <opencv2/opencv.hpp>
 
+// LL: Added config header to pass macro that switches Leander's code off and on
+#include "At3dcv_config.h"
+#include <ros/ros.h>
+
 namespace ORB_SLAM2
 {
 
@@ -129,6 +133,11 @@ public:
     cv::Mat raw_img;
     cv::Mat raw_depth;
 
+    #ifdef at3dcv_leander
+    std::vector<Eigen::Matrix2Xd> raw_read_inst_segment_vert;
+    std::vector<string> raw_object_classes;
+    #endif
+
     // NOTE the object_landmark vector need to push back, not pre-allocated vector
     // landmarks are copied from local cubes, not new-created
 
@@ -167,7 +176,13 @@ public:
     long unsigned int mnId;            // key frame id
     const long unsigned int mnFrameId; // frame id in all images
 
+    // Frame timestamp.
+    #ifdef at3dcv_tum_rgbd
+    std::string mTimeStamp_id;
     const double mTimeStamp;
+    #else
+    const double mTimeStamp;
+    #endif
 
     int record_txtrow_id = -1; //final save to txt row id.
 

@@ -219,11 +219,10 @@ cv::Mat System::TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const doub
             mbReset = false;
         }
     }
-
     return mpTracker->GrabImageRGBD(im, depthmap, timestamp, msg_seq_id);
 }
-#else
-cv::Mat System::TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const double &timestamp)
+#elif defined at3dcv_tum_rgbd
+cv::Mat System::TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const double &timestamp, std::string timestamp_id)
 {
 
     // AC: Deleted system check mSensor != RGBD...
@@ -261,8 +260,48 @@ cv::Mat System::TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const doub
             mbReset = false;
         }
     }
+    return mpTracker->GrabImageRGBD(im, depthmap, timestamp, timestamp_id);
+}
+#else
+cv::Mat System::TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const double &timestamp, ros::Time timestamp_id)
+{
 
-    return mpTracker->GrabImageRGBD(im, depthmap, timestamp);
+    // AC: Deleted system check mSensor != RGBD...
+
+    // Check mode change
+    {
+        unique_lock<mutex> lock(mMutexMode);
+        if (mbActivateLocalizationMode)
+        {
+            mpLocalMapper->RequestStop();
+
+            // Wait until Local Mapping has effectively stopped
+            while (!mpLocalMapper->isStopped())
+            {
+                usleep(1000);
+            }
+
+            mpTracker->InformOnlyTracking(true);
+            mbActivateLocalizationMode = false;
+        }
+        if (mbDeactivateLocalizationMode)
+        {
+            mpTracker->InformOnlyTracking(false);
+            mpLocalMapper->Release();
+            mbDeactivateLocalizationMode = false;
+        }
+    }
+
+    // Check reset
+    {
+        unique_lock<mutex> lock(mMutexReset);
+        if (mbReset)
+        {
+            mpTracker->Reset();
+            mbReset = false;
+        }
+    }
+    return mpTracker->GrabImageRGBD(im, depthmap, timestamp, timestamp_id);
 }
 #endif
 

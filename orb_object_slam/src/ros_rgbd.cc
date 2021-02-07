@@ -172,6 +172,20 @@ void ImageGrabber::GrabRGBD(const sensor_msgs::ImageConstPtr &msgRGB, const sens
         ROS_ERROR("cv_bridge exception: %s", e.what());
         return;
     }
+    
+    
+    
+    
 
+    #ifdef at3dcv_andy
     cv::Mat pose = mpSLAM->TrackRGBD(cv_ptrRGB->image, depth_mat, cv_ptrRGB->header.stamp.toSec(), msgRGB->header.seq);
+    #elif defined at3dcv_tum_rgbd
+    std::stringstream first_17_stream;
+    first_17_stream << cv_ptrRGB->header.stamp;
+    std::string first_17 = first_17_stream.str().substr(0, 17);
+    std::cout << "$$$$$$$$$$$$$$$$$$ first_17.substr(0, 17): " << first_17<< std::endl;
+    cv::Mat pose = mpSLAM->TrackRGBD(cv_ptrRGB->image, depth_mat, cv_ptrRGB->header.stamp.toSec(), first_17);
+    #else
+    cv::Mat pose = mpSLAM->TrackRGBD(cv_ptrRGB->image, depth_mat, cv_ptrRGB->header.stamp.toSec());
+    #endif
 }

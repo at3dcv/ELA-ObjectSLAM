@@ -191,9 +191,10 @@ void MapDrawer::DrawMapCuboids() // ideally this should be draw map cuboids.
 	for (size_t object_id = 0; object_id < all_Map_objs.size(); object_id++)
 	{
 		MapObject *obj_landmark = all_Map_objs[object_id];
-
 		if (obj_landmark->isBad()) // some good, some bad, some not determined
+		{	
 			continue;
+		}
 
 		// show objects that being optimized! for kitti fix scale, this will make map visualization better.
 		if (bundle_object_opti)
@@ -246,7 +247,9 @@ void MapDrawer::DrawMapCuboids() // ideally this should be draw map cuboids.
 			for (auto it = obj_landmark->allDynamicPoses.begin(); it != obj_landmark->allDynamicPoses.end(); it++)
 			{
 				if (bundle_object_opti && !it->second.second) //only show optimized frame object pose
+				{
 					continue;
+				}
 				g2o::cuboid cubepose = it->second.first;
 				glVertex3f(cubepose.pose.translation()(0), cubepose.pose.translation()(1), cubepose.pose.translation()(2));
 			}

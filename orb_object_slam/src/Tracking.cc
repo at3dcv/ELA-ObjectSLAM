@@ -391,7 +391,7 @@ cv::Mat Tracking::GrabImageRGBD(const cv::Mat &imRGB, const cv::Mat &imD, const 
 	imDepth.convertTo(imDepth, CV_32F, mDepthMapFactor);
 
 	mCurrentFrame = Frame(mImGray, imDepth, timestamp, mpORBextractorLeft, mpORBVocabulary, mK, mDistCoef, mbf, mThDepth);
-	
+
 	// AC: Current frame id
 	if (mCurrentFrame.mnId == 0)
 		start_msg_seq_id = msg_seq_id;
@@ -405,6 +405,49 @@ cv::Mat Tracking::GrabImageRGBD(const cv::Mat &imRGB, const cv::Mat &imD, const 
 				exit(0);
 			}
 	}
+
+	if (mCurrentFrame.mnId == 0)
+	{
+		mpMap->img_height = mImGray.rows;
+		mpMap->img_width = mImGray.cols;
+	}
+	
+	if (whether_detect_object)
+	{
+		mCurrentFrame.raw_img = mImGray; // I clone in Keyframe.cc  don't need to clone here.
+		mCurrentFrame.raw_depth = imDepth;
+	}
+
+	Track();
+
+	return mCurrentFrame.mTcw.clone();
+}
+#elif defined at3dcv_tum_rgbd
+cv::Mat Tracking::GrabImageRGBD(const cv::Mat &imRGB, const cv::Mat &imD, const double &timestamp, std::string timestamp_id)
+{
+	mImGray = imRGB;
+	cv::Mat imDepth = imD;
+
+	if (mImGray.channels() == 3)
+	{
+		if (mbRGB)
+			cvtColor(mImGray, mImGray, CV_RGB2GRAY);
+		else
+			cvtColor(mImGray, mImGray, CV_BGR2GRAY);
+	}
+	else if (mImGray.channels() == 4)
+	{
+		if (mbRGB)
+			cvtColor(mImGray, mImGray, CV_RGBA2GRAY);
+		else
+			cvtColor(mImGray, mImGray, CV_BGRA2GRAY);
+	}
+
+	if (mDepthMapFactor != 1 || imDepth.type() != CV_32F)
+		;
+	imDepth.convertTo(imDepth, CV_32F, mDepthMapFactor);
+
+	mCurrentFrame = Frame(mImGray, imDepth, timestamp, timestamp_id, mpORBextractorLeft, mpORBVocabulary, mK, mDistCoef, mbf, mThDepth);
 
 	if (mCurrentFrame.mnId == 0)
 	{
@@ -1622,6 +1665,14 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 	std::vector<double> all_box_confidence;
 	vector<int> truth_tracklet_ids;
 	
+	// LL: Added by Leander
+	// LL: Making the frame index and object class avilable outside the if/else case
+	#ifdef at3dcv_tum_rgbd
+	std::string frame_index_c;
+	std::vector<string> object_classes;
+	#endif
+	// LL: Added by Leander
+
 	// LL: Differentiate between offline and online (loading from file or detection with e.g. YOLO)
 	// LL: - Offline: We used ReadAllObjecttxt of the file Tracking_util.cc to read all the all object proposels and saved them to all_offline_object_cubes
 	// LL: - Offline: We read the information of all_offline_object_cubes line by line an use it to initalizen new cuboid instances and in addition add the relevant info to all_obj2d_bbox
@@ -1653,9 +1704,10 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 			// LL: But carful with "use_truth_trackid" which is possibly written to postion 13 (12 in cpp) -> see 7 lines below
 			
 		// LL: Added by Leander
-		#ifndef at3dcv_leander
+		#ifdef at3dcv_leander
 			raw_cuboid->yolo_obj_scale = raw_cuboid->obj_class_scales["3"];
 		#endif
+
 		// LL: Added by Leander
 
 			raw_cuboid->rect_detect_2d = pred_frame_objects.row(i).segment<4>(7);
@@ -1674,12 +1726,40 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 		// AC: TODO: Move this function up to the Frame, so that it will be read out on a frame-to-frame basis
 		std::string data_edge_data_dir = base_data_folder + "/edge_detection/LSD/";
 		std::string data_yolo_obj_dir = base_data_folder + "/mats/filter_match_2d_boxes_txts/";
-		char frame_index_c[256];
-		sprintf(frame_index_c, "%04d", (int)pKF->mnFrameId); // format into 4 digit
+		
+		#ifdef at3dcv_tum_rgbd
+		std::cout << "$$$$$$$$$$$$ pKF->mTimeStamp:" << pKF->mTimeStamp << std::endl;
+		std::cout << "$$$$$$$$$$$$ pKF->mTimeStamp_id:" << pKF->mTimeStamp_id << std::endl;
+		std::cout << "$$$$$$$$$$$$$$$$$$ mnFrameId: " << (int)pKF->mnFrameId  << std::endl;
+		std::cout << "$$$$$$$$$$$$$$$$$$ mnId: " << (int)pKF->mnId  << std::endl;
+		std::cout << "Only keep the first 17 characters of a string" << std::endl;
+		std::cout << "$$$$$$$$$$$$$$$$$$ First 17: " << pKF->mTimeStamp_id << std::endl;
+		frame_index_c = pKF->mTimeStamp_id;
+		std::cout << "$$$$$$$$$$$$$$$$$$ path" << data_edge_data_dir + frame_index_c + "_edge.txt", all_lines_raw << std::endl;
+		#endif
+
+
+		//sprintf(frame_index_c, "%04d", frame_id); // format into 4 digit
 
 		// read detected edges
 		Eigen::MatrixXd all_lines_raw(100, 4); // 100 is some large frame number, the txt edge index start from 0
 		read_all_number_txt(data_edge_data_dir + frame_index_c + "_edge.txt", all_lines_raw);
+
+		// LL: Flip x and y axis
+		// Each row in the file represents a line.
+		// Each line has the following columns: x_0, y_0 ,x_1, y_1
+		//#ifdef at3dcv_tum_rgbd
+		//Eigen::MatrixXd all_lines_fliped(all_lines_raw.rows(), all_lines_raw.cols());
+		//for(int i = 0; i != all_lines_raw.rows(); ++i)
+		//{
+		//	for(int j = 0; j != all_lines_raw.cols()-1; ++j)
+		//	{
+		//		all_lines_fliped(i,j) = all_lines_raw(i,j+1);
+		//		all_lines_fliped(i,j+1) = all_lines_raw(i,j);
+		//	}
+		//}
+		//all_lines_raw = all_lines_fliped;
+		//#endif
 
 		// read yolo object detection
 		Eigen::MatrixXd raw_all_obj2d_bbox(10, 5);
@@ -1689,6 +1769,17 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 		sprintf(obj_2d_txt_postfix, "_mrcnn.txt", obj_det_2d_thre);
 		if (!read_obj_detection_txt(data_yolo_obj_dir + frame_index_c + obj_2d_txt_postfix, raw_all_obj2d_bbox, raw_object_classes))
 			ROS_ERROR_STREAM("Cannot read yolo txt  " << data_yolo_obj_dir + frame_index_c + obj_2d_txt_postfix);
+
+		//#ifdef at3dcv_tum_rgbd
+		//// LL: Flip x and y axis
+		//Eigen::MatrixXd raw_object_classes_x_y_fliped(raw_all_obj2d_bbox.rows(), raw_all_obj2d_bbox.cols());
+		//for(int i = 0; i != raw_all_obj2d_bbox.rows()/2; ++i)
+		//{
+		//	raw_object_classes_x_y_fliped.row(i*2) = raw_all_obj2d_bbox.row((i*2)+1);
+		//	raw_object_classes_x_y_fliped.row((i*2)+1) = raw_all_obj2d_bbox.row((i*2));
+		//}
+		//raw_all_obj2d_bbox = raw_object_classes_x_y_fliped;
+		//#endif
 
 		// remove some 2d boxes too close to boundary.
 		int boundary_threshold = 20;
@@ -1705,6 +1796,12 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 			all_obj2d_bbox.push_back(raw_all_obj2d_bbox.row(good_object_ids[i]));
 			// LL: We should read in the confidence score and added here!
 			all_box_confidence.push_back(1); //TODO change here.
+		
+		// LL: Added by Leander
+		#ifdef at3dcv_tum_rgbd
+			object_classes.push_back(raw_object_classes[good_object_ids[i]]);
+		#endif
+		// LL: Added by Leander
 		}
 
 // LL: Added by Leander
@@ -1714,6 +1811,18 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 		std::vector<Eigen::Matrix2Xd> raw_read_inst_segment_vert;
 		if (!read_inst_segment_vertices(data_inst_seg_vertices_dir + frame_index_c + "_ch.txt", raw_read_inst_segment_vert))
 			ROS_ERROR_STREAM("Cannot read the polygon vertices txt " << data_inst_seg_vertices_dir + frame_index_c + "_obj_vertices.txt");
+		
+		// LL: Add the raw instance segmentation convex hull vertices and class names to the key frame
+		// LL: Flip x and y axis
+		Eigen::MatrixXd raw_read_inst_segment_vert_x_y_fliped(raw_all_obj2d_bbox.rows(), raw_all_obj2d_bbox.cols());
+		for(int i = 0; i != raw_read_inst_segment_vert.rows()/2; ++i)
+		{
+			raw_read_inst_segment_vert_x_y_fliped.row(i*2) = raw_read_inst_segment_vert.row((i*2)+1);
+			raw_read_inst_segment_vert_x_y_fliped.row((i*2)+1) = raw_read_inst_segment_vert.row((i*2));
+		}
+		
+		pKF->raw_read_inst_segment_vert = raw_read_inst_segment_vert_x_y_fliped;
+		pKF->raw_object_classes = raw_object_classes;
 
 		// LL: Added by Leander: Filter the raw_read_inst_segment_vert and read_inst_segment_vert
 		std::vector<Eigen::Matrix2Xd> read_inst_segment_vert;
@@ -1721,7 +1830,6 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 		for (size_t i = 0; i < good_object_ids.size(); i++)
 		{
 			read_inst_segment_vert.push_back(raw_read_inst_segment_vert[good_object_ids[i]]);
-			object_classes.push_back(raw_object_classes[good_object_ids[i]]);
 		}
 #endif
 // LL: Added by Leander
@@ -1768,6 +1876,14 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 			MapObject *newcuboid = new MapObject(mpMap);
 			g2o::cuboid cube_local_meas = cube_ground_value.transform_to(Converter::toSE3Quat(pop_pose_to_ground));
 			newcuboid->cube_meas = cube_local_meas;
+
+// LL: Added by Leander
+#ifdef at3dcv_tum_rgbd
+			newcuboid->frame_index_c = frame_index_c;
+			newcuboid->object_class = object_classes[ii];
+#endif
+// LL: Added by Leander	
+
 
 // LL: Added by Leander
 #ifdef at3dcv_leander
@@ -1871,13 +1987,15 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 			}
 
 			if (!enable_ground_height_scale)
-			{									   // slightly faster
+			{									   // slightly faste
 				if (pKF->local_cuboids.size() > 0) // if there is object
+				{
 					for (size_t i = 0; i < pKF->mvKeys.size(); i++)
 					{
 						int associated_times = 0;
 						for (size_t j = 0; j < pKF->local_cuboids.size(); j++)
 							if (!overlapped[j])
+							{
 								if (pKF->local_cuboids[j]->bbox_2d.contains(pKF->mvKeys[i].pt))
 								{
 									associated_times++;
@@ -1886,7 +2004,9 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 									else
 										pKF->keypoint_associate_objectID[i] = -1;
 								}
+							}
 					}
+				}
 			}
 			else
 			{
@@ -1895,6 +2015,7 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 				{
 					int associated_times = 0;
 					for (size_t j = 0; j < pKF->local_cuboids.size(); j++)
+					{
 						if (pKF->local_cuboids[j]->bbox_2d.contains(pKF->mvKeys[i].pt))
 						{
 							pKF->keypoint_inany_object[i] = true;
@@ -1907,6 +2028,7 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 									pKF->keypoint_associate_objectID[i] = -1;
 							}
 						}
+					}
 				}
 				if (height_esti_history.size() == 0)
 				{
@@ -1969,7 +2091,8 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 		object_own_point_threshold = -1;
 
 	// points and object are related in local mapping, when creating mapPoints
-
+	ROS_DEBUG_STREAM("Tracking::DetectCuboid: Set check_whether_valid_object START ");
+	ROS_DEBUG_STREAM("Tracking::DetectCuboid: Treshhol is set to: " +object_own_point_threshold);
 	//dynamic object: didn't triangulate point in localmapping. but in tracking
 	for (size_t i = 0; i < checkframes.size(); i++)
 	{
@@ -1979,8 +2102,11 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 			MapObject *mPO = kfs->local_cuboids[j];
 			if (!mPO->become_candidate)
 			{
+				object_own_point_threshold = 2;
 				// points number maybe increased when later triangulated
 				mPO->check_whether_valid_object(object_own_point_threshold);
+				ROS_DEBUG_STREAM("Tracking::DetectCuboid mPO->become_candidate was set to: " + mPO->become_candidate);
+				ROS_DEBUG_STREAM("Tracking::DetectCuboid: Set check_whether_valid_object END ");
 			}
 		}
 	}
@@ -2004,7 +2130,10 @@ void Tracking::AssociateCuboids(KeyFrame *pKF)
 		{
 			MapObject *mPO = kfs->local_cuboids[j];
 			if (mPO->become_candidate && (!mPO->already_associated))
+			{
+				ROS_DEBUG_STREAM("Tracking::AssociateCuboids: Added cuboid to LocalObjectsCandidates");
 				LocalObjectsCandidates.push_back(kfs->local_cuboids[j]);
+			}
 		}
 		for (size_t j = 0; j < kfs->cuboids_landmark.size(); j++)
 			if (kfs->cuboids_landmark[j]) // might be deleted due to badFlag()
@@ -2083,6 +2212,7 @@ void Tracking::AssociateCuboids(KeyFrame *pKF)
 			}
 			candidateObject->already_associated = true; // must be put before SetAsLandmark();
 			KeyFrame *refframe = candidateObject->GetReferenceKeyFrame();
+			ROS_DEBUG_STREAM("Tracking::AssociateCuboids: Added observation");
 			candidateObject->addObservation(refframe, candidateObject->object_id_in_localKF); // add to frame observation
 			refframe->cuboids_landmark.push_back(candidateObject);
 			candidateObject->mnId = MapObject::getIncrementedIndex(); //mpMap->MapObjectsInMap();  // needs to manually set

@@ -33,36 +33,37 @@ std::unordered_map<std::string, Eigen::Vector3d> cuboid::obj_class_scales{
     {"26", Eigen::Vector3d(0.06, 0.06, 0.30)},        // umbrella
     {"27", Eigen::Vector3d(0.07, 0.12, 0.12)},        // handbag
     {"29", Eigen::Vector3d(0.06, 0.17, 0.15)},        // suticase
-    {"40", Eigen::Vector3d(0.035, 0.035, 0.14)},        // bottle 
-    {"41", Eigen::Vector3d(0.6, 0.3, 0.55)},        // wine glass
+    {"40", Eigen::Vector3d(0.035, 0.035, 0.14)},        // bottle
+    //{"41", Eigen::Vector3d(0.6, 0.3, 0.55)},        // wine glass
     {"42", Eigen::Vector3d(0.035, 0.035, 0.045)},        // cup
-    {"43", Eigen::Vector3d(0.6, 0.3, 0.55)},        // fork
-    {"44", Eigen::Vector3d(0.6, 0.3, 0.55)},        // knife
-    {"45", Eigen::Vector3d(0.6, 0.3, 0.55)},        // spoon
-    {"46", Eigen::Vector3d(0.6, 0.3, 0.55)},        // bowl
-    {"47", Eigen::Vector3d(0.6, 0.3, 0.55)},        // banana
-    {"48", Eigen::Vector3d(0.6, 0.3, 0.55)},        // apple
-    {"49", Eigen::Vector3d(0.6, 0.3, 0.55)},        // sandwich
-    {"50", Eigen::Vector3d(0.6, 0.3, 0.55)},        // orange
-    {"57", Eigen::Vector3d(0.6, 0.3, 0.55)},        // chair
-    {"58", Eigen::Vector3d(0.6, 0.3, 0.55)},        // couch
-    {"59", Eigen::Vector3d(0.6, 0.3, 0.55)},        // potted plant
-    {"63", Eigen::Vector3d(0.6, 0.3, 0.55)},        // tv
-    {"64", Eigen::Vector3d(0.6, 0.3, 0.55)},        // laptop
-    {"65", Eigen::Vector3d(0.6, 0.3, 0.55)},        // mouse
-    {"66", Eigen::Vector3d(0.6, 0.3, 0.55)},        // remote
-    {"67", Eigen::Vector3d(0.6, 0.3, 0.55)},        // key board
-    {"68", Eigen::Vector3d(0.6, 0.3, 0.55)},        // cellphone
-    {"69", Eigen::Vector3d(0.6, 0.3, 0.55)},        // microwave
-    {"70", Eigen::Vector3d(0.6, 0.3, 0.55)},        // Oven
-    {"71", Eigen::Vector3d(0.6, 0.3, 0.55)},        // Toaster
-    {"72", Eigen::Vector3d(0.6, 0.3, 0.55)},        // sink
-    {"73", Eigen::Vector3d(0.6, 0.3, 0.55)},        // refrigerator
-    {"74", Eigen::Vector3d(0.6, 0.3, 0.55)},        // book
-    {"75", Eigen::Vector3d(0.6, 0.3, 0.55)},        // clock
-    {"76", Eigen::Vector3d(0.6, 0.3, 0.55)},        // vase
-    {"78", Eigen::Vector3d(0.6, 0.3, 0.55)},        // scissors
-    {"79", Eigen::Vector3d(0.6, 0.3, 0.55)},        // teddy bear
+    //{"43", Eigen::Vector3d(0.6, 0.3, 0.55)},        // fork
+    //{"44", Eigen::Vector3d(0.6, 0.3, 0.55)},        // knife
+    //{"45", Eigen::Vector3d(0.6, 0.3, 0.55)},        // spoon
+    //{"46", Eigen::Vector3d(0.6, 0.3, 0.55)},        // bowl
+    //{"47", Eigen::Vector3d(0.6, 0.3, 0.55)},        // banana
+    //{"48", Eigen::Vector3d(0.6, 0.3, 0.55)},        // apple
+    //{"49", Eigen::Vector3d(0.6, 0.3, 0.55)},        // sandwich
+    //{"50", Eigen::Vector3d(0.6, 0.3, 0.55)},        // orange
+    {"57", Eigen::Vector3d(0.21, 0.22, 0.40)},        // chair
+    {"58", Eigen::Vector3d(0.75, 0.25, 0.40)},        // couch
+    {"59", Eigen::Vector3d(0.13, 0.13, 0.35)},        // potted plant
+    {"61", Eigen::Vector3d(0.6, 0.3, 0.55)},        // dining table
+    {"63", Eigen::Vector3d(0.45, 0.3, 0.05)},        // tv
+    {"64", Eigen::Vector3d(0.15, 0.11, 0.9)},        // laptop
+    {"65", Eigen::Vector3d(0.035, 0.05, 0.025)},        // mouse
+    {"66", Eigen::Vector3d(0.03, 0.09, 0.015)},        // remote
+    {"67", Eigen::Vector3d(0.055, 0.15, 0.01)},        // key board
+    {"68", Eigen::Vector3d(0.035, 0.07, 0.01)},        // cellphone
+    {"69", Eigen::Vector3d(0.2, 0.15, 0.15)},        // microwave
+    {"70", Eigen::Vector3d(0.3, 0.3, 0.25)},        // Oven
+    //{"71", Eigen::Vector3d(0.6, 0.3, 0.55)},        // Toaster
+    //{"72", Eigen::Vector3d(0.6, 0.3, 0.55)},        // sink
+    //{"73", Eigen::Vector3d(0.6, 0.3, 0.55)},        // refrigerator
+    //{"74", Eigen::Vector3d(0.6, 0.3, 0.55)},        // book
+    //{"75", Eigen::Vector3d(0.6, 0.3, 0.55)},        // clock
+    //{"76", Eigen::Vector3d(0.6, 0.3, 0.55)},        // vase
+    //{"78", Eigen::Vector3d(0.6, 0.3, 0.55)},        // scissors
+    //{"79", Eigen::Vector3d(0.6, 0.3, 0.55)},        // teddy bear
     };
 #endif
 // LL: Added by Leander

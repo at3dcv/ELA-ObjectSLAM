@@ -110,6 +110,14 @@ public:
     #endif
     // LL: Added by Leander
     
+    // LL: Added by Leander 
+    // LL: Init with deafault value
+    #ifdef at3dcv_tum_rgbd
+    std::string frame_index_c;
+    std::string object_class;
+    #endif
+    // LL: Added by Leander
+
     //----------for local MapObject--------     no mutex needed, for local cuboid storage, not landmark
     int object_id_in_localKF;        // object id in reference keyframe's local objects.
     Eigen::Matrix2Xi box_corners_2d; // 2*8 on image  usually for local cuboids on reference frame.

@@ -29,6 +29,9 @@
 
 #include <mutex>
 
+// LL: Added config header to pass macro that switches Leander's code off and on
+#include "At3dcv_config.h"
+
 namespace ORB_SLAM2
 {
 
@@ -50,6 +53,29 @@ public:
     cv::Mat DrawFrame();
 
 protected:
+
+    // LL: Added by Leander 
+    #ifdef at3dcv_tum_rgbd
+    std::vector<std::string> frame_index_c;
+    std::vector<std::string> object_class;
+    std::string CLASS_NAMES[81] = {"BG", "person", "bicycle", "car", "motorcycle", "airplane",
+               "bus", "train", "truck", "boat", "traffic light",
+               "fire hydrant", "stop sign", "parking meter", "bench", "bird",
+               "cat", "dog", "horse", "sheep", "cow", "elephant", "bear",
+               "zebra", "giraffe", "backpack", "umbrella", "handbag", "tie",
+               "suitcase", "frisbee", "skis", "snowboard", "sports ball",
+               "kite", "baseball bat", "baseball glove", "skateboard",
+               "surfboard", "tennis racket", "bottle", "wine glass", "cup",
+               "fork", "knife", "spoon", "bowl", "banana", "apple",
+               "sandwich", "orange", "broccoli", "carrot", "hot dog", "pizza",
+               "donut", "cake", "chair", "couch", "potted plant", "bed",
+               "dining table", "toilet", "tv", "laptop", "mouse", "remote",
+               "keyboard", "cell phone", "microwave", "oven", "toaster",
+               "sink", "refrigerator", "book", "clock", "vase", "scissors",
+               "teddy bear", "hair drier", "toothbrush"};
+    #endif
+    // LL: Added by Leander
+
     // by me  for object
     std::vector<cv::Rect> bbox_2ds;                // yolo detected 2D bbox_2d, which has 3D cuboid
     std::vector<Eigen::Matrix2Xi> box_corners_2ds; //2*8 corners on object.

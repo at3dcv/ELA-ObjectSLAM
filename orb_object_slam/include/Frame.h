@@ -28,6 +28,12 @@
 #include <vector>
 #include <opencv2/opencv.hpp>
 
+
+// LL: Added config header to pass macro that switches Leander's code off and on
+#include "At3dcv_config.h"
+#include <ros/ros.h>
+
+
 namespace ORB_SLAM2
 {
 #define FRAME_GRID_ROWS 48
@@ -49,9 +55,14 @@ public:
     Frame(const cv::Mat &imLeft, const cv::Mat &imRight, const double &timeStamp, ORBextractor *extractorLeft, ORBextractor *extractorRight, ORBVocabulary *voc,
           cv::Mat &K, cv::Mat &distCoef, const float &bf, const float &thDepth);
 
+    #ifdef at3dcv_tum_rgbd
+    Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeStamp, std::string timestamp_id, ORBextractor *extractor, ORBVocabulary *voc, 
+    cv::Mat &K, cv::Mat &distCoef, const float &bf, const float &thDepth);
+    #else
     // Constructor for RGB-D cameras. extract keypoints, descriptors
     Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeStamp, ORBextractor *extractor, ORBVocabulary *voc,
           cv::Mat &K, cv::Mat &distCoef, const float &bf, const float &thDepth);
+    #endif
 
     // Constructor for Monocular cameras. extract keypoints, descriptors
     Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor *extractor, ORBVocabulary *voc, cv::Mat &K, cv::Mat &distCoef,
@@ -146,8 +157,12 @@ public:
     ORBextractor *mpORBextractorLeft, *mpORBextractorRight;
 
     // Frame timestamp.
+    #ifdef at3dcv_tum_rgbd
+    std::string mTimeStamp_id;
     double mTimeStamp;
-
+    #else
+    double mTimeStamp;
+    #endif
     // Calibration matrix and OpenCV distortion parameters.
     cv::Mat mK;
     static float fx;
