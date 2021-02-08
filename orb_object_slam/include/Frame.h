@@ -26,6 +26,7 @@
 #include "ORBVocabulary.h"
 #include <vector>
 #include <opencv2/opencv.hpp>
+#include "Eigen/Dense"
 
 // AC: custom class
 #include "ObjDetectionHelper.h"
@@ -113,11 +114,11 @@ public:
     double limit_of_check = 2120;
     int limit_edge_corner = 5;
 
-    void FilterOutMovingPoints(const cv::Mat &imGray);
+    void FilterOutMovingPoints();
     ObjDetectionHelper mCurrentObjDetection;
     std::vector<vector<float > > mCurrentBBoxes;
 
-    void CheckMovingKeyPoints(const cv::Mat &imGray, const std::vector<std::vector<float > > mCurrentBBoxes);
+    void CheckMovingKeyPoints(Eigen::MatrixXd mCurrentBBoxes, std::vector<std::string> classes);
 
 public:
     // by me, detect_3d_cuboid needs raw image
