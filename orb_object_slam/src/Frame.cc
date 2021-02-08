@@ -37,7 +37,7 @@
 
 #include "tictoc_profiler/profiler.hpp"
 
-// AC: Added config header to pass macro that switches Leander's code off and on
+// AC: Added config header to pass macro that switches out custom code off and on
 #include "At3dcv_config.h"
 // AC: import read_obj
 #include "detect_3d_cuboid/detect_3d_cuboid.h"
@@ -249,19 +249,19 @@ Frame::Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor *extra
             FilterOutMovingPoints();
             imGrayPre = imGray.clone();
             // AC: sample 300 mvKeys for next frame
-            for (int i = 0; i < 300; i++) {
-                int randNum = rand()%(mvKeys.size() + 1);
-                prepoint.push_back(mvKeys[randNum].pt);
-            }
+            // for (int i = 0; i < 300; i++) {
+            //     int randNum = rand()%(mvKeys.size() + 1);
+            //     prepoint.push_back(mvKeys[randNum].pt);
+            // }
         }
         else
         {
             imGrayPre = imGray.clone();
             // AC: sample 300 mvKeys for next frame
-            for (int i = 0; i < 300; i++) {
-                int randNum = rand()%(mvKeys.size() + 1);
-                prepoint.push_back(mvKeys[randNum].pt);
-            }
+            // for (int i = 0; i < 300; i++) {
+            //     int randNum = rand()%(mvKeys.size() + 1);
+            //     prepoint.push_back(mvKeys[randNum].pt);
+            // }
         }
 #else
         std::string pred_mask_img_name = base_data_folder + "/rcnn_labelmap_3dmatched/" + std::to_string(mnId) + "_maskmap.png";
@@ -365,6 +365,7 @@ Frame::Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor *extra
     mb = mbf / fx;
 
     AssignFeaturesToGrid();
+    if (show_debug) std::cout << "Frame::Frame END" << std::endl;
 }
 
 // AC: The generated keypoints are ONLY used to determine whether a frame has a moving object or not!
@@ -372,6 +373,8 @@ void Frame::DetectMovingKeypoints(const cv::Mat &imgray)
 {
     std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
     // Clear the previous data
+    prepoint.clear();
+    nextpoint.clear();
 	F_prepoint.clear();
 	F_nextpoint.clear();
 	T_M.clear();
@@ -446,6 +449,7 @@ void Frame::FilterOutMovingPoints()
     sprintf(frame_index_c, "%04d", (int)mnId); // format into 4 digit
     Eigen::MatrixXd raw_all_obj2d_bbox(10, 5);
 	std::vector<string> object_classes;
+    if (show_debug) std::cout << frame_index_c << std::endl;
     if (!read_obj_detection_txt(base_data_folder + "/mats/filter_match_2d_boxes_txts/" + frame_index_c + "_mrcnn.txt", raw_all_obj2d_bbox, object_classes))
         return;
 

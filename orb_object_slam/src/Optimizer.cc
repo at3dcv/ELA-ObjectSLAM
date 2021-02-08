@@ -2071,12 +2071,14 @@ void Optimizer::LocalBACameraPointObjectsDynamic(KeyFrame *pKF, bool *pbStopFlag
             fine_threshold = 3;
         }
 
+        cout << "BA vpEdgesCameraPointObject 1" << endl;
         for (size_t i = 0; i < lLocalMapObjects.size(); i++)
         {
             MapObject *pMObj = lLocalMapObjects[i];
             // compute the mean, eliminate outlier points.
             Eigen::Vector3d mean_point;
             mean_point.setZero();
+            cout << "BA vpEdgesCameraPointObject for 1" << endl;
             for (size_t j = 0; j < all_object_ba_points[i].size(); j++)
                 mean_point += all_object_ba_points[i][j];
             mean_point /= (double)(all_object_ba_points[i].size());
@@ -2086,12 +2088,14 @@ void Optimizer::LocalBACameraPointObjectsDynamic(KeyFrame *pKF, bool *pbStopFlag
             Eigen::Vector3d mean_point_2;
             mean_point_2.setZero();
             int valid_point_num = 0;
+            cout << "BA vpEdgesCameraPointObject for 2" << endl;
             for (size_t j = 0; j < all_object_ba_points[i].size(); j++)
                 if ((mean_point - all_object_ba_points[i][j]).norm() < coarse_threshold)
                 {
                     mean_point_2 += all_object_ba_points[i][j];
                     valid_point_num++;
                 }
+            cout << "BA vpEdgesCameraPointObject for 3" << endl;
             mean_point_2 /= (double)valid_point_num;
             std::vector<Eigen::Vector3d> good_points; // for car, if points are 4 meters away from center, usually outlier.
             for (size_t j = 0; j < all_object_ba_points[i].size(); j++)
@@ -2100,7 +2104,10 @@ void Optimizer::LocalBACameraPointObjectsDynamic(KeyFrame *pKF, bool *pbStopFlag
                 {
                     mean_point_final += all_object_ba_points[i][j];
                     good_points.push_back(all_object_ba_points[i][j]);
+                    cout << "BA vpEdgesCameraPointObject used_points_in_BA: " << pMObj->used_points_in_BA.size() << endl;
+                    cout << "BA vpEdgesCameraPointObject counter: " << j << endl;
                     pMObj->used_points_in_BA_filtered.push_back(pMObj->used_points_in_BA[j]);
+                    cout << "BA vpEdgesCameraPointObject if end" << endl;
                 }
                 // else  remove observation.
             }
@@ -2108,15 +2115,27 @@ void Optimizer::LocalBACameraPointObjectsDynamic(KeyFrame *pKF, bool *pbStopFlag
             all_object_ba_points[i].clear();
             all_object_ba_points[i] = good_points;
 
-            if ((all_object_ba_points[i].size() > 5) && 1) // whether want to initialize object position to be center of points
-            {
-                g2o_object_vertex *vObject = static_cast<g2o_object_vertex *>(optimizer.vertex(pMObj->mnId + maxKFid + 1));
-                g2o::cuboid tempcube = vObject->estimate();
-                tempcube.setTranslation(mean_point_final);
-                vObject->setEstimate(tempcube);
-            }
+            cout << "BA vpEdgesCameraPointObject if 4: " << all_object_ba_points[i].size() << " " << pMObj->mnId + maxKFid + 1 << endl;
+            
+            // AC: commented this part out as it throws often an -11 error...
+            // if ((all_object_ba_points[i].size() > 5) && 1) // whether want to initialize object position to be center of points
+            // {
+            //     cout << "BA vpEdgesCameraPointObject if size > 5" << endl;
+            //     g2o_object_vertex *vObject = static_cast<g2o_object_vertex *>(optimizer.vertex(pMObj->mnId + maxKFid + 1));
+            //     cout << "BA vpEdgesCameraPointObject if size > 5 1" << endl;
+            //     try {
+            //         g2o::cuboid tempcube = vObject->estimate();
+            //         cout << "BA vpEdgesCameraPointObject if size > 5 2" << endl;
+            //         tempcube.setTranslation(mean_point_final);
+            //         cout << "BA vpEdgesCameraPointObject if size > 5 3" << endl;
+            //         vObject->setEstimate(tempcube);
+            //     } catch (const std::exception& e) {
+            //         std::cout << "Exception in bundle adjustment" << std::endl;
+            //     } 
+            // }
         }
 
+        cout << "BA vpEdgesCameraPointObject 2" << endl;
         // point - object 3d measurement. set use fixed point or to optimize point
         for (size_t i = 0; i < lLocalMapObjects.size(); i++) // no need to optimize all objects...., use local KF's map objects?
         {
@@ -2124,6 +2143,7 @@ void Optimizer::LocalBACameraPointObjectsDynamic(KeyFrame *pKF, bool *pbStopFlag
 
             if (1) // an object connected to many fixed points. optimize only object
             {
+                cout << "BA vpEdgesCameraPointObject if(0)" << endl;
 #ifdef ObjectFixScale
                 g2o::EdgePointCuboidOnlyObjectFixScale *e = new g2o::EdgePointCuboidOnlyObjectFixScale();
 #else
@@ -2132,6 +2152,7 @@ void Optimizer::LocalBACameraPointObjectsDynamic(KeyFrame *pKF, bool *pbStopFlag
                 for (size_t j = 0; j < all_object_ba_points[i].size(); j++)
                     e->object_points.push_back(all_object_ba_points[i][j]);
 
+                cout << "BA vpEdgesCameraPointObject e->object_points.size() > 10" << endl;
                 if (e->object_points.size() > 10)
                 {
                     e->setVertex(0, dynamic_cast<g2o::OptimizableGraph::Vertex *>(optimizer.vertex(pMO->mnId + maxKFid + 1)));
@@ -2171,6 +2192,7 @@ void Optimizer::LocalBACameraPointObjectsDynamic(KeyFrame *pKF, bool *pbStopFlag
         }
     }
 
+    cout << "BA vpEdgesCameraPointObject 3" << endl;
     // set up object-movement velocity constraints.
     vector<g2o::EdgeObjectMotion *> allmotionedges;
     if (ba_dyna_obj_velo)
@@ -2181,6 +2203,7 @@ void Optimizer::LocalBACameraPointObjectsDynamic(KeyFrame *pKF, bool *pbStopFlag
         inv_sigma = inv_sigma * object_velocity_BA_weight;
         Eigen::Matrix3d object_velocity_sigma = inv_sigma.cwiseProduct(inv_sigma).asDiagonal();
         const float thHuberObjectVeloc = sqrt(4);
+        cout << "BA vpEdgesCameraPointObject 4" << endl;
         for (vector<MapObject *>::iterator lit = lLocalMapObjects.begin(), lend = lLocalMapObjects.end(); lit != lend; lit++)
         {
             MapObject *pMObject = *lit;
@@ -2259,6 +2282,7 @@ void Optimizer::LocalBACameraPointObjectsDynamic(KeyFrame *pKF, bool *pbStopFlag
         }
     }
 
+    cout << "BA vpEdgesCameraPointObject 5" << endl;
     // add camera - object 2d measurement.
     vector<g2o_camera_obj_2d_edge *> vpEdgesCameraObject;
     if (ba_dyna_obj_cam) // for kitti, this works better as scale is given
@@ -2285,6 +2309,7 @@ void Optimizer::LocalBACameraPointObjectsDynamic(KeyFrame *pKF, bool *pbStopFlag
         vector<g2o_camera_obj_2d_edge *> vpEdgesCameraObjectRight;
         vector<g2o_camera_obj_2d_edge *> vpEdgesCameraObjectMiddle;
         bool whether_want_camera_obj = true;
+        cout << "BA vpEdgesCameraPointObject 6" << endl;
         if (whether_want_camera_obj)
             for (vector<MapObject *>::iterator lit = lLocalMapObjects.begin(), lend = lLocalMapObjects.end(); lit != lend; lit++)
             {
@@ -2360,6 +2385,7 @@ void Optimizer::LocalBACameraPointObjectsDynamic(KeyFrame *pKF, bool *pbStopFlag
                 }
             }
 
+        cout << "BA vpEdgesCameraPointObject 6" << endl;
         if (scene_unique_id == kitti)
         {
             if (total_left > 2 * (total_right + total_middle))
