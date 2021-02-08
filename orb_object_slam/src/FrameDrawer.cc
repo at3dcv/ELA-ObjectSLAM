@@ -176,8 +176,11 @@ cv::Mat FrameDrawer::DrawFrame()
             cv::rectangle(im, bbox_2ds[i], box_colors[i % box_colors.size()], 2); // 2d bounding box.
 
             #ifdef at3dcv_tum_rgbd
-            std::string  box_identifier = CLASS_NAMES[std::stoi(object_class[i])]; 
-            cv::putText(im, box_identifier , cv::Point(bbox_2ds[i].x + 20, bbox_2ds[i].y + 20), cv::FONT_HERSHEY_PLAIN, 2, box_colors[i % box_colors.size()], 2); // # bgr
+            if(i < object_class.size())
+            {
+                std::string  box_identifier = CLASS_NAMES[std::stoi(object_class[i])]; 
+                cv::putText(im, box_identifier , cv::Point(bbox_2ds[i].x + 20, bbox_2ds[i].y + 20), cv::FONT_HERSHEY_PLAIN, 2, box_colors[i % box_colors.size()], 2); // # bgr
+            }
             #endif 
 
             if ((scene_unique_id != kitti) && (box_corners_2ds[i].cols() > 0))    // for most offline read data, usually cannot read it, could use rviz.

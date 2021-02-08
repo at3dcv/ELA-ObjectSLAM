@@ -1668,9 +1668,10 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 			newcuboid->cube_meas = cube_local_meas;
 			// LL: Added by Leander
 			// LL: Adding the object classes as a member field to the cuboids
-			#ifdef at3dcv_tum_rgbd
-						newcuboid->object_class = object_classes_clean[ii];
-			#endif
+		#ifdef at3dcv_tum_rgbd
+			if(ii < object_classes_clean.size())
+				newcuboid->object_class = object_classes_clean[ii];
+		#endif
 			newcuboid->bbox_2d = cv::Rect(raw_cuboid->rect_detect_2d[0], raw_cuboid->rect_detect_2d[1], raw_cuboid->rect_detect_2d[2], raw_cuboid->rect_detect_2d[3]);
 			newcuboid->bbox_vec = Vector4d((double)newcuboid->bbox_2d.x + (double)newcuboid->bbox_2d.width / 2, (double)newcuboid->bbox_2d.y + (double)newcuboid->bbox_2d.height / 2,
 										   (double)newcuboid->bbox_2d.width, (double)newcuboid->bbox_2d.height);
