@@ -66,9 +66,129 @@ Frame::Frame()
 }
 
 
+
+#ifdef at3dcv_tum
+//Copy Constructor
+Frame::Frame(const Frame &frame)
+    : mpORBvocabulary(frame.mpORBvocabulary), mpORBextractorLeft(frame.mpORBextractorLeft), mpORBextractorRight(frame.mpORBextractorRight),
+      mTimeStamp(frame.mTimeStamp), mTimeStamp_id(frame.mTimeStamp_id), mK(frame.mK.clone()), mDistCoef(frame.mDistCoef.clone()),
+      mbf(frame.mbf), mb(frame.mb), mThDepth(frame.mThDepth), N(frame.N), mvKeys(frame.mvKeys),
+      mvKeysRight(frame.mvKeysRight), mvKeysUn(frame.mvKeysUn), mvuRight(frame.mvuRight),
+      mvDepth(frame.mvDepth), mBowVec(frame.mBowVec), mFeatVec(frame.mFeatVec),
+      mDescriptors(frame.mDescriptors.clone()), mDescriptorsRight(frame.mDescriptorsRight.clone()),
+      mvpMapPoints(frame.mvpMapPoints), mvbOutlier(frame.mvbOutlier), mnId(frame.mnId),
+      mpReferenceKF(frame.mpReferenceKF), mnScaleLevels(frame.mnScaleLevels),
+      mfScaleFactor(frame.mfScaleFactor), mfLogScaleFactor(frame.mfLogScaleFactor),
+      mvScaleFactors(frame.mvScaleFactors), mvInvScaleFactors(frame.mvInvScaleFactors),
+      mvLevelSigma2(frame.mvLevelSigma2), mvInvLevelSigma2(frame.mvInvLevelSigma2)
+{
+    for (int i = 0; i < FRAME_GRID_COLS; i++)
+        for (int j = 0; j < FRAME_GRID_ROWS; j++)
+            mGrid[i][j] = frame.mGrid[i][j];
+
+    if (!frame.mTcw.empty())
+        SetPose(frame.mTcw);
+
+    if (whether_detect_object)
+    {
+        raw_img = frame.raw_img.clone();
+        raw_depth = frame.raw_depth.clone();
+    }
+    if (whether_dynamic_object)
+    {
+        KeysStatic = frame.KeysStatic;
+        keypoint_associate_objectID = frame.keypoint_associate_objectID;
+        numobject = frame.numobject;
+        objmask_img = frame.objmask_img;
+        mvKeysHarris = frame.mvKeysHarris;
+        mvpMapPointsHarris = frame.mvpMapPointsHarris;
+        keypoint_associate_objectID_harris = frame.keypoint_associate_objectID_harris;
+    }
+}
+// for monocular
+Frame::Frame(const cv::Mat &imGray, const double &timeStamp, std::string timeStamp_id, ORBextractor *extractor, ORBVocabulary *voc, cv::Mat &K, cv::Mat &distCoef, const float &bf,
+             const float &thDepth)
+    : mpORBvocabulary(voc), mpORBextractorLeft(extractor), mpORBextractorRight(static_cast<ORBextractor *>(NULL)),
+      mTimeStamp(timeStamp), mTimeStamp_id(timeStamp_id), mK(K.clone()), mDistCoef(distCoef.clone()), mbf(bf), mThDepth(thDepth), mpReferenceKF(static_cast<KeyFrame *>(NULL))
+{
+    ROS_DEBUG_STREAM("Frame::Frame Mono");
+    // Frame ID
+    mnId = nNextId++;
+
+    // Scale Level Info
+    mnScaleLevels = mpORBextractorLeft->GetLevels();
+    mfScaleFactor = mpORBextractorLeft->GetScaleFactor();
+    mfLogScaleFactor = log(mfScaleFactor);
+    mvScaleFactors = mpORBextractorLeft->GetScaleFactors();
+    mvInvScaleFactors = mpORBextractorLeft->GetInverseScaleFactors();
+    mvLevelSigma2 = mpORBextractorLeft->GetScaleSigmaSquares();
+    mvInvLevelSigma2 = mpORBextractorLeft->GetInverseScaleSigmaSquares();
+    
+    ExtractORB(0, imGray); // orb detector   change mvKeys, mDescriptors
+
+    // AC: Copied from DS-SLAM
+    if(imGrayPre.data)
+    {
+        DetectMovingKeypoints(imGray);
+        if (whether_dynamic_object) {
+            FilterOutMovingPoints(imGray);
+            ROS_DEBUG_STREAM("Frame::Frame FilterOutMovingPoints END " << N);
+        }
+        imGrayPre = imGray.clone();
+    }
+    else
+    {
+        imGrayPre = imGray.clone();
+    }
+    
+    // AC: here was the dynamic object removal process, however, it only takes a segmented map
+    // AC: with only dynamic objects
+
+    N = mvKeys.size();
+    ROS_DEBUG_STREAM("Keypoint count: " << N);
+
+    if (mvKeys.empty())
+        return;
+        
+    ROS_DEBUG_STREAM("Frame::Frame Undistort");
+    UndistortKeyPoints();
+
+    // Set no stereo information
+    mvuRight = vector<float>(N, -1);
+    mvDepth = vector<float>(N, -1);
+
+    mvpMapPoints = vector<MapPoint *>(N, static_cast<MapPoint *>(NULL));
+    mvbOutlier = vector<bool>(N, false);
+
+    ROS_DEBUG_STREAM("Frame::Frame if");
+    // This is done only for the first Frame (or after a change in the calibration)
+    if (mbInitialComputations)
+    {
+        ComputeImageBounds(imGray);
+
+        mfGridElementWidthInv = static_cast<float>(FRAME_GRID_COLS) / static_cast<float>(mnMaxX - mnMinX);
+        mfGridElementHeightInv = static_cast<float>(FRAME_GRID_ROWS) / static_cast<float>(mnMaxY - mnMinY);
+
+        fx = K.at<float>(0, 0);
+        fy = K.at<float>(1, 1);
+        cx = K.at<float>(0, 2);
+        cy = K.at<float>(1, 2);
+        invfx = 1.0f / fx;
+        invfy = 1.0f / fy;
+
+        mbInitialComputations = false;
+    }
+
+    mb = mbf / fx;
+
+    AssignFeaturesToGrid();
+
+    ROS_DEBUG_STREAM("Frame::Frame END");
+}
+
 // for stereo
-Frame::Frame(const cv::Mat &imLeft, const cv::Mat &imRight, const double &timeStamp, ORBextractor *extractorLeft, ORBextractor *extractorRight, ORBVocabulary *voc, cv::Mat &K, cv::Mat &distCoef, const float &bf, const float &thDepth)
-    : mpORBvocabulary(voc), mpORBextractorLeft(extractorLeft), mpORBextractorRight(extractorRight), mTimeStamp(timeStamp), mK(K.clone()), mDistCoef(distCoef.clone()), mbf(bf), mThDepth(thDepth),
+Frame::Frame(const cv::Mat &imLeft, const cv::Mat &imRight, const double &timeStamp, std::string timeStamp_id, ORBextractor *extractorLeft, ORBextractor *extractorRight, ORBVocabulary *voc, cv::Mat &K, cv::Mat &distCoef, const float &bf, const float &thDepth)
+    : mpORBvocabulary(voc), mpORBextractorLeft(extractorLeft), mpORBextractorRight(extractorRight), mTimeStamp(timeStamp), mTimeStamp_id(timeStamp_id), mK(K.clone()), mDistCoef(distCoef.clone()), mbf(bf), mThDepth(thDepth),
       mpReferenceKF(static_cast<KeyFrame *>(NULL))
 {
     // Frame ID
@@ -123,47 +243,7 @@ Frame::Frame(const cv::Mat &imLeft, const cv::Mat &imRight, const double &timeSt
 
     AssignFeaturesToGrid();
 }
-
-// for RGBD
-#ifdef at3dcv_tum_rgbd
-//Copy Constructor
-Frame::Frame(const Frame &frame)
-    : mpORBvocabulary(frame.mpORBvocabulary), mpORBextractorLeft(frame.mpORBextractorLeft), mpORBextractorRight(frame.mpORBextractorRight),
-      mTimeStamp(frame.mTimeStamp), mTimeStamp_id(frame.mTimeStamp_id), mK(frame.mK.clone()), mDistCoef(frame.mDistCoef.clone()),
-      mbf(frame.mbf), mb(frame.mb), mThDepth(frame.mThDepth), N(frame.N), mvKeys(frame.mvKeys),
-      mvKeysRight(frame.mvKeysRight), mvKeysUn(frame.mvKeysUn), mvuRight(frame.mvuRight),
-      mvDepth(frame.mvDepth), mBowVec(frame.mBowVec), mFeatVec(frame.mFeatVec),
-      mDescriptors(frame.mDescriptors.clone()), mDescriptorsRight(frame.mDescriptorsRight.clone()),
-      mvpMapPoints(frame.mvpMapPoints), mvbOutlier(frame.mvbOutlier), mnId(frame.mnId),
-      mpReferenceKF(frame.mpReferenceKF), mnScaleLevels(frame.mnScaleLevels),
-      mfScaleFactor(frame.mfScaleFactor), mfLogScaleFactor(frame.mfLogScaleFactor),
-      mvScaleFactors(frame.mvScaleFactors), mvInvScaleFactors(frame.mvInvScaleFactors),
-      mvLevelSigma2(frame.mvLevelSigma2), mvInvLevelSigma2(frame.mvInvLevelSigma2)
-{
-    for (int i = 0; i < FRAME_GRID_COLS; i++)
-        for (int j = 0; j < FRAME_GRID_ROWS; j++)
-            mGrid[i][j] = frame.mGrid[i][j];
-
-    if (!frame.mTcw.empty())
-        SetPose(frame.mTcw);
-
-    if (whether_detect_object)
-    {
-        raw_img = frame.raw_img.clone();
-        raw_depth = frame.raw_depth.clone();
-    }
-    if (whether_dynamic_object)
-    {
-        KeysStatic = frame.KeysStatic;
-        keypoint_associate_objectID = frame.keypoint_associate_objectID;
-        numobject = frame.numobject;
-        objmask_img = frame.objmask_img;
-        mvKeysHarris = frame.mvKeysHarris;
-        mvpMapPointsHarris = frame.mvpMapPointsHarris;
-        keypoint_associate_objectID_harris = frame.keypoint_associate_objectID_harris;
-    }
-}
-
+// For RGB-D
 Frame::Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeStamp, std::string timeStamp_id, ORBextractor *extractor, ORBVocabulary *voc, cv::Mat &K, cv::Mat &distCoef, const float &bf, const float &thDepth)
     : mpORBvocabulary(voc), mpORBextractorLeft(extractor), mpORBextractorRight(static_cast<ORBextractor *>(NULL)),
       mTimeStamp(timeStamp), mTimeStamp_id(timeStamp_id), mK(K.clone()), mDistCoef(distCoef.clone()), mbf(bf), mThDepth(thDepth), mpReferenceKF(static_cast<KeyFrame *>(NULL))
@@ -236,7 +316,6 @@ Frame::Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeSt
     ROS_DEBUG_STREAM("Frame::Frame Depth END");
 }
 #else
-
 //Copy Constructor
 Frame::Frame(const Frame &frame)
     : mpORBvocabulary(frame.mpORBvocabulary), mpORBextractorLeft(frame.mpORBextractorLeft), mpORBextractorRight(frame.mpORBextractorRight),
@@ -274,7 +353,9 @@ Frame::Frame(const Frame &frame)
         keypoint_associate_objectID_harris = frame.keypoint_associate_objectID_harris;
     }
 }
+#endif
 
+// for RGB-D
 Frame::Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeStamp, ORBextractor *extractor, ORBVocabulary *voc, cv::Mat &K, cv::Mat &distCoef, const float &bf, const float &thDepth)
     : mpORBvocabulary(voc), mpORBextractorLeft(extractor), mpORBextractorRight(static_cast<ORBextractor *>(NULL)),
       mTimeStamp(timeStamp), mK(K.clone()), mDistCoef(distCoef.clone()), mbf(bf), mThDepth(thDepth), mpReferenceKF(static_cast<KeyFrame *>(NULL))
@@ -346,7 +427,6 @@ Frame::Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeSt
 
     ROS_DEBUG_STREAM("Frame::Frame Depth END");
 }
-#endif
 
 // for monocular
 Frame::Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor *extractor, ORBVocabulary *voc, cv::Mat &K, cv::Mat &distCoef, const float &bf,
@@ -428,6 +508,65 @@ Frame::Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor *extra
 
     ROS_DEBUG_STREAM("Frame::Frame END");
 }
+
+// for stereo
+Frame::Frame(const cv::Mat &imLeft, const cv::Mat &imRight, const double &timeStamp, ORBextractor *extractorLeft, ORBextractor *extractorRight, ORBVocabulary *voc, cv::Mat &K, cv::Mat &distCoef, const float &bf, const float &thDepth)
+    : mpORBvocabulary(voc), mpORBextractorLeft(extractorLeft), mpORBextractorRight(extractorRight), mTimeStamp(timeStamp), mK(K.clone()), mDistCoef(distCoef.clone()), mbf(bf), mThDepth(thDepth),
+      mpReferenceKF(static_cast<KeyFrame *>(NULL))
+{
+    // Frame ID
+    mnId = nNextId++;
+
+    // Scale Level Info
+    mnScaleLevels = mpORBextractorLeft->GetLevels();
+    mfScaleFactor = mpORBextractorLeft->GetScaleFactor();
+    mfLogScaleFactor = log(mfScaleFactor);
+    mvScaleFactors = mpORBextractorLeft->GetScaleFactors();
+    mvInvScaleFactors = mpORBextractorLeft->GetInverseScaleFactors();
+    mvLevelSigma2 = mpORBextractorLeft->GetScaleSigmaSquares();
+    mvInvLevelSigma2 = mpORBextractorLeft->GetInverseScaleSigmaSquares();
+
+    // ORB extraction
+    thread threadLeft(&Frame::ExtractORB, this, 0, imLeft);
+    thread threadRight(&Frame::ExtractORB, this, 1, imRight);
+    threadLeft.join();
+    threadRight.join();
+
+    if (mvKeys.empty())
+        return;
+
+    N = mvKeys.size();
+
+    UndistortKeyPoints();
+
+    ComputeStereoMatches();
+
+    mvpMapPoints = vector<MapPoint *>(N, static_cast<MapPoint *>(NULL));
+    mvbOutlier = vector<bool>(N, false);
+
+    // This is done only for the first Frame (or after a change in the calibration)
+    if (mbInitialComputations)
+    {
+        ComputeImageBounds(imLeft);
+
+        mfGridElementWidthInv = static_cast<float>(FRAME_GRID_COLS) / (mnMaxX - mnMinX);
+        mfGridElementHeightInv = static_cast<float>(FRAME_GRID_ROWS) / (mnMaxY - mnMinY);
+
+        fx = K.at<float>(0, 0);
+        fy = K.at<float>(1, 1);
+        cx = K.at<float>(0, 2);
+        cy = K.at<float>(1, 2);
+        invfx = 1.0f / fx;
+        invfy = 1.0f / fy;
+
+        mbInitialComputations = false;
+    }
+
+    mb = mbf / fx;
+
+    AssignFeaturesToGrid();
+}
+
 
 void Frame::FilterOutMovingPoints(const cv::Mat &imGray)
 {

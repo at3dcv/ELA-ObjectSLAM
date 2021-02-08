@@ -177,12 +177,10 @@ public:
     const long unsigned int mnFrameId; // frame id in all images
 
     // Frame timestamp.
-    #ifdef at3dcv_tum_rgbd
+    #ifdef at3dcv_tum
     std::string mTimeStamp_id;
-    const double mTimeStamp;
-    #else
-    const double mTimeStamp;
     #endif
+    const double mTimeStamp;
 
     int record_txtrow_id = -1; //final save to txt row id.
 

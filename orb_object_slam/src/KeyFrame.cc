@@ -42,7 +42,7 @@ namespace ORB_SLAM2
 
 long unsigned int KeyFrame::nNextId = 0;
 
-#ifdef at3dcv_tum_rgbd
+#ifdef at3dcv_tum
 KeyFrame::KeyFrame(Frame &F, Map *pMap, KeyFrameDatabase *pKFDB) : mnFrameId(F.mnId), mTimeStamp(F.mTimeStamp), mTimeStamp_id(F.mTimeStamp_id), mnGridCols(FRAME_GRID_COLS), mnGridRows(FRAME_GRID_ROWS),
                                                                    mfGridElementWidthInv(F.mfGridElementWidthInv), mfGridElementHeightInv(F.mfGridElementHeightInv),
                                                                    mnTrackReferenceForFrame(0), mnFuseTargetForKF(0), mnBALocalForKF(0), mnBAFixedForKF(0),

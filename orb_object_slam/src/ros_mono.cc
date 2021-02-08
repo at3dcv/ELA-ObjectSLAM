@@ -33,6 +33,9 @@
 #include "Parameters.h"
 #include "tictoc_profiler/profiler.hpp"
 
+// LL: Added config header to pass macro that switches Leander's code off and on
+#include "At3dcv_config.h"
+
 using namespace std;
 
 class ImageGrabber
@@ -150,6 +153,14 @@ void ImageGrabber::GrabImage(const sensor_msgs::ImageConstPtr &msg)
         ROS_ERROR("cv_bridge exception: %s", e.what());
         return;
     }
-
+    #ifdef at3dcv_tum_mono
+    std::cout << "$$$$$$$$$$$$$$$$$$ unix_file_name ????" << std::endl;
+    std::string unix_file_name = unix_stamp_as_identifier(cv_ptr->header.stamp);
+    std::cout << "$$$$$$$$$$$$$$$$$$ unix_file_name " << unix_file_name<< std::endl;
+    std::cout << "$$$$$$$$$$$$$$$$$$ cv_ptr->header.stamp.toSec() " << cv_ptr->header.stamp.toSec()<< std::endl;
+    std::cout << "$$$$$$$$$$$$$$$$$$ msg->header.seq " << msg->header.seq<< std::endl;
+    mpSLAM->TrackMonocular(cv_ptr->image, cv_ptr->header.stamp.toSec(), unix_file_name, msg->header.seq);
+    #else
     mpSLAM->TrackMonocular(cv_ptr->image, cv_ptr->header.stamp.toSec(), msg->header.seq);
+    #endif
 }

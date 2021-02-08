@@ -55,7 +55,7 @@ public:
 protected:
 
     // LL: Added by Leander 
-    #ifdef at3dcv_tum_rgbd
+    #ifdef at3dcv_tum
     std::vector<std::string> frame_index_c;
     std::vector<std::string> object_class;
     std::string CLASS_NAMES[81] = {"BG", "person", "bicycle", "car", "motorcycle", "airplane",

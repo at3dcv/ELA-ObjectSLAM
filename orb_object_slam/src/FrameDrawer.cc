@@ -181,8 +181,8 @@ cv::Mat FrameDrawer::DrawFrame()
         for (size_t i = 0; i < bbox_2ds.size(); i++)
         {
             cv::rectangle(im, bbox_2ds[i], box_colors[i % box_colors.size()], 2); // 2d bounding box.
-            #ifdef at3dcv_tum_rgbd
-            std::string  box_identifier = frame_index_c[i] +"; "+CLASS_NAMES[std::stoi(object_class[i])]; 
+            #ifdef at3dcv_tum
+            std::string  box_identifier = CLASS_NAMES[std::stoi(object_class[i])]; 
             cv::putText(im, box_identifier , cv::Point(bbox_2ds[i].x + 20, bbox_2ds[i].y + 20), cv::FONT_HERSHEY_PLAIN, 2, box_colors[i % box_colors.size()], 2); // # bgr
             #endif 
             if ((scene_unique_id != kitti) && (box_corners_2ds[i].cols() > 0))    // for most offline read data, usually cannot read it, could use rviz.
@@ -309,8 +309,7 @@ void FrameDrawer::Update(Tracking *pTracker)
         box_corners_2ds.clear();
         edge_markers_2ds.clear();
         point_Object_AssoID.clear();
-        #ifdef at3dcv_tum_rgbd
-        frame_index_c.clear();
+        #ifdef at3dcv_tum
         object_class.clear();
         #endif
         ROS_DEBUG_STREAM("FrameDrawer::Update if 2");
@@ -324,8 +323,9 @@ void FrameDrawer::Update(Tracking *pTracker)
                 {
                     for (const MapObject *object : pTracker->mCurrentFrame.mpReferenceKF->local_cuboids)
                     {   
-                        frame_index_c.push_back(object->frame_index_c);
+                        #ifdef at3dcv_tum
                         object_class.push_back(object->object_class);
+                        #endif
                         bbox_2ds.push_back(object->bbox_2d);
                         box_corners_2ds.push_back(object->box_corners_2d);
                         edge_markers_2ds.push_back(object->edge_markers);

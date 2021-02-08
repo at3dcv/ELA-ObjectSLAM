@@ -112,7 +112,7 @@ public:
     
     // LL: Added by Leander 
     // LL: Init with deafault value
-    #ifdef at3dcv_tum_rgbd
+    #ifdef at3dcv_tum
     std::string frame_index_c;
     std::string object_class;
     #endif

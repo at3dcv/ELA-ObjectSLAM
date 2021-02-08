@@ -73,12 +73,17 @@ public:
     cv::Mat GrabImageStereo(const cv::Mat &imRectLeft, const cv::Mat &imRectRight, const double &timestamp);
     #ifdef at3dcv_andy
     cv::Mat GrabImageRGBD(const cv::Mat &imRGB, const cv::Mat &imD, const double &timestamp, int msg_seq_id);
-    #elif defined at3dcv_tum_rgbd
+    #elif defined (at3dcv_tum_rgbd)
     cv::Mat GrabImageRGBD(const cv::Mat &imRGB, const cv::Mat &imD, const double &timestamp, std::string timestamp_id);
-    #elif
+    #else
     cv::Mat GrabImageRGBD(const cv::Mat &imRGB, const cv::Mat &imD, const double &timestamp);
     #endif
+
+    #ifdef at3dcv_tum_mono
+    cv::Mat GrabImageMonocular(const cv::Mat &im, const double &timestamp, std::string timestamp_id, int msg_seq_id = -1);
+    #else
     cv::Mat GrabImageMonocular(const cv::Mat &im, const double &timestamp, int msg_seq_id = -1);
+    #endif
 
     void SetLocalMapper(LocalMapping *pLocalMapper);
     void SetLoopClosing(LoopClosing *pLoopClosing);

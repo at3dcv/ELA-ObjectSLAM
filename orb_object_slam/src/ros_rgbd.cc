@@ -36,9 +36,8 @@
 #include "Parameters.h"
 #include "tictoc_profiler/profiler.hpp"
 
-#ifdef at3dcv_tum_rgbd
-#include <cmath>
-#endif
+// LL: Added config header to pass macro that switches Leander's code off and on
+#include "At3dcv_config.h"
 
 using namespace std;
 
@@ -180,44 +179,8 @@ void ImageGrabber::GrabRGBD(const sensor_msgs::ImageConstPtr &msgRGB, const sens
     
     #ifdef at3dcv_andy
     cv::Mat pose = mpSLAM->TrackRGBD(cv_ptrRGB->image, depth_mat, cv_ptrRGB->header.stamp.toSec(), msgRGB->header.seq);
-    #elif defined at3dcv_tum_rgbd
-    // LL: Retrive the seconds and nano seconds from the header stamp as stringstream
-    std::stringstream time_sec;
-    std::stringstream time_nsec;
-    time_sec << cv_ptrRGB->header.stamp.sec;
-    time_nsec << cv_ptrRGB->header.stamp.nsec;
-
-    // LL: Cut reduce the nano seconds to 6 digits by rounding up the last three digits
-    std::cout << "1+++++ Came till here ros_gbd" << std::endl;
-    std::cout << time_nsec.str() << "." << time_nsec.str() << std::endl;
-    int i=0;
-
-    // LL: Some time stamps have less then 6 digits for the nano seconds which throws an error
-    // LL: therefore we alongate it.
-    std::string time_sec_long = time_nsec.str() + "000000";
-    double double_last_val = 0;
-    do {
-        std::string string_last_val = time_sec_long.str().substr(5-i, 1) +"."+time_sec_long.substr(6-i, 3+i);
-        double_last_val = atof(string_last_val.c_str());
-        double_last_val = round(double_last_val);
-        i++;
-
-    }while (double_last_val == 10.0 && i < 5);
-
-    std::string unix_file_name;
-    if ( double_last_val != 10.0)
-    {
-        double_last_val = double_last_val * pow(10,i-1);
-        unix_file_name = time_sec.str() + "." + time_sec_long.substr(0,5-i+1) + std::to_string((int)double_last_val);
-    }
-    else
-    {   
-        int int_sec_last_value = std::stoi(time_sec.str().substr(9,1));
-        int_sec_last_value = int_sec_last_value +1;
-        unix_file_name = time_sec.str().substr(0,8)+ std::to_string(int_sec_last_value) + ".000000";
-    }
-    std::cout << "$$$$$$$$$$$$$$$$$$ time_sec " << time_sec.str()<< std::endl;
-    std::cout << "$$$$$$$$$$$$$$$$$$ time_nsec " << time_nsec.str()<< std::endl;
+    #elif defined(at3dcv_tum_rgbd)
+    std::string unix_file_name = unix_stamp_as_identifier(cv_ptrRGB->header.stamp);
     std::cout << "$$$$$$$$$$$$$$$$$$ unix_file_name " << unix_file_name<< std::endl;
     cv::Mat pose = mpSLAM->TrackRGBD(cv_ptrRGB->image, depth_mat, cv_ptrRGB->header.stamp.toSec(), unix_file_name);
     #else

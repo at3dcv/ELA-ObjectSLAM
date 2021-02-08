@@ -221,7 +221,7 @@ cv::Mat System::TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const doub
     }
     return mpTracker->GrabImageRGBD(im, depthmap, timestamp, msg_seq_id);
 }
-#elif defined at3dcv_tum_rgbd
+#elif defined(at3dcv_tum_rgbd)
 cv::Mat System::TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const double &timestamp, std::string timestamp_id)
 {
 
@@ -263,7 +263,7 @@ cv::Mat System::TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const doub
     return mpTracker->GrabImageRGBD(im, depthmap, timestamp, timestamp_id);
 }
 #else
-cv::Mat System::TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const double &timestamp, ros::Time timestamp_id)
+cv::Mat System::TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const double &timestamp)
 {
 
     // AC: Deleted system check mSensor != RGBD...
@@ -301,10 +301,57 @@ cv::Mat System::TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const doub
             mbReset = false;
         }
     }
-    return mpTracker->GrabImageRGBD(im, depthmap, timestamp, timestamp_id);
+    return mpTracker->GrabImageRGBD(im, depthmap, timestamp);
 }
 #endif
 
+#ifdef at3dcv_tum_mono
+cv::Mat System::TrackMonocular(const cv::Mat &im, const double &timestamp, std::string timestamp_id, int msg_seq_id)
+{
+    std::cout << "---TrackMonocular: 1" << std::endl;
+    if (mSensor != MONOCULAR)
+    {
+        cerr << "ERROR: you called TrackMonocular but input sensor was not set to Monocular." << endl;
+        exit(-1);
+    }
+
+    // Check mode change
+    {
+        unique_lock<mutex> lock(mMutexMode);
+        if (mbActivateLocalizationMode)
+        {
+            mpLocalMapper->RequestStop();
+
+            // Wait until Local Mapping has effectively stopped
+            while (!mpLocalMapper->isStopped())
+            {
+                usleep(1000);
+            }
+
+            mpTracker->InformOnlyTracking(true);
+            mbActivateLocalizationMode = false;
+        }
+        if (mbDeactivateLocalizationMode)
+        {
+            mpTracker->InformOnlyTracking(false);
+            mpLocalMapper->Release();
+            mbDeactivateLocalizationMode = false;
+        }
+    }
+
+    // Check reset
+    {
+        unique_lock<mutex> lock(mMutexReset);
+        if (mbReset)
+        {
+            mpTracker->Reset();
+            mbReset = false;
+        }
+    }
+    std::cout << "---TrackMonocular: 2" << std::endl;
+    return mpTracker->GrabImageMonocular(im, timestamp, timestamp_id, msg_seq_id);
+}
+#else
 cv::Mat System::TrackMonocular(const cv::Mat &im, const double &timestamp, int msg_seq_id)
 {
     if (mSensor != MONOCULAR)
@@ -349,6 +396,7 @@ cv::Mat System::TrackMonocular(const cv::Mat &im, const double &timestamp, int m
 
     return mpTracker->GrabImageMonocular(im, timestamp, msg_seq_id);
 }
+#endif
 
 void System::ActivateLocalizationMode()
 {
