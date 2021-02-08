@@ -1564,6 +1564,13 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 	std::vector<double> all_box_confidence;
 	vector<int> truth_tracklet_ids;
 
+	// LL: Added by Leander
+	// LL: Making the object class accessable outside the if/else case
+	#ifdef at3dcv_tum_rgbd
+	std::vector<string> object_classes_clean;
+	#endif
+	// LL: Added by Leander
+
 	// LL: Differentiate between offline and online (loading from file or detection with e.g. YOLO)
 	// LL: - Offline: We used ReadAllObjecttxt of the file Tracking_util.cc to read all the all object proposels and saved them to all_offline_object_cubes
 	// LL: - Offline: We the information of all_offline_object_cubes line by line an use it to initalizen new cuboid instances and in addition ad the relevant info to all_obj2d_bbox
@@ -1630,6 +1637,12 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 			all_obj2d_bbox_infov_mat.row(i) = raw_all_obj2d_bbox.row(good_object_ids[i]);
 			all_obj2d_bbox.push_back(raw_all_obj2d_bbox.row(good_object_ids[i]));
 			all_box_confidence.push_back(1); //TODO change here.
+		// LL: Added by Leander
+		// LL: Filtering the object classes in the same manor as the bb's are filtered
+		#ifdef at3dcv_tum_rgbd
+			object_classes_clean.push_back(object_classes[good_object_ids[i]]);
+		#endif
+		// LL: Added by Leander
 		}
 
 		cv::Mat frame_pose_to_init = pKF->GetPoseInverse(); // camera to init world
@@ -1667,6 +1680,12 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 			MapObject *newcuboid = new MapObject(mpMap);
 			g2o::cuboid cube_local_meas = cube_ground_value.transform_to(Converter::toSE3Quat(pop_pose_to_ground));
 			newcuboid->cube_meas = cube_local_meas;
+			// LL: Added by Leander
+			// LL: Adding the object classes as a member field to the cuboids
+		#ifdef at3dcv_tum_rgbd
+			if(ii < object_classes_clean.size())
+				newcuboid->object_class = object_classes_clean[ii];
+		#endif
 			newcuboid->bbox_2d = cv::Rect(raw_cuboid->rect_detect_2d[0], raw_cuboid->rect_detect_2d[1], raw_cuboid->rect_detect_2d[2], raw_cuboid->rect_detect_2d[3]);
 			newcuboid->bbox_vec = Vector4d((double)newcuboid->bbox_2d.x + (double)newcuboid->bbox_2d.width / 2, (double)newcuboid->bbox_2d.y + (double)newcuboid->bbox_2d.height / 2,
 										   (double)newcuboid->bbox_2d.width, (double)newcuboid->bbox_2d.height);

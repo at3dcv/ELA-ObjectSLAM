@@ -11,6 +11,9 @@
 
 #include "KeyFrame.h"
 
+// LL: Added config header to pass macro that switches Leander's code off and on
+#include "At3dcv_config.h"
+
 namespace ORB_SLAM2
 {
 // class KeyFrame;
@@ -99,6 +102,13 @@ public:
 
     Vector6d velocityTwist;                                    //general 6dof twist. for cars can assume no roll pitch   pose_Twc*exp(twist)=newpose
     g2o::SE3Quat getMovePose(KeyFrame *kf, double deltaT = 0); // deltaT relative to kf. works for short period where velocity doesn't change much
+
+// LL: Added by Leander 
+// LL: Setting the detected object class names as member field
+#ifdef at3dcv_tum_rgbd
+    std::string object_class;
+#endif
+// LL: Added by Leander
 
     //----------for local MapObject--------     no mutex needed, for local cuboid storage, not landmark
     int object_id_in_localKF;        // object id in reference keyframe's local objects.

@@ -174,6 +174,15 @@ cv::Mat FrameDrawer::DrawFrame()
         for (size_t i = 0; i < bbox_2ds.size(); i++)
         {
             cv::rectangle(im, bbox_2ds[i], box_colors[i % box_colors.size()], 2); // 2d bounding box.
+
+            #ifdef at3dcv_tum_rgbd
+            if(i < object_class.size())
+            {
+                std::string  box_identifier = CLASS_NAMES[std::stoi(object_class[i])]; 
+                cv::putText(im, box_identifier , cv::Point(bbox_2ds[i].x + 20, bbox_2ds[i].y + 20), cv::FONT_HERSHEY_PLAIN, 2, box_colors[i % box_colors.size()], 2); // # bgr
+            }
+            #endif 
+
             if ((scene_unique_id != kitti) && (box_corners_2ds[i].cols() > 0))    // for most offline read data, usually cannot read it, could use rviz.
             {
                 plot_image_with_cuboid_edges(im, box_corners_2ds[i], edge_markers_2ds[i]); // eight corners.
@@ -294,6 +303,11 @@ void FrameDrawer::Update(Tracking *pTracker)
         box_corners_2ds.clear();
         edge_markers_2ds.clear();
         point_Object_AssoID.clear();
+        
+        #ifdef at3dcv_tum_rgbd
+        object_class.clear();
+        #endif
+
         if (pTracker->mCurrentFrame.mpReferenceKF != NULL)                                             // mCurrentFrame.mpReferenceKF
             if ((pTracker->mCurrentFrame.mnId - pTracker->mCurrentFrame.mpReferenceKF->mnFrameId) < 1) // if current frame is a keyframe
             {
@@ -301,6 +315,7 @@ void FrameDrawer::Update(Tracking *pTracker)
                 {
                     for (const MapObject *object : pTracker->mCurrentFrame.mpReferenceKF->local_cuboids)
                     {
+                        object_class.push_back(object->object_class);
                         bbox_2ds.push_back(object->bbox_2d);
                         box_corners_2ds.push_back(object->box_corners_2d);
                         edge_markers_2ds.push_back(object->edge_markers);
