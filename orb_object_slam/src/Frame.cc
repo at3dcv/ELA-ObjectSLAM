@@ -87,6 +87,7 @@ Frame::Frame(const Frame &frame)
     if (!frame.mTcw.empty())
         SetPose(frame.mTcw);
 
+    // AC: cache img, depth, rgb image
     if (whether_detect_object)
     { 
         raw_img = frame.raw_img.clone();
@@ -418,7 +419,7 @@ void Frame::DetectMovingKeypoints(const cv::Mat &imgray)
 	T_M.clear();
 
 	// Detect dynamic target and ultimately optput the T matrix
-    cv::goodFeaturesToTrack(imGrayPre, prepoint, 1000, 0.01, 8, cv::Mat(), 3, true, 0.04);
+    cv::goodFeaturesToTrack(imGrayPre, prepoint, 2000, 0.01, 8, cv::Mat(), 3, true, 0.04);
     cv::cornerSubPix(imGrayPre, prepoint, cv::Size(10, 10), cv::Size(-1, -1), cv::TermCriteria(CV_TERMCRIT_ITER | CV_TERMCRIT_EPS, 20, 0.03));
 	cv::calcOpticalFlowPyrLK(imGrayPre, imgray, prepoint, nextpoint, state, err, cv::Size(22, 22), 5, cv::TermCriteria(CV_TERMCRIT_ITER | CV_TERMCRIT_EPS, 20, 0.01));
     // AC: output of state: output status vector (of unsigned chars); each element of the vector is set to 1 if the flow for the corresponding features has been found, otherwise, it is set to 0.
@@ -457,7 +458,7 @@ void Frame::DetectMovingKeypoints(const cv::Mat &imgray)
     if (show_debug) std::cout << "Size: " << F_prepoint.size() << std::endl;
 
     // F-Matrix
-    cv::Mat mask = cv::Mat(cv::Size(1, 300), CV_8UC1);
+    cv::Mat mask = cv::Mat(cv::Size(1, 700), CV_8UC1);
     cv::Mat F = cv::findFundamentalMat(F_prepoint, F_nextpoint, mask, cv::FM_RANSAC, 0.1, 0.99);
 
     for (int i = 0; i < prepoint.size(); i++)
@@ -492,22 +493,20 @@ void Frame::FilterOutMovingPoints()
         return;
 
     if (!T_M.empty() && raw_all_obj2d_bbox.rows() > 0)
-        CheckMovingKeyPoints(raw_all_obj2d_bbox, object_classes);
+        CheckMovingObjects(raw_all_obj2d_bbox, object_classes);
         
     if(show_debug) std::cout << "Frame::FilterOutMovingPoints END" << std::endl;
 }
 
 // TODO: Add semantic mask
-void Frame::CheckMovingKeyPoints(Eigen::MatrixXd mCurrentBBoxes, std::vector<std::string> classes)
+void Frame::CheckMovingObjects(Eigen::MatrixXd mCurrentBBoxes, std::vector<std::string> classes)
 {
-    std::vector<bool> objectsAreMoving = vector<bool>(mCurrentBBoxes.rows(), false);
+    objectsAreMoving = vector<bool>(mCurrentBBoxes.rows(), false);
     numobject = mCurrentBBoxes.rows();
-
-    if (show_debug) std::cout << "rows bboxes " << mCurrentBBoxes.rows() << std::endl;
-    if (show_debug) std::cout << "rows classes " << classes.size() << std::endl;
 
     // Make further judgment
     // AC: Check whether an object is moving
+    int dynamicObjectsCounter = 0;
     for (int j = 0; j < mCurrentBBoxes.rows(); j++)
     {
         if (show_debug) std::cout << "class " << std::stoi(classes[j]) << std::endl;
@@ -532,6 +531,7 @@ void Frame::CheckMovingKeyPoints(Eigen::MatrixXd mCurrentBBoxes, std::vector<std
                 if (movingKeypointCounter > 1)
                 {
                     objectsAreMoving[j] = 1;
+                    dynamicObjectsCounter++;
                     break;
                 }
             }
@@ -571,6 +571,7 @@ void Frame::CheckMovingKeyPoints(Eigen::MatrixXd mCurrentBBoxes, std::vector<std
     }
     if (show_debug) std::cout << "Found " << objectKeypointsCounter << "/" << mvKeys.size() << " keypoints in objects" << std::endl;
     if (show_debug) std::cout << "Found " << dynamicKeypointsCounter << "/" << mvKeys.size() << " dynamic keypoints" << std::endl;
+    if (show_debug) std::cout << "Found " << dynamicObjectsCounter << " dynamic objects" << std::endl;
 }
 
 void Frame::AssignFeaturesToGrid()

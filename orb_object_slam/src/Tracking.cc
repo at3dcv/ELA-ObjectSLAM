@@ -1563,6 +1563,10 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 	std::vector<Vector4d> all_obj2d_bbox;
 	std::vector<double> all_box_confidence;
 	vector<int> truth_tracklet_ids;
+	// AC: show dynamic objects in mapdrawer
+#ifdef at3dcv_dyn_obj_mapdrawer
+	std::vector<bool> good_moving_objects;
+#endif
 
 	// LL: Added by Leander
 	// LL: Making the object class accessable outside the if/else case
@@ -1632,8 +1636,16 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 			if ((raw_all_obj2d_bbox(i, 0) > boundary_threshold) && (raw_all_obj2d_bbox(i, 0) + raw_all_obj2d_bbox(i, 2) < img_width - boundary_threshold))
 				good_object_ids.push_back(i);
 		Eigen::MatrixXd all_obj2d_bbox_infov_mat(good_object_ids.size(), 5);
+		// AC: save all selected bboxes
+		if (show_debug) std::cout << "Sizes of objects in Tracking/Frame " << raw_all_obj2d_bbox.rows() << "|" << mCurrentFrame.objectsAreMoving.size() << "|" << good_object_ids.size() << std::endl;
 		for (size_t i = 0; i < good_object_ids.size(); i++)
 		{
+#ifdef at3dcv_dyn_obj_mapdrawer
+			if (std::stoi(object_classes[i]) == 1 && mCurrentFrame.objectsAreMoving[good_object_ids[i]])
+				if (show_debug) std::cout << "Moving people considered!!!" << std::endl;
+			// AC: take moving objects into account
+			good_moving_objects.push_back(mCurrentFrame.objectsAreMoving[good_object_ids[i]]);
+#endif
 			all_obj2d_bbox_infov_mat.row(i) = raw_all_obj2d_bbox.row(good_object_ids[i]);
 			all_obj2d_bbox.push_back(raw_all_obj2d_bbox.row(good_object_ids[i]));
 			all_box_confidence.push_back(1); //TODO change here.
@@ -1666,6 +1678,10 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 	g2o::SE3Quat InitToGround_se3 = Converter::toSE3Quat(InitToGround);
 	for (int ii = 0; ii < (int)all_obj_cubes.size(); ii++) // LL: Loop over all cuboids detected in the key frame
 	{
+#ifdef at3dcv_dyn_obj_mapdrawer
+		if (good_moving_objects[ii] && all_obj_cubes[ii].size() == 0)
+			if (show_debug) std::cout << "Empty moving people..." << std::endl;
+#endif
 		if (all_obj_cubes[ii].size() > 0) // if has detected 3d Cuboid
 		{
 			cuboid *raw_cuboid = all_obj_cubes[ii][0];
@@ -1706,7 +1722,14 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 
 			if (whether_dynamic_object)
 			{
-				newcuboid->is_dynamic = true;							// for debug, later should check!
+#ifdef at3dcv_dyn_obj_mapdrawer
+				// AC: assign dynamic tag to cuboids
+				if (good_moving_objects[ii])
+				{
+					if (show_debug) std::cout << "Set " << newcuboid->mnId << "th new cuboid as dynamic!" << std::endl;
+					newcuboid->is_dynamic = true;
+				}
+#endif
 				newcuboid->pose_Twc_latestKF = global_obj_pose_to_init; //set pose for dynamic object
 			}
 			if (scene_unique_id == kitti)
@@ -2022,6 +2045,13 @@ void Tracking::AssociateCuboids(KeyFrame *pKF)
 				largest_shared_objectlandmark->pose_Twc_latestKF = cubeglobalpose; //if want to test without BA
 				largest_shared_objectlandmark->pose_noopti = cubeglobalpose;
 			}
+#ifdef at3dcv_dyn_obj_mapdrawer
+			// AC: add dynamic poses to generic case
+			// largest_shared_objectlandmark->allDynamicPoses[refframe] = make_pair(cubeglobalpose, false);
+			// largest_shared_objectlandmark->SetWorldPos(cubeglobalpose);
+			// largest_shared_objectlandmark->pose_Twc_latestKF = cubeglobalpose; //if want to test without BA
+			// largest_shared_objectlandmark->pose_noopti = cubeglobalpose;
+#endif
 			largest_shared_objectlandmark->MergeIntoLandmark(candidateObject);
 		}
 	}

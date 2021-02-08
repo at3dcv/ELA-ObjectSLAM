@@ -68,6 +68,7 @@ KeyFrame::KeyFrame(Frame &F, Map *pMap, KeyFrameDatabase *pKFDB) : mnFrameId(F.m
 
     SetPose(F.mTcw);
 
+    // AC: cache img, depth, rgb image
     if (whether_detect_object)
     {
         raw_img = F.raw_img.clone();

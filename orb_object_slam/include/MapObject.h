@@ -32,7 +32,7 @@ class MapObject
 {
 public:
     // whether update global unique map object ID. only used in keyframe creation.
-    MapObject(Map *pMap, bool update_index = false);
+    MapObject(Map *pMap, bool update_index = false); // AC: TODO: set to true??
 
     void SetWorldPos(const g2o::cuboid &Pos);
     g2o::cuboid GetWorldPos();     // get cuboid pose in world/init frame.
