@@ -35,7 +35,7 @@ std::unordered_map<std::string, Eigen::Vector3d> cuboid::obj_class_scales{
     {"29", Eigen::Vector3d(0.06, 0.17, 0.15)},        // suticase
     {"40", Eigen::Vector3d(0.035, 0.035, 0.14)},        // bottle
     //{"41", Eigen::Vector3d(0.6, 0.3, 0.55)},        // wine glass
-    {"42", Eigen::Vector3d(0.035, 0.035, 0.045)},        // cup
+    //{"42", Eigen::Vector3d(0.035, 0.035, 0.045)},        // cup
     //{"43", Eigen::Vector3d(0.6, 0.3, 0.55)},        // fork
     //{"44", Eigen::Vector3d(0.6, 0.3, 0.55)},        // knife
     //{"45", Eigen::Vector3d(0.6, 0.3, 0.55)},        // spoon

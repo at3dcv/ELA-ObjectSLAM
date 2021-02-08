@@ -1735,7 +1735,7 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 		std::cout << "Only keep the first 17 characters of a string" << std::endl;
 		std::cout << "$$$$$$$$$$$$$$$$$$ First 17: " << pKF->mTimeStamp_id << std::endl;
 		frame_index_c = pKF->mTimeStamp_id;
-		std::cout << "$$$$$$$$$$$$$$$$$$ path" << data_edge_data_dir + frame_index_c + "_edge.txt", all_lines_raw << std::endl;
+		std::cout << "$$$$$$$$$$$$$$$$$$ path" << data_edge_data_dir + frame_index_c + "_edge.txt" << std::endl;
 		#endif
 
 
@@ -1743,7 +1743,14 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 
 		// read detected edges
 		Eigen::MatrixXd all_lines_raw(100, 4); // 100 is some large frame number, the txt edge index start from 0
-		read_all_number_txt(data_edge_data_dir + frame_index_c + "_edge.txt", all_lines_raw);
+		if(!read_all_number_txt(data_edge_data_dir + frame_index_c + "_edge.txt", all_lines_raw))
+		{
+			ROS_ERROR_STREAM("Cannot read edge txt  " << data_edge_data_dir + frame_index_c + "_edge.txt");
+			std::ofstream outfile (data_edge_data_dir + frame_index_c + "_edge.txt");
+			outfile.close();
+			read_all_number_txt(data_edge_data_dir + frame_index_c + "_edge.txt", all_lines_raw);
+			ROS_ERROR_STREAM("Create file  " << data_yolo_obj_dir + frame_index_c + "_edge.txt");
+		}
 
 		// LL: Flip x and y axis
 		// Each row in the file represents a line.
@@ -1764,12 +1771,17 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 		// read yolo object detection
 		Eigen::MatrixXd raw_all_obj2d_bbox(10, 5);
 		std::vector<string> raw_object_classes;
-		char obj_2d_txt_postfix[256];
+		//char obj_2d_txt_postfix[256];
 		// LL: Added - chagend the file ending to "_mrcnn.txt"
-		sprintf(obj_2d_txt_postfix, "_mrcnn.txt", obj_det_2d_thre);
-		if (!read_obj_detection_txt(data_yolo_obj_dir + frame_index_c + obj_2d_txt_postfix, raw_all_obj2d_bbox, raw_object_classes))
-			ROS_ERROR_STREAM("Cannot read yolo txt  " << data_yolo_obj_dir + frame_index_c + obj_2d_txt_postfix);
-
+		//sprintf(obj_2d_txt_postfix, "_mrcnn.txt", obj_det_2d_thre);
+		if (!read_obj_detection_txt(data_yolo_obj_dir + frame_index_c + "_mrcnn.txt", raw_all_obj2d_bbox, raw_object_classes))
+		{
+			ROS_ERROR_STREAM("Cannot read yolo txt  " << data_yolo_obj_dir + frame_index_c + "_mrcnn.txt");
+			std::ofstream outfile (data_yolo_obj_dir + frame_index_c + "_mrcnn.txt");
+			outfile.close();
+			read_obj_detection_txt(data_yolo_obj_dir + frame_index_c + "_mrcnn.txt",raw_all_obj2d_bbox, raw_object_classes);
+			ROS_ERROR_STREAM("Created file  " << data_yolo_obj_dir + frame_index_c + "_mrcnn.txt");
+		}
 		//#ifdef at3dcv_tum_rgbd
 		//// LL: Flip x and y axis
 		//Eigen::MatrixXd raw_object_classes_x_y_fliped(raw_all_obj2d_bbox.rows(), raw_all_obj2d_bbox.cols());
@@ -1810,8 +1822,13 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 		std::string data_inst_seg_vertices_dir = base_data_folder + "/mats/instance_segmentation_vertices/";
 		std::vector<Eigen::Matrix2Xd> raw_read_inst_segment_vert;
 		if (!read_inst_segment_vertices(data_inst_seg_vertices_dir + frame_index_c + "_ch.txt", raw_read_inst_segment_vert))
-			ROS_ERROR_STREAM("Cannot read the polygon vertices txt " << data_inst_seg_vertices_dir + frame_index_c + "_obj_vertices.txt");
-		
+		{	
+			ROS_ERROR_STREAM("Cannot read mask txt  " << data_inst_seg_vertices_dir + frame_index_c + "_ch.txt");
+			std::ofstream outfile (data_inst_seg_vertices_dir + frame_index_c + "_ch.txt");
+			outfile.close();
+			read_inst_segment_vertices(data_inst_seg_vertices_dir + frame_index_c + "_ch.txt",raw_read_inst_segment_vert);
+			ROS_ERROR_STREAM("Created file  " << data_inst_seg_vertices_dir + frame_index_c + "_ch.txt");		
+		}
 		// LL: Add the raw instance segmentation convex hull vertices and class names to the key frame
 		// LL: Flip x and y axis
 		Eigen::MatrixXd raw_read_inst_segment_vert_x_y_fliped(raw_all_obj2d_bbox.rows(), raw_all_obj2d_bbox.cols());
@@ -2406,6 +2423,7 @@ void Tracking::CreateNewKeyFrame()
 					break;
 			}
 		}
+	std::cout << "+++++ Came till here" << std::endl;
 	}
 
 	//copied from localMapping, only for dynamic object
