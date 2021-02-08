@@ -170,8 +170,7 @@ void ImageGrabber::GrabRGBD(const sensor_msgs::ImageConstPtr &msgRGB, const sens
     try
     {
         cv_ptrD = cv_bridge::toCvShare(msgD);
-        depth_mat = cv::Mat::zeros(cv_ptrD->image.size(), CV_32FC1); // cv_ptrD->image;
-        std::cout << depth_mat.size() << std::endl;
+        depth_mat = cv_ptrD->image;
         // usually TYPE_32FC1   if TYPE_16UC1, convert it.
         if (msgD->encoding == sensor_msgs::image_encodings::TYPE_16UC1) // already uint, (already multiplied by 1000)
         {
@@ -184,11 +183,6 @@ void ImageGrabber::GrabRGBD(const sensor_msgs::ImageConstPtr &msgRGB, const sens
         return;
     }
     std::cout << "mpSLAM->TrackRGBD" << std::endl;
-#ifdef at3dcv_andy
-    cv::Mat pose = mpSLAM->TrackRGBD(cv_ptrRGB->image, depth_mat, cv_ptrRGB->header.stamp.toSec(), msgRGB->header.seq);
-#else
+
     cv::Mat pose = mpSLAM->TrackRGBD(cv_ptrRGB->image, depth_mat, cv_ptrRGB->header.stamp.toSec());
-#endif
-    std::cout << "mpSLAM->TrackRGBD END " << std::endl;
-    // mpSLAM->TrackMonocular(cv_ptrRGB->image, cv_ptrRGB->header.stamp.toSec(), msgRGB->header.seq);
 }

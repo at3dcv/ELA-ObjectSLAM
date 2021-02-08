@@ -88,7 +88,11 @@ Frame::Frame(const Frame &frame)
         SetPose(frame.mTcw);
 
     if (whether_detect_object)
+    { 
         raw_img = frame.raw_img.clone();
+        raw_depth = frame.raw_depth.clone();
+        raw_rgb = frame.raw_rgb.clone();
+    }
 
     if (whether_dynamic_object)
     {
@@ -163,8 +167,9 @@ Frame::Frame(const cv::Mat &imLeft, const cv::Mat &imRight, const double &timeSt
 // for RGBD
 Frame::Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeStamp, ORBextractor *extractor, ORBVocabulary *voc, cv::Mat &K, cv::Mat &distCoef, const float &bf, const float &thDepth)
     : mpORBvocabulary(voc), mpORBextractorLeft(extractor), mpORBextractorRight(static_cast<ORBextractor *>(NULL)),
-      mTimeStamp(timeStamp), mK(K.clone()), mDistCoef(distCoef.clone()), mbf(bf), mThDepth(thDepth)
+      mTimeStamp(timeStamp), mK(K.clone()), mDistCoef(distCoef.clone()), mbf(bf), mThDepth(thDepth), mpReferenceKF(static_cast<KeyFrame *>(NULL))
 {
+    if (show_debug) std::cout << "Frame::Frame" << std::endl;
     // Frame ID
     mnId = nNextId++;
 
@@ -180,6 +185,35 @@ Frame::Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeSt
     // ORB extraction
     ExtractORB(0, imGray);
 
+    if (whether_dynamic_object)
+    {
+        KeysStatic = vector<bool>(mvKeys.size(), true); // all points are static now.
+        keypoint_associate_objectID = vector<int>(mvKeys.size(), -1);
+        numobject = 0;
+        
+        // AC: Check whether there is a previous frame
+        if(imGrayPre.data)
+        {
+            DetectMovingKeypoints(imGray);
+            FilterOutMovingPoints();
+            imGrayPre = imGray.clone();
+            // AC: sample 300 mvKeys for next frame
+            // for (int i = 0; i < 300; i++) {
+            //     int randNum = rand()%(mvKeys.size() + 1);
+            //     prepoint.push_back(mvKeys[randNum].pt);
+            // }
+        }
+        else
+        {
+            imGrayPre = imGray.clone();
+            // AC: sample 300 mvKeys for next frame
+            // for (int i = 0; i < 300; i++) {
+            //     int randNum = rand()%(mvKeys.size() + 1);
+            //     prepoint.push_back(mvKeys[randNum].pt);
+            // }
+        }
+    }
+
     N = mvKeys.size();
 
     if (mvKeys.empty())
@@ -187,7 +221,10 @@ Frame::Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeSt
 
     UndistortKeyPoints();
 
-    ComputeStereoFromRGBD(imDepth);
+    // ComputeStereoFromRGBD(imDepth);
+    // Set no stereo information
+    mvuRight = vector<float>(N, -1);
+    mvDepth = vector<float>(N, -1);
 
     mvpMapPoints = vector<MapPoint *>(N, static_cast<MapPoint *>(NULL));
     mvbOutlier = vector<bool>(N, false);
@@ -221,6 +258,7 @@ Frame::Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor *extra
     : mpORBvocabulary(voc), mpORBextractorLeft(extractor), mpORBextractorRight(static_cast<ORBextractor *>(NULL)),
       mTimeStamp(timeStamp), mK(K.clone()), mDistCoef(distCoef.clone()), mbf(bf), mThDepth(thDepth), mpReferenceKF(static_cast<KeyFrame *>(NULL))
 {
+    
     // Frame ID
     mnId = nNextId++;
 
