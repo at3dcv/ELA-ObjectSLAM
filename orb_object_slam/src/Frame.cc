@@ -461,85 +461,74 @@ void Frame::CheckMovingKeyPoints(Eigen::MatrixXd mCurrentBBoxes, std::vector<std
     std::vector<bool> objectsAreMoving = vector<bool>(mCurrentBBoxes.rows(), false);
     numobject = mCurrentBBoxes.rows();
 
-    std::cout << "rows bboxes " << mCurrentBBoxes.rows() << std::endl;
-    std::cout << "rows classes " << classes.size() << std::endl;
+    if (show_debug) std::cout << "rows bboxes " << mCurrentBBoxes.rows() << std::endl;
+    if (show_debug) std::cout << "rows classes " << classes.size() << std::endl;
 
     // Make further judgment
     // AC: Check whether an object is moving
     for (int j = 0; j < mCurrentBBoxes.rows(); j++)
     {
-        // std::cout << "class " << std::stoi(classes[j]) << std::endl;
-        // std::cout << mCurrentBBoxes(j, 0) << " ";
-        // std::cout << mCurrentBBoxes(j, 1) << " ";
-        // std::cout << mCurrentBBoxes(j, 2) << " ";
-        // std::cout << mCurrentBBoxes(j, 3) << " ";
-        std::cout << std::endl;
+        if (show_debug) std::cout << "class " << std::stoi(classes[j]) << std::endl;
+
         // AC: Only consider the class people
         if (std::stoi(classes[j]) != 1) continue;
 
-        // int bbLeft = mCurrentBBoxes(j, 0);
-        // int bbTop = mCurrentBBoxes(j, 1);
-        // int bbRight = bbLeft + mCurrentBBoxes(j, 2);
-        // int bbBottom = bbTop - mCurrentBBoxes(j, 3);
+        int bbLeft = mCurrentBBoxes(j, 0);
+        int bbTop = mCurrentBBoxes(j, 1);
+        int bbRight = bbLeft + mCurrentBBoxes(j, 2);
+        int bbBottom = bbTop - mCurrentBBoxes(j, 3);
 
-        // int movingKeypointCounter = 0;
+        int movingKeypointCounter = 0;
 
-        // std::cout << "T_M size: " << T_M.size() << std::endl;
-
-        // for (int i = 0; i < T_M.size(); i++)
-        // {
-        //     std::cout << "counter " << i << std::endl;
-        //     std::cout << "X " << T_M[i].x << std::endl;
-        //     std::cout << "Y " << T_M[i].y << std::endl;
-        //     // AC: Check whether keypoint is in bounding box
-        //     if(T_M[i].x >= bbLeft && T_M[i].x <= bbRight && T_M[i].y <= bbTop && T_M[i].y >= bbBottom)
-        //     {
-        //         std::cout << "mvKptCounter " << movingKeypointCounter << std::endl;
-        //         movingKeypointCounter++;
-        //         // AC: if two keypoints are in object, it is considered moving
-        //         if (movingKeypointCounter > 1)
-        //         {
-        //             std::cout << "BREAK" << std::endl;
-        //             objectsAreMoving[j] = 1;
-        //             break;
-        //         }
-        //     }
-        // }
+        for (int i = 0; i < T_M.size(); i++)
+        {
+            // AC: Check whether keypoint is in bounding box
+            if(T_M[i].x >= bbLeft && T_M[i].x <= bbRight && T_M[i].y <= bbTop && T_M[i].y >= bbBottom)
+            {
+                movingKeypointCounter++;
+                // AC: if two keypoints are in object, it is considered moving
+                if (movingKeypointCounter > 1)
+                {
+                    objectsAreMoving[j] = 1;
+                    break;
+                }
+            }
+        }
     }
 
-    // int dynamicKeypointsCounter = 0;
-    // for (int j = 0; j < mCurrentBBoxes.rows(); j++)
-    // {
-    //     for (size_t i = 0; i < mvKeys.size(); i++)
-    //     {
-    //         float bbLeft = (float)mCurrentBBoxes(j, 0);
-    //         float bbTop = (float)mCurrentBBoxes(j, 1);
-    //         float bbRight = bbLeft + mCurrentBBoxes(j, 2);
-    //         float bbBottom = bbTop - mCurrentBBoxes(j, 3);
+    int dynamicKeypointsCounter = 0;
+    for (int j = 0; j < mCurrentBBoxes.rows(); j++)
+    {
+        for (size_t i = 0; i < mvKeys.size(); i++)
+        {
+            float bbLeft = (float)mCurrentBBoxes(j, 0);
+            float bbTop = (float)mCurrentBBoxes(j, 1);
+            float bbRight = bbLeft + mCurrentBBoxes(j, 2);
+            float bbBottom = bbTop - mCurrentBBoxes(j, 3);
 
-    //         if ((int)mvKeys[i].pt.x >= bbLeft && (int)mvKeys[i].pt.x <= bbRight && (int)mvKeys[i].pt.y <= bbTop && (int)mvKeys[i].pt.y >= bbBottom)
-    //         {
-    //             // add keypoints of each BBox to association
-    //             keypoint_associate_objectID[i] = j;
-    //             if (objectsAreMoving[j])
-    //             {
-    //                 KeysStatic[i] = 0; //0 is background, static >0 object id
-    //                 dynamicKeypointsCounter++;
-    //             }
-    //         }
-    //     }
-    // }
+            if ((int)mvKeys[i].pt.x >= bbLeft && (int)mvKeys[i].pt.x <= bbRight && (int)mvKeys[i].pt.y <= bbTop && (int)mvKeys[i].pt.y >= bbBottom)
+            {
+                // add keypoints of each BBox to association
+                keypoint_associate_objectID[i] = j;
+                if (objectsAreMoving[j])
+                {
+                    KeysStatic[i] = 0; //0 is background, static >0 object id
+                    dynamicKeypointsCounter++;
+                }
+            }
+        }
+    }
 
-    // int objectKeypointsCounter = 0;
-    // for (int k = 0; k < keypoint_associate_objectID.size(); k++)
-    // {
-    //     if (keypoint_associate_objectID[k] != -1)
-    //     {
-    //         objectKeypointsCounter++;
-    //     }
-    // }
-    // if (show_debug) std::cout << "Found " << objectKeypointsCounter << "/" << mvKeys.size() << " keypoints in objects" << std::endl;
-    // if (show_debug) std::cout << "Found " << dynamicKeypointsCounter << "/" << mvKeys.size() << " dynamic keypoints" << std::endl;
+    int objectKeypointsCounter = 0;
+    for (int k = 0; k < keypoint_associate_objectID.size(); k++)
+    {
+        if (keypoint_associate_objectID[k] != -1)
+        {
+            objectKeypointsCounter++;
+        }
+    }
+    if (show_debug) std::cout << "Found " << objectKeypointsCounter << "/" << mvKeys.size() << " keypoints in objects" << std::endl;
+    if (show_debug) std::cout << "Found " << dynamicKeypointsCounter << "/" << mvKeys.size() << " dynamic keypoints" << std::endl;
 }
 
 void Frame::AssignFeaturesToGrid()
