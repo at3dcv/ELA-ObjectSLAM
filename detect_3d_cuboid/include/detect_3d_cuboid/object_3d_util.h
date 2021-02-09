@@ -11,6 +11,10 @@
 
 #include "detect_3d_cuboid/detect_3d_cuboid.h"
 
+// LL: Added config header to pass macro that switches Leander's code off and on
+#include "At3dcv_config.h"
+#include <unordered_map>
+
 using namespace Eigen;
 
 // NOTE all the functions here correspond to matlab functions.

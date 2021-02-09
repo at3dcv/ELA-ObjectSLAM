@@ -37,8 +37,6 @@
 
 #include "tictoc_profiler/profiler.hpp"
 
-// AC: Added config header to pass macro that switches out custom code off and on
-#include "At3dcv_config.h"
 // AC: import read_obj
 #include "detect_3d_cuboid/detect_3d_cuboid.h"
 
@@ -80,6 +78,11 @@ Frame::Frame(const Frame &frame)
       mvScaleFactors(frame.mvScaleFactors), mvInvScaleFactors(frame.mvInvScaleFactors),
       mvLevelSigma2(frame.mvLevelSigma2), mvInvLevelSigma2(frame.mvInvLevelSigma2)
 {
+
+    #ifdef at3dcv_tum
+    mTimeStamp_id = frame.mTimeStamp_id;
+    #endif
+
     for (int i = 0; i < FRAME_GRID_COLS; i++)
         for (int j = 0; j < FRAME_GRID_ROWS; j++)
             mGrid[i][j] = frame.mGrid[i][j];
@@ -164,6 +167,250 @@ Frame::Frame(const cv::Mat &imLeft, const cv::Mat &imRight, const double &timeSt
     AssignFeaturesToGrid();
 }
 
+// LL: Adding the function argument timeStamp_id for the unix time stamp identifier to the mono and RGB-D constructor
+#ifdef at3dcv_tum
+// for RGBD
+Frame::Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeStamp, std::string timeStamp_id, ORBextractor *extractor, ORBVocabulary *voc, cv::Mat &K, cv::Mat &distCoef, const float &bf, const float &thDepth)
+    : mpORBvocabulary(voc), mpORBextractorLeft(extractor), mpORBextractorRight(static_cast<ORBextractor *>(NULL)),
+      mTimeStamp(timeStamp), mTimeStamp_id(timeStamp_id), mK(K.clone()), mDistCoef(distCoef.clone()), mbf(bf), mThDepth(thDepth), mpReferenceKF(static_cast<KeyFrame *>(NULL))
+{
+    if (show_debug) std::cout << "Frame::Frame" << std::endl;
+    // Frame ID
+    mnId = nNextId++;
+
+    // Scale Level Info
+    mnScaleLevels = mpORBextractorLeft->GetLevels();
+    mfScaleFactor = mpORBextractorLeft->GetScaleFactor();
+    mfLogScaleFactor = log(mfScaleFactor);
+    mvScaleFactors = mpORBextractorLeft->GetScaleFactors();
+    mvInvScaleFactors = mpORBextractorLeft->GetInverseScaleFactors();
+    mvLevelSigma2 = mpORBextractorLeft->GetScaleSigmaSquares();
+    mvInvLevelSigma2 = mpORBextractorLeft->GetInverseScaleSigmaSquares();
+
+    // ORB extraction
+    ExtractORB(0, imGray);
+
+    if (whether_dynamic_object)
+    {
+        KeysStatic = vector<bool>(mvKeys.size(), true); // all points are static now.
+        keypoint_associate_objectID = vector<int>(mvKeys.size(), -1);
+        numobject = 0;
+        
+        // AC: Check whether there is a previous frame
+        if(imGrayPre.data)
+        {
+            DetectMovingKeypoints(imGray);
+            FilterOutMovingPoints();
+            imGrayPre = imGray.clone();
+            // AC: sample 300 mvKeys for next frame
+            // for (int i = 0; i < 300; i++) {
+            //     int randNum = rand()%(mvKeys.size() + 1);
+            //     prepoint.push_back(mvKeys[randNum].pt);
+            // }
+        }
+        else
+        {
+            imGrayPre = imGray.clone();
+            // AC: sample 300 mvKeys for next frame
+            // for (int i = 0; i < 300; i++) {
+            //     int randNum = rand()%(mvKeys.size() + 1);
+            //     prepoint.push_back(mvKeys[randNum].pt);
+            // }
+        }
+    }
+
+    N = mvKeys.size();
+
+    if (mvKeys.empty())
+        return;
+
+    UndistortKeyPoints();
+
+    // ComputeStereoFromRGBD(imDepth);
+    // Set no stereo information
+    mvuRight = vector<float>(N, -1);
+    mvDepth = vector<float>(N, -1);
+
+    mvpMapPoints = vector<MapPoint *>(N, static_cast<MapPoint *>(NULL));
+    mvbOutlier = vector<bool>(N, false);
+
+    // This is done only for the first Frame (or after a change in the calibration)
+    if (mbInitialComputations)
+    {
+        ComputeImageBounds(imGray);
+
+        mfGridElementWidthInv = static_cast<float>(FRAME_GRID_COLS) / static_cast<float>(mnMaxX - mnMinX);
+        mfGridElementHeightInv = static_cast<float>(FRAME_GRID_ROWS) / static_cast<float>(mnMaxY - mnMinY);
+
+        fx = K.at<float>(0, 0);
+        fy = K.at<float>(1, 1);
+        cx = K.at<float>(0, 2);
+        cy = K.at<float>(1, 2);
+        invfx = 1.0f / fx;
+        invfy = 1.0f / fy;
+
+        mbInitialComputations = false;
+    }
+
+    mb = mbf / fx;
+
+    AssignFeaturesToGrid();
+}
+
+// for monocular
+Frame::Frame(const cv::Mat &imGray, const double &timeStamp, std::string timeStamp_id, ORBextractor *extractor, ORBVocabulary *voc, cv::Mat &K, cv::Mat &distCoef, const float &bf,
+             const float &thDepth)
+    : mpORBvocabulary(voc), mpORBextractorLeft(extractor), mpORBextractorRight(static_cast<ORBextractor *>(NULL)),
+      mTimeStamp(timeStamp), mTimeStamp_id(timeStamp_id), mK(K.clone()), mDistCoef(distCoef.clone()), mbf(bf), mThDepth(thDepth), mpReferenceKF(static_cast<KeyFrame *>(NULL))
+{
+    
+    // Frame ID
+    mnId = nNextId++;
+
+    // Scale Level Info
+    mnScaleLevels = mpORBextractorLeft->GetLevels();
+    mfScaleFactor = mpORBextractorLeft->GetScaleFactor();
+    mfLogScaleFactor = log(mfScaleFactor);
+    mvScaleFactors = mpORBextractorLeft->GetScaleFactors();
+    mvInvScaleFactors = mpORBextractorLeft->GetInverseScaleFactors();
+    mvLevelSigma2 = mpORBextractorLeft->GetScaleSigmaSquares();
+    mvInvLevelSigma2 = mpORBextractorLeft->GetInverseScaleSigmaSquares();
+
+    ExtractORB(0, imGray); // orb detector   change mvKeys, mDescriptors
+
+    if (whether_dynamic_object)
+    {
+#ifdef at3dcv_andy
+        KeysStatic = vector<bool>(mvKeys.size(), true); // all points are static now.
+        keypoint_associate_objectID = vector<int>(mvKeys.size(), -1);
+        numobject = 0;
+        
+        // AC: Check whether there is a previous frame
+        if(imGrayPre.data)
+        {
+            DetectMovingKeypoints(imGray);
+            FilterOutMovingPoints();
+            imGrayPre = imGray.clone();
+            // AC: sample 300 mvKeys for next frame
+            // for (int i = 0; i < 300; i++) {
+            //     int randNum = rand()%(mvKeys.size() + 1);
+            //     prepoint.push_back(mvKeys[randNum].pt);
+            // }
+        }
+        else
+        {
+            imGrayPre = imGray.clone();
+            // AC: sample 300 mvKeys for next frame
+            // for (int i = 0; i < 300; i++) {
+            //     int randNum = rand()%(mvKeys.size() + 1);
+            //     prepoint.push_back(mvKeys[randNum].pt);
+            // }
+        }
+#else
+        std::string pred_mask_img_name = base_data_folder + "/rcnn_labelmap_3dmatched/" + std::to_string(mnId) + "_maskmap.png";
+        objmask_img = cv::imread(pred_mask_img_name, CV_LOAD_IMAGE_UNCHANGED); // uint8  sometimes read image might take long time....
+
+        KeysStatic = vector<bool>(mvKeys.size(), true); // all points are static now.
+        keypoint_associate_objectID = vector<int>(mvKeys.size(), -1);
+        numobject = 0;
+
+        if (remove_dynamic_features) // directly delete dynamic region features
+        {
+            std::vector<cv::KeyPoint> mvKeys_cp;
+            cv::Mat mDescriptors_cp;
+
+            for (size_t i = 0; i < mvKeys.size(); i++)
+            {
+                int maskval = int(objmask_img.at<uint8_t>(mvKeys[i].pt.y, mvKeys[i].pt.x));
+                bool delete_feature = maskval > 0;
+
+                if (!delete_feature)
+                {
+                    mvKeys_cp.push_back(mvKeys[i]);
+                    mDescriptors_cp.push_back(mDescriptors.row(i));
+                }
+            }
+            std::cout << "Delete dynamic feature points  " << mvKeys.size() - mvKeys_cp.size() << std::endl;
+
+            mvKeys = mvKeys_cp;
+            mDescriptors = mDescriptors_cp.clone();
+        }
+        else
+        {
+            for (size_t i = 0; i < mvKeys.size(); i++)
+            {
+                // AC: assign for each instance of segmentation a ID from 0 to n
+                int maskval = int(objmask_img.at<uint8_t>(mvKeys[i].pt.y, mvKeys[i].pt.x));
+                if (maskval == 0)
+                {
+                    keypoint_associate_objectID[i] = -1;
+                    continue;
+                }
+                bool found = false;
+                for (int j = 0; j < detectedObjectsToId.size(); j++) {
+                    if (detectedObjectsToId[j] == maskval) {
+                        found = true;
+                        KeysStatic[i] = (maskval == 0); //0 is background, static >0 object id
+                        numobject = max(numobject, maskval);
+                        if (maskval > 0)
+                            keypoint_associate_objectID[i] = j; // TODO: maskval - 1;
+                        break;
+                    }
+                }
+                if (!found) {
+                    KeysStatic[i] = (maskval == 0); //0 is background, static >0 object id
+                    numobject = max(numobject, maskval);
+                    if (maskval > 0)
+                        keypoint_associate_objectID[i] = detectedObjectsToId.size(); // TODO: maskval - 1;
+                    detectedObjectsToId.push_back(maskval);
+                }
+            }
+            std::cout << "Object classes ";
+            for (int k = 0; k < detectedObjectsToId.size(); k++)
+                std::cout << detectedObjectsToId[k] << " ";
+            std::cout << std::endl;
+        }
+#endif
+    }
+
+    N = mvKeys.size();
+
+    if (mvKeys.empty())
+        return;
+
+    UndistortKeyPoints();
+
+    // Set no stereo information
+    mvuRight = vector<float>(N, -1);
+    mvDepth = vector<float>(N, -1);
+
+    mvpMapPoints = vector<MapPoint *>(N, static_cast<MapPoint *>(NULL));
+    mvbOutlier = vector<bool>(N, false);
+
+    // This is done only for the first Frame (or after a change in the calibration)
+    if (mbInitialComputations)
+    {
+        ComputeImageBounds(imGray);
+
+        mfGridElementWidthInv = static_cast<float>(FRAME_GRID_COLS) / static_cast<float>(mnMaxX - mnMinX);
+        mfGridElementHeightInv = static_cast<float>(FRAME_GRID_ROWS) / static_cast<float>(mnMaxY - mnMinY);
+
+        fx = K.at<float>(0, 0);
+        fy = K.at<float>(1, 1);
+        cx = K.at<float>(0, 2);
+        cy = K.at<float>(1, 2);
+        invfx = 1.0f / fx;
+        invfy = 1.0f / fy;
+
+        mbInitialComputations = false;
+    }
+
+    mb = mbf / fx;
+
+    AssignFeaturesToGrid();
+    if (show_debug) std::cout << "Frame::Frame END" << std::endl;
+}
+#else
 // for RGBD
 Frame::Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeStamp, ORBextractor *extractor, ORBVocabulary *voc, cv::Mat &K, cv::Mat &distCoef, const float &bf, const float &thDepth)
     : mpORBvocabulary(voc), mpORBextractorLeft(extractor), mpORBextractorRight(static_cast<ORBextractor *>(NULL)),
@@ -405,6 +652,7 @@ Frame::Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor *extra
     AssignFeaturesToGrid();
     if (show_debug) std::cout << "Frame::Frame END" << std::endl;
 }
+#endif
 
 // AC: The generated keypoints are ONLY used to determine whether a frame has a moving object or not!
 void Frame::DetectMovingKeypoints(const cv::Mat &imgray)
@@ -482,9 +730,13 @@ void Frame::FilterOutMovingPoints()
 {
     if(show_debug) std::cout << "Frame::FilterOutMovingPoints" << std::endl;
 
-    // AC: Read bounding boxes
+    #ifdef at3dcv_tum
+    std::string frame_index_c = mTimeStamp_id;
+    #else
     char frame_index_c[256];
     sprintf(frame_index_c, "%04d", (int)mnId); // format into 4 digit
+    #endif
+    // AC: Read bounding boxes
     Eigen::MatrixXd raw_all_obj2d_bbox(10, 5);
 	std::vector<string> object_classes;
     if (show_debug) std::cout << frame_index_c << std::endl;

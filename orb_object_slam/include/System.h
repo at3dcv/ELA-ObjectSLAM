@@ -28,6 +28,9 @@
 
 #include "ORBVocabulary.h"
 
+// LL: Added config header to pass macro that switches Leander's code off and on
+#include "At3dcv_config.h"
+
 namespace ORB_SLAM2
 {
 
@@ -64,14 +67,22 @@ class System
     // Input image: RGB (CV_8UC3) or grayscale (CV_8U). RGB is converted to grayscale.
     // Input depthmap: Float (CV_32F).
     // Returns the camera pose (empty if tracking fails).
+    
     cv::Mat TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const double &timestamp);
-    // AC: overloaded function to pass msg_seq_id
-    cv::Mat TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const double &timestamp, int msg_seq_id);
+    #ifdef at3dcv_tum
+    // LL: overloaded function to pass the unix file identifier 
+    cv::Mat TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const double &timestamp, std::string timestamp_id);
+    #endif
 
     // Proccess the given monocular frame
     // Input images: RGB (CV_8UC3) or grayscale (CV_8U). RGB is converted to grayscale.
     // Returns the camera pose (empty if tracking fails).
-    cv::Mat TrackMonocular(const cv::Mat &im, const double &timestamp, int msg_seq_id = -1);
+    cv::Mat TrackMonocular(const cv::Mat &im, const double &timestamp, int msg_seq_id = -1);    
+    #ifdef at3dcv_tum
+    // LL: overloaded function to pass the unix file identifier 
+    cv::Mat TrackMonocular(const cv::Mat &im, const double &timestamp, std::string timestamp_id, int msg_seq_id = -1);
+    #endif
+
 
     // This stops local mapping thread (map building) and performs only camera tracking.
     void ActivateLocalizationMode();

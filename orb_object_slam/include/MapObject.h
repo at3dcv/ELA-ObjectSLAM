@@ -103,12 +103,16 @@ public:
     Vector6d velocityTwist;                                    //general 6dof twist. for cars can assume no roll pitch   pose_Twc*exp(twist)=newpose
     g2o::SE3Quat getMovePose(KeyFrame *kf, double deltaT = 0); // deltaT relative to kf. works for short period where velocity doesn't change much
 
-// LL: Added by Leander 
-// LL: Setting the detected object class names as member field
-#ifdef at3dcv_tum_rgbd
+    // LL: Setting the mrcnn object scale as member field
+    // LL: Init with deafault value ("car" size)
+    #ifdef at3dcv_size
+    Eigen::Vector3d mrcnn_map_obj_scale = Eigen::Vector3d(1.9420, 0.8143, 0.7631);
+    #endif
+    
+    // LL: Setting the detected object class names as member field
+    #ifdef at3dcv_tum
     std::string object_class;
-#endif
-// LL: Added by Leander
+    #endif
 
     //----------for local MapObject--------     no mutex needed, for local cuboid storage, not landmark
     int object_id_in_localKF;        // object id in reference keyframe's local objects.

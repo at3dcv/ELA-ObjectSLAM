@@ -184,5 +184,11 @@ void ImageGrabber::GrabRGBD(const sensor_msgs::ImageConstPtr &msgRGB, const sens
     }
     std::cout << "mpSLAM->TrackRGBD" << std::endl;
 
+    // LL: Referencing the bounding box, edge and mask files via the unix time stamp
+    #ifdef at3dcv_tum
+    std::string unix_file_name = unix_stamp_as_identifier(cv_ptrRGB->header.stamp);
+    cv::Mat pose = mpSLAM->TrackRGBD(cv_ptrRGB->image, depth_mat, cv_ptrRGB->header.stamp.toSec(), unix_file_name);
+    #else
     cv::Mat pose = mpSLAM->TrackRGBD(cv_ptrRGB->image, depth_mat, cv_ptrRGB->header.stamp.toSec());
+    #endif
 }

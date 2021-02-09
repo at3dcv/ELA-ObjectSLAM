@@ -72,6 +72,7 @@ ${PCL_INCLUDE_DIRS}
 SET(CMAKE_BUILD_TYPE Release)
 
 add_library(${PROJECT_NAME} SHARED
+src/At3dcv_config.cc
 src/System.cc
 src/Tracking.cc
 src/Tracking_util.cc

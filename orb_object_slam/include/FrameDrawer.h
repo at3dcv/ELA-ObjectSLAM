@@ -60,7 +60,7 @@ protected:
 // LL: Added by Leander 
 // LL: Passing the object class information from the cube proposals to the frame drawer
 // LL: Passing the look up table for the class types to the frame drawer
-#ifdef at3dcv_tum_rgbd
+#ifdef at3dcv_tum
 std::vector<std::string> object_class;
 std::string CLASS_NAMES[81] = {"BG", "person", "bicycle", "car", "motorcycle", "airplane",
            "bus", "train", "truck", "boat", "traffic light",

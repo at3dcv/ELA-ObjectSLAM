@@ -4,6 +4,9 @@
 #include <Eigen/Core>
 #include <Eigen/Dense>
 
+// LL: Added config header to pass macro that switches Leander's code off and on
+#include "At3dcv_config.h"
+
 template <class T>
 Eigen::Quaternion<T> zyx_euler_to_quat(const T &roll, const T &pitch, const T &yaw);
 

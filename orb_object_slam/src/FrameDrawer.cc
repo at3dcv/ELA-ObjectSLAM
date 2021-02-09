@@ -175,7 +175,7 @@ cv::Mat FrameDrawer::DrawFrame()
         {
             cv::rectangle(im, bbox_2ds[i], box_colors[i % box_colors.size()], 2); // 2d bounding box.
 
-            #ifdef at3dcv_tum_rgbd
+            #ifdef at3dcv_tum
             if(i < object_class.size())
             {
                 std::string  box_identifier = CLASS_NAMES[std::stoi(object_class[i])]; 
@@ -304,7 +304,7 @@ void FrameDrawer::Update(Tracking *pTracker)
         edge_markers_2ds.clear();
         point_Object_AssoID.clear();
         
-        #ifdef at3dcv_tum_rgbd
+        #ifdef at3dcv_tum
         object_class.clear();
         #endif
 
