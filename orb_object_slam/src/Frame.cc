@@ -37,8 +37,6 @@
 
 #include "tictoc_profiler/profiler.hpp"
 
-// AC: Added config header to pass macro that switches out custom code off and on
-#include "At3dcv_config.h"
 // AC: import read_obj
 #include "detect_3d_cuboid/detect_3d_cuboid.h"
 
@@ -734,7 +732,6 @@ void Frame::FilterOutMovingPoints()
 
     #ifdef at3dcv_tum
     std::string frame_index_c = mTimeStamp_id;
-    std::cout <<  "FilterOutMovingPoints: frame_index_c ---------------------> " << frame_index_c << std::endl;
     #else
     char frame_index_c[256];
     sprintf(frame_index_c, "%04d", (int)mnId); // format into 4 digit

@@ -4,5 +4,6 @@
 //#define at3dcv_leander
 #define at3dcv_andy
 #define at3dcv_tum
+#define at3dcv_size
 
 std::string unix_stamp_as_identifier(ros::Time timestamp);

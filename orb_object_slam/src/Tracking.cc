@@ -1734,6 +1734,12 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 			raw_cuboid->pos = pred_frame_objects.row(i).head(3);
 			raw_cuboid->rotY = pred_frame_objects(i, 3);
 			raw_cuboid->scale = Vector3d(pred_frame_objects(i, 4), pred_frame_objects(i, 5), pred_frame_objects(i, 6));
+			
+			// LL: If no class names are provided, set mrcnn_obj_scale to 3 (car)
+			#ifdef at3dcv_size
+				raw_cuboid->mrcnn_obj_scale = raw_cuboid->obj_class_scales["3"];
+			#endif
+			
 			raw_cuboid->rect_detect_2d = pred_frame_objects.row(i).segment<4>(7);
 			raw_cuboid->box_config_type = Vector2d(1, 1); // randomly given unless provided. for latter visualization
 			all_obj2d_bbox.push_back(raw_cuboid->rect_detect_2d);
@@ -1813,7 +1819,16 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 
 		pop_pose_to_ground = frame_pose_to_ground;
 		Eigen::Matrix4f cam_transToGround = Converter::toMatrix4f(pop_pose_to_ground);
-		detect_cuboid_obj->detect_cuboid(pKF->raw_img, cam_transToGround.cast<double>(), all_obj2d_bbox_infov_mat, all_lines_raw, all_obj_cubes);
+		
+
+		// LL: Added by Leander
+		#ifdef at3dcv_size
+				// LL: Added by Leander: Added `object_classes` and `read_inst_segment_vert` to this function call
+				detect_cuboid_obj->detect_cuboid(pKF->raw_img, cam_transToGround.cast<double>(), all_obj2d_bbox_infov_mat, all_lines_raw, all_obj_cubes, object_classes_clean);
+		#else
+				detect_cuboid_obj->detect_cuboid(pKF->raw_img, cam_transToGround.cast<double>(), all_obj2d_bbox_infov_mat, all_lines_raw, all_obj_cubes);		
+		#endif
+
 	}
 
 	// LL: Going through the all_obj_cubes vector holding the object proposels and converting a to a class instance of type MapObject.
@@ -1840,10 +1855,17 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 			newcuboid->cube_meas = cube_local_meas;
 			// LL: Added by Leander
 			// LL: Adding the object classes as a member field to the cuboids
-		#ifdef at3dcv_tum
+			#ifdef at3dcv_tum
 			if(ii < object_classes_clean.size())
 				newcuboid->object_class = object_classes_clean[ii];
-		#endif
+				//std::cout <<  "newcuboid->object_class ---------------------> " << newcuboid->object_class << std::endl;
+			#endif
+
+			// LL: Set the scale of the map object to that ot the raw cuboid which was derived from the look up table
+			#ifdef at3dcv_size
+			newcuboid->mrcnn_map_obj_scale = raw_cuboid->mrcnn_obj_scale;
+    		//std::cout <<  "newcuboid->mrcnn_map_obj_scale ---------------------> " << newcuboid->mrcnn_map_obj_scale << std::endl;
+			#endif
 			newcuboid->bbox_2d = cv::Rect(raw_cuboid->rect_detect_2d[0], raw_cuboid->rect_detect_2d[1], raw_cuboid->rect_detect_2d[2], raw_cuboid->rect_detect_2d[3]);
 			newcuboid->bbox_vec = Vector4d((double)newcuboid->bbox_2d.x + (double)newcuboid->bbox_2d.width / 2, (double)newcuboid->bbox_2d.y + (double)newcuboid->bbox_2d.height / 2,
 										   (double)newcuboid->bbox_2d.width, (double)newcuboid->bbox_2d.height);
@@ -2150,7 +2172,11 @@ void Tracking::AssociateCuboids(KeyFrame *pKF)
 			if (scene_unique_id == kitti) // object scale change back and forth
 			{
 				g2o::cuboid cubeglobalpose = candidateObject->GetWorldPos();
-				cubeglobalpose.setScale(Eigen::Vector3d(1.9420, 0.8143, 0.7631));
+				#ifndef at3dcv_size
+				    cubeglobalpose.setScale(Eigen::Vector3d(1.9420, 0.8143, 0.7631));
+				#else
+				    cubeglobalpose.setScale(candidateObject->mrcnn_map_obj_scale);
+				#endif
 				candidateObject->SetWorldPos(cubeglobalpose);
 				candidateObject->pose_Twc_latestKF = cubeglobalpose;
 				candidateObject->pose_noopti = cubeglobalpose;
@@ -2173,7 +2199,11 @@ void Tracking::AssociateCuboids(KeyFrame *pKF)
 			if (scene_unique_id == kitti)
 			{
 				g2o::cuboid cubeglobalpose = candidateObject->GetWorldPos();
-				cubeglobalpose.setScale(Eigen::Vector3d(1.9420, 0.8143, 0.7631));
+				#ifndef at3dcv_size
+				    cubeglobalpose.setScale(Eigen::Vector3d(1.9420, 0.8143, 0.7631));
+				#else
+				    cubeglobalpose.setScale(candidateObject->mrcnn_map_obj_scale);
+				#endif
 
 				largest_shared_objectlandmark->allDynamicPoses[refframe] = make_pair(cubeglobalpose, false);
 				largest_shared_objectlandmark->SetWorldPos(cubeglobalpose);
