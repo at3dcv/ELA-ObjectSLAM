@@ -22,7 +22,8 @@
 #define SYSTEM_H
 //EC:
 #include <boost/thread.hpp>
-#include "pointcloudmapping.h"#include <mutex>
+#include "pointcloudmapping.h"
+#include <mutex>
 #include <string>
 #include <thread>
 #include <opencv2/core/core.hpp>
@@ -66,7 +67,7 @@ class System
     // Input depthmap: Float (CV_32F).
     // Returns the camera pose (empty if tracking fails).
     cv::Mat TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const double &timestamp);
-    // AC: additional RGBD function using msg_seq_id like in the monocular case...
+    // AC: overloaded function to pass msg_seq_id
     cv::Mat TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const double &timestamp, int msg_seq_id);
 
     // Proccess the given monocular frame
@@ -106,6 +107,8 @@ class System
     // TODO: Save/Load functions
     // SaveMap(const string &filename);
     // LoadMap(const string &filename);
+
+    bool show_debug = true;
 
   private:
     // Input sensor
@@ -155,7 +158,7 @@ class System
     std::mutex mMutexMode;
     bool mbActivateLocalizationMode;
     bool mbDeactivateLocalizationMode;
-     //EC: point cloud mapping
+    //EC: point cloud mapping
     boost::shared_ptr<PointCloudMapping> mpPointCloudMapping;
 };
 

@@ -14,7 +14,7 @@ public:
     ObjDetectionHelper();
     void ReadFile(const string filePath);
     vector<float> GetNthEntry(int n);
-    vector<vector<float > > GetBBoxesWithPerson();
+    vector<vector<float > > GetBBoxes();
 
 private:
     vector<int> classes;

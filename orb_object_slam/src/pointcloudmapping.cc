@@ -113,36 +113,10 @@ pcl::PointCloud< PointCloudMapping::PointT >::Ptr PointCloudMapping::generatePoi
         {
             float d = depth.ptr<float>(m)[n];
 
-            if (d < 0.01 || d > 8)
+            //if (d < 0.01 || d > 8)
+            if (d < 0 || d > 8)
                 continue;
-                /* 
-	            int flag_exist=0;
-	     
-		        for (int i=-20;i <= 20; i+=3)
-		        {
-                    for (int j=-20;j <= 20; j+=3)
-                    {
-                        int tempx = m + i;
-                        int tempy = n + j ;
-            
-                        if( tempx <= 0  ) tempx = 0;
-                        if( tempx >= ( cam_w-1)  ) tempx = cam_w-1;
-                        if( tempy  <= 0  ) tempy =  0;
-                        if( tempy >= (cam_h -1) ) tempy = cam_h-1;
-                        if((int)semantic.ptr<uchar>(tempx)[tempy] == PEOPLE_LABLE)  
-                        {   //EC: do nothing
-                            flag_exist=1;
-                            break;
-                           
-                        }
-                    }
-                    if(flag_exist==1)
-                        break;
-		        }
-	
-                if(flag_exist == 1)
-                    continue;
-                */
+         
                 PointT p;
                 p.z = d;
                 p.x = ( n - kf->cx) * p.z / kf->fx;
@@ -164,11 +138,13 @@ pcl::PointCloud< PointCloudMapping::PointT >::Ptr PointCloudMapping::generatePoi
 	            tmp->points.push_back(p);
                
         }
-        ROS_ERROR_STREAM("eben");
-        
     }
+    cv::Mat identity = cv::Mat::eye(4,4, CV_32F);
+    //Eigen::Isometry3d T = ORB_SLAM2::Converter::toSE3Quat( kf->GetPose() );
 
-    Eigen::Isometry3d T = ORB_SLAM2::Converter::toSE3Quat( kf->GetPose() );
+    // use identity to see there is scale problem 
+    // between the pose and depth map
+    Eigen::Isometry3d T = ORB_SLAM2::Converter::toSE3Quat( identity ); 
     
     PointCloud::Ptr cloud(new PointCloud);
     pcl::transformPointCloud( *tmp, *cloud, T.inverse().matrix());
@@ -176,6 +152,74 @@ pcl::PointCloud< PointCloudMapping::PointT >::Ptr PointCloudMapping::generatePoi
     ROS_ERROR_STREAM("Generate point cloud for kf "<<kf->mnId<<", size="<<cloud->points.size());
     cout<<"Generate point cloud for kf "<<kf->mnId<<", size="<<cloud->points.size()<<endl;
     return cloud;
+}
+
+pcl::PointCloud< PointCloudMapping::PointT >::Ptr PointCloudMapping::generatePointCloudfromFeature(KeyFrame* kf, cv::Mat& semantic_color,cv::Mat& semantic, cv::Mat& color, cv::Mat& depth)
+{
+    ROS_ERROR_STREAM("IN generatePointCloudfromFeature " << kf->GetMapPoints().size());
+
+    PointCloud::Ptr tmp( new PointCloud() );
+    // Point cloud is null ptr
+    //for( std::size_t i = 0; i < kf.mvpMapPoints.size(); i++){
+    
+    try{
+        for (set<MapPoint *>::iterator vit = kf->GetMapPoints().begin(), vend = kf->GetMapPoints().end(); vit != vend; vit++)
+	    {
+            MapPoint *mp = *vit;
+            
+            if ( !mp->isBad()){
+                ROS_ERROR_STREAM(mp);
+                ROS_ERROR_STREAM("for0");
+
+                float x = mp->GetWorldPos().at<float>(0);
+                float y = mp->GetWorldPos().at<float>(1);
+                float d = mp->GetWorldPos().at<float>(2); 
+                PointT p;
+                ROS_ERROR_STREAM(d << " " << x << " " << y);
+
+                p.z = d;
+                p.x = x;
+                p.y = y;
+
+                int xi = static_cast<int>(mp->mTrackProjX);
+                int yi = static_cast<int>(mp->mTrackProjY);
+                ROS_ERROR_STREAM("coords2: " << mp->mTrackProjX << " " << mp->mTrackProjY << " " << xi << " " << yi);
+
+                // Deal with color
+                if((int)semantic.ptr<uchar>(xi)[yi]==0)
+                {
+                    p.b = color.ptr<uchar>(xi)[yi*3];
+                    p.g = color.ptr<uchar>(xi)[yi*3+1];
+                    p.r = color.ptr<uchar>(xi)[yi*3+2];
+                }
+                else
+                {
+                    p.b = 0;
+                    p.g = 0;
+                    p.r = 255;
+                }
+                tmp->points.push_back(p);
+            }
+        }
+        
+    }
+    catch(...){;}
+    ROS_ERROR_STREAM("finish generatePointCloudfromFeature "<< tmp->points.size());
+
+    return tmp;
+    /*
+    cv::Mat identity = cv::Mat::eye(4,4, CV_32F);
+    // use identity to see there is scale problem 
+    // between the pose and depth map
+    Eigen::Isometry3d T = ORB_SLAM2::Converter::toSE3Quat( identity ); 
+    
+    PointCloud::Ptr cloud(new PointCloud);
+    pcl::transformPointCloud( *tmp, *cloud, T.inverse().matrix());
+    cloud->is_dense = false;
+    ROS_ERROR_STREAM("Generate point cloud for kf "<<kf->mnId<<", size="<<cloud->points.size());
+    cout<<"Generate point cloud for kf "<<kf->mnId<<", size="<<cloud->points.size()<<endl;
+    return cloud;
+    */
 }
 
 
@@ -214,13 +258,14 @@ void PointCloudMapping::viewer()
         KfMap->clear();
         for ( size_t i=lastKeyframeSize; i<N ; i++ )
         {
-            
             PointCloud::Ptr p = generatePointCloud( keyframes[i],semanticImgs_color[i], semanticImgs[i],colorImgs[i], depthImgs[i] );
-	        
+            //PointCloud::Ptr p = generatePointCloudfromFeature( keyframes[i],semanticImgs_color[i], semanticImgs[i],colorImgs[i], depthImgs[i] );
+
             *KfMap += *p;
 	        *globalMap += *p;	    
         }
-	
+        
+
 	    PointCloud::Ptr tmp1(new PointCloud());
         voxel.setInputCloud( KfMap );
         voxel.filter( *tmp1 );
@@ -231,7 +276,6 @@ void PointCloudMapping::viewer()
 	    pcl::toROSMsg(pcl_filter, pcl_point);
 	    pcl_point.header.frame_id = "/pointCloud";
 	    pclPoint_pub.publish(pcl_point);
-        ROS_ERROR_STREAM("Publish point cloud " << pcl_filter.size());
 
         lastKeyframeSize = N;
 	    cout << "Keyframe map publish time ="<<endl;

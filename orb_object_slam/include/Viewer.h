@@ -50,6 +50,8 @@ public:
 
     void Release();
 
+    bool show_debug = true;
+
 private:
     bool Stop();
 

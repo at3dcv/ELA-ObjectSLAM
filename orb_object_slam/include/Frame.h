@@ -24,9 +24,12 @@
 #include "Thirdparty/DBoW2/DBoW2/BowVector.h"
 #include "Thirdparty/DBoW2/DBoW2/FeatureVector.h"
 #include "ORBVocabulary.h"
-#include "ObjDetectionHelper.h"
 #include <vector>
 #include <opencv2/opencv.hpp>
+#include "Eigen/Dense"
+
+// AC: custom class
+#include "ObjDetectionHelper.h"
 
 namespace ORB_SLAM2
 {
@@ -104,26 +107,26 @@ public:
     // Backprojects a keypoint (if depth is available) into 3D world coordinates.
     cv::Mat UnprojectDepth(const int &i, float depth);
 
-    // EXTENSION
-    // detect moving points
+    // AC: EXTENSION
     void DetectMovingKeypoints(const cv::Mat &imgray);
     std::vector<cv::Point2f> T_M;
     double limit_dis_epi = 1; 
     double limit_of_check = 2120;
     int limit_edge_corner = 5;
 
-    // For semantic segmentation thread
-    void FilterOutMovingPoints(const cv::Mat &imGray);
+    void FilterOutMovingPoints();
     ObjDetectionHelper mCurrentObjDetection;
     std::vector<vector<float > > mCurrentBBoxes;
 
-    void CheckMovingKeyPoints(const cv::Mat &imGray, const std::vector<std::vector<float > > mCurrentBBoxes);
+    void CheckMovingKeyPoints(Eigen::MatrixXd mCurrentBBoxes, std::vector<std::string> classes);
 
 public:
     // by me, detect_3d_cuboid needs raw image
     cv::Mat raw_img;
-    cv::Mat raw_depth;  // AC: Used for Cuboid + 3d reconstruction
-    cv::Mat raw_rgb;  // AC: Used for 3d reconstruction
+    // AC: Used for 3d reconstruction
+    cv::Mat raw_depth;
+    cv::Mat raw_rgb;
+
     std::vector<bool> KeysStatic;
     std::vector<int> keypoint_associate_objectID;
     int numobject;
@@ -233,6 +236,8 @@ public:
     static float mnMaxY;
 
     static bool mbInitialComputations;
+
+    bool show_debug = true;
 
 private:
     // Undistort keypoints given OpenCV distortion parameters.

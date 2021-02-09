@@ -36,6 +36,9 @@
 #include "Parameters.h"
 #include "tictoc_profiler/profiler.hpp"
 
+// AC: Added config header to pass macro that switches out custom code off and on
+#include "At3dcv_config.h"
+
 using namespace std;
 
 class ImageGrabber
@@ -113,21 +116,26 @@ int main(int argc, char **argv)
         ROS_WARN_STREAM("Turn on global loop closing!!");
     // Create SLAM system. It initializes all system threads and gets ready to process frames.
     // AC: Set System to MONOCULAR as we don't leverage the depth data
+    std::cout << "ros_rgbd 0" << std::endl;
     ORB_SLAM2::System SLAM(argv[1], argv[2], ORB_SLAM2::System::MONOCULAR, enable_loop_closing);
 
     ImageGrabber igb(&SLAM);
 
+    std::cout << "ros_rgbd 1" << std::endl;
     message_filters::Subscriber<sensor_msgs::Image> rgb_sub(nh, "/camera/image_raw", 1);
     message_filters::Subscriber<sensor_msgs::Image> depth_sub(nh, "/camera/depth_registered/image_raw", 1);
     typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::Image> sync_pol;
+    std::cout << "ros_rgbd 2" << std::endl;
     message_filters::Synchronizer<sync_pol> sync(sync_pol(10), rgb_sub, depth_sub);
     sync.registerCallback(boost::bind(&ImageGrabber::GrabRGBD, &igb, _1, _2));
 
     ros::spin(); //block here till I ctrl-C
 
+    ROS_DEBUG_STREAM("main SLAM.Shutdown");
     // Stop all threads
     SLAM.Shutdown();
 
+    ROS_DEBUG_STREAM("main SLAM.SaveTrajectoryTUM");
     // Save camera trajectory
     //     SLAM.SaveKeyFrameTrajectoryTUM(packagePath+"/Outputs/KeyFrameTrajectory.txt");
     // Save camera trajectory
@@ -135,6 +143,7 @@ int main(int argc, char **argv)
     if (ORB_SLAM2::scene_unique_id == ORB_SLAM2::kitti)
         SLAM.SaveTrajectoryKITTI(packagePath + "/Outputs/AllFrameTrajectoryKITTI.txt");
 
+    ROS_DEBUG_STREAM("main ros::shutdown");
     ca::Profiler::print_aggregated(std::cout);
     ros::shutdown();
 
@@ -143,7 +152,7 @@ int main(int argc, char **argv)
 
 void ImageGrabber::GrabRGBD(const sensor_msgs::ImageConstPtr &msgRGB, const sensor_msgs::ImageConstPtr &msgD)
 {
-    ROS_DEBUG_STREAM("ImageGrabber::GrabRGBD");
+    std::cout << "ImageGrabber::GrabRGBD" << std::endl;;
     // Copy the ros image message to cv::Mat.
     cv_bridge::CvImageConstPtr cv_ptrRGB;
     try
@@ -162,7 +171,6 @@ void ImageGrabber::GrabRGBD(const sensor_msgs::ImageConstPtr &msgRGB, const sens
     {
         cv_ptrD = cv_bridge::toCvShare(msgD);
         depth_mat = cv_ptrD->image;
-        ROS_DEBUG_STREAM("Depth map size: " << depth_mat.size());
         // usually TYPE_32FC1   if TYPE_16UC1, convert it.
         if (msgD->encoding == sensor_msgs::image_encodings::TYPE_16UC1) // already uint, (already multiplied by 1000)
         {
@@ -174,6 +182,7 @@ void ImageGrabber::GrabRGBD(const sensor_msgs::ImageConstPtr &msgRGB, const sens
         ROS_ERROR("cv_bridge exception: %s", e.what());
         return;
     }
+    std::cout << "mpSLAM->TrackRGBD" << std::endl;
 
-    cv::Mat pose = mpSLAM->TrackRGBD(cv_ptrRGB->image, depth_mat, cv_ptrRGB->header.stamp.toSec(), msgRGB->header.seq);
+    cv::Mat pose = mpSLAM->TrackRGBD(cv_ptrRGB->image, depth_mat, cv_ptrRGB->header.stamp.toSec());
 }

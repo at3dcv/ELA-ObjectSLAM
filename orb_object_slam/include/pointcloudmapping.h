@@ -69,6 +69,7 @@
 #include <opencv2/opencv.hpp>
 
 #include "KeyFrame.h"
+#include "MapPoint.h"
 //The lable of people is 15
 #define PEOPLE_LABLE 3
 // using namespace ORB_SLAM2;
@@ -92,6 +93,7 @@ public:
 
 protected:
     PointCloud::Ptr generatePointCloud(KeyFrame* kf, cv::Mat& semantic_color,cv::Mat& semantic, cv::Mat& color, cv::Mat& depth);
+    PointCloud::Ptr generatePointCloudfromFeature(KeyFrame* kf, cv::Mat& semantic_color,cv::Mat& semantic, cv::Mat& color, cv::Mat& depth);
 
     PointCloud::Ptr globalMap;
 

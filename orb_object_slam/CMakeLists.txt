@@ -95,7 +95,7 @@ src/Initializer.cc
 src/Viewer.cc
 src/Parameters.cpp
 src/g2o_Object.cpp
-src/ObjDetectionHelper.cpp
+src/ObjDetectionHelper.cc
 src/pointcloudmapping.cc
 ) 
 
@@ -118,7 +118,6 @@ target_link_libraries(ros_mono  ${PROJECT_NAME} ${catkin_LIBRARIES} )
 add_executable(ros_rgbd
 src/ros_rgbd.cc
 )
-
 target_link_libraries(ros_rgbd  ${PROJECT_NAME} ${catkin_LIBRARIES} )
 # 
 # # Node for Stereo camera

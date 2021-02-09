@@ -91,6 +91,8 @@ public:
     int GetBelongedObject(MapObject *&obj); // change obj, return observation times.
     MapObject *GetBelongedObject();         //return obj
 
+    bool show_debug = true;
+
 public:
     long unsigned int mnId;
     static long unsigned int nNextId;
@@ -143,8 +145,9 @@ public:
 
     int record_txtrow_id = -1; // when finally record to txt, row id in txt
 
+  
 protected:
-    // Position in absolute coordinates 3*1
+// Position in absolute coordinates 3*1
     cv::Mat mWorldPos;
 
     // Keyframes observing the point and associated keypoint index in keyframe

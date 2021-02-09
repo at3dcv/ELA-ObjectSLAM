@@ -103,13 +103,13 @@ public:
     Vector6d velocityTwist;                                    //general 6dof twist. for cars can assume no roll pitch   pose_Twc*exp(twist)=newpose
     g2o::SE3Quat getMovePose(KeyFrame *kf, double deltaT = 0); // deltaT relative to kf. works for short period where velocity doesn't change much
 
-    // LL: Added by Leander 
-    // LL: Init with deafault value
-    #ifdef at3dcv_leander
-    Eigen::Vector3d yolo_map_obj_scale = Eigen::Vector3d(1.9420, 0.8143, 0.7631);
-    #endif
-    // LL: Added by Leander
-    
+// LL: Added by Leander 
+// LL: Setting the detected object class names as member field
+#ifdef at3dcv_tum_rgbd
+    std::string object_class;
+#endif
+// LL: Added by Leander
+
     //----------for local MapObject--------     no mutex needed, for local cuboid storage, not landmark
     int object_id_in_localKF;        // object id in reference keyframe's local objects.
     Eigen::Matrix2Xi box_corners_2d; // 2*8 on image  usually for local cuboids on reference frame.
@@ -127,6 +127,8 @@ public:
     g2o::cuboid pose_noopti;
 
     int record_txtrow_id = -1;
+
+    bool show_debug = true;
 
 protected:
     g2o::cuboid pose_Twc; // cuboid pose to the init/world. initialized as the position from first observe frame

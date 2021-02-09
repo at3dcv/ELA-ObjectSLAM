@@ -54,6 +54,8 @@ public:
 
     Eigen::MatrixXd truth_poses; // n*3 xyz pose
 
+    bool show_debug = true;
+
 private:
     std::vector<Eigen::Vector3f> box_colors;
 
