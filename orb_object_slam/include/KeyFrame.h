@@ -180,6 +180,7 @@ public:
     #ifdef at3dcv_tum
     std::string mTimeStamp_id;
     #endif
+    
     const double mTimeStamp;
 
     int record_txtrow_id = -1; //final save to txt row id.

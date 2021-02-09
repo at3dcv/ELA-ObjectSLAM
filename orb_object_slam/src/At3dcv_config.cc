@@ -16,9 +16,6 @@ std::string unix_stamp_as_identifier(ros::Time timestamp)
     int i=0;
     std::string time_nsec_long = time_nsec.str() + "000000";
 
-    // LL: Cut reduce the nano seconds to 6 digits by rounding up the last three digits
-    std::cout << time_nsec.str() << "." << time_nsec.str() << std::endl;
-
     double double_last_val = 0;
     do {
         std::string string_last_val = time_nsec_long.substr(5-i, 1) +"."+time_nsec_long.substr(6-i, 3+i);

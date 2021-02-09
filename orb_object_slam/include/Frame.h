@@ -50,19 +50,6 @@ public:
 
     // Copy constructor.
     Frame(const Frame &frame);
-
-
-    #ifdef at3dcv_tum
-    // Constructor for RGB-D cameras. extract keypoints, descriptors
-    Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeStamp, std::string timestamp_id, ORBextractor *extractor, ORBVocabulary *voc, 
-      cv::Mat &K, cv::Mat &distCoef, const float &bf, const float &thDepth);
-    // Constructor for Monocular cameras. extract keypoints, descriptors
-    Frame(const cv::Mat &imGray, const double &timeStamp, std::string timestamp_id, ORBextractor *extractor, ORBVocabulary *voc, cv::Mat &K, cv::Mat &distCoef,
-      const float &bf, const float &thDepth);
-    // Constructor for stereo cameras. extract keypoints, descriptors
-    Frame(const cv::Mat &imLeft, const cv::Mat &imRight, const double &timeStamp, std::string timestamp_id, ORBextractor *extractorLeft, ORBextractor *extractorRight, ORBVocabulary *voc,
-      cv::Mat &K, cv::Mat &distCoef, const float &bf, const float &thDepth);
-    #endif
     
     // Constructor for RGB-D cameras. extract keypoints, descriptors
     Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeStamp, ORBextractor *extractor, ORBVocabulary *voc,
@@ -166,6 +153,7 @@ public:
     #ifdef at3dcv_tum
     std::string mTimeStamp_id;
     #endif
+    
     double mTimeStamp;
     // Calibration matrix and OpenCV distortion parameters.
     cv::Mat mK;

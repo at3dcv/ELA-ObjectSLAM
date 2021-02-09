@@ -447,7 +447,12 @@ cv::Mat Tracking::GrabImageRGBD(const cv::Mat &imRGB, const cv::Mat &imD, const 
 		;
 	imDepth.convertTo(imDepth, CV_32F, mDepthMapFactor);
 
-	mCurrentFrame = Frame(mImGray, imDepth, timestamp, timestamp_id, mpORBextractorLeft, mpORBVocabulary, mK, mDistCoef, mbf, mThDepth);
+	mCurrentFrame = Frame(mImGray, imDepth, timestamp, mpORBextractorLeft, mpORBVocabulary, mK, mDistCoef, mbf, mThDepth);
+
+	#ifdef at3dcv_tum
+	mCurrentFrame.mTimeStamp_id = timestamp_id;
+	std::cout << "mCurrentFrame.mTimeStamp_id ------------> " << mCurrentFrame.mTimeStamp_id << std::endl;
+	#endif
 
 	if (mCurrentFrame.mnId == 0)
 	{
@@ -538,7 +543,11 @@ cv::Mat Tracking::GrabImageMonocular(const cv::Mat &im, const double &timestamp,
 	{
 		if ((!mono_firstframe_truth_depth_init) || (mCurrentFrame.mnId > 0))
 		{
-			mCurrentFrame = Frame(mImGray, timestamp, timestamp_id, mpIniORBextractor, mpORBVocabulary, mK, mDistCoef, mbf, mThDepth);
+			mCurrentFrame = Frame(mImGray, timestamp, mpIniORBextractor, mpORBVocabulary, mK, mDistCoef, mbf, mThDepth);
+
+			#ifdef at3dcv_tum
+			mCurrentFrame.mTimeStamp_id = timestamp_id;
+			#endif
 		}
 		else
 		{ // read (truth) depth /stereo image for first frame
@@ -551,12 +560,18 @@ cv::Mat Tracking::GrabImageMonocular(const cv::Mat &im, const double &timestamp,
 			else
 				ROS_WARN_STREAM("Read first right stereo size  " << right_stereo_img.rows);
 			std::cout << "Read first right depth size  " << right_stereo_img.rows << "  baseline  " << mbf << std::endl;
-			mCurrentFrame = Frame(mImGray, right_stereo_img, timestamp, timestamp_id, mpORBextractorLeft, mpORBextractorRight, mpORBVocabulary, mK, mDistCoef, mbf, mThDepth);
+			mCurrentFrame = Frame(mImGray, right_stereo_img, timestamp, mpORBextractorLeft, mpORBextractorRight, mpORBVocabulary, mK, mDistCoef, mbf, mThDepth);
+			#ifdef at3dcv_tum
+			mCurrentFrame.mTimeStamp_id = timestamp_id;
+			#endif
 		}
 	}
 	else
 	{
-		mCurrentFrame = Frame(mImGray, timestamp, timestamp_id, mpORBextractorLeft, mpORBVocabulary, mK, mDistCoef, mbf, mThDepth); // create new frames.
+		mCurrentFrame = Frame(mImGray, timestamp, mpORBextractorLeft, mpORBVocabulary, mK, mDistCoef, mbf, mThDepth); // create new frames.
+		#ifdef at3dcv_tum
+		mCurrentFrame.mTimeStamp_id = timestamp_id;
+		#endif
 	}
 	
 	// AC: Current frame id
@@ -925,7 +940,9 @@ void Tracking::Track()
 			mCurrentFrame.mpReferenceKF = mpReferenceKF;
 
 		mLastFrame = Frame(mCurrentFrame);
-
+		#ifdef at3dcv_tum
+		mLastFrame.mTimeStamp_id = mCurrentFrame.mTimeStamp_id;
+		#endif
 		ca::Profiler::tictoc("Tracking time");
 	}
 
@@ -1130,6 +1147,7 @@ void Tracking::MonocularInitialization()
 		{
 			mInitialFrame = Frame(mCurrentFrame);
 			mLastFrame = Frame(mCurrentFrame);
+
 			mvbPrevMatched.resize(mCurrentFrame.mvKeysUn.size());
 			for (size_t i = 0; i < mCurrentFrame.mvKeysUn.size(); i++)
 				mvbPrevMatched[i] = mCurrentFrame.mvKeysUn[i].pt;
@@ -1329,6 +1347,7 @@ void Tracking::CreateInitialMapMonocular()
 	mCurrentFrame.mpReferenceKF = pKFcur;
 
 	mLastFrame = Frame(mCurrentFrame);
+	
 
 	mpMap->SetReferenceMapPoints(mvpLocalMapPoints);
 
@@ -2433,6 +2452,10 @@ void Tracking::CreateNewKeyFrame()
 		return;
 
 	KeyFrame *pKF = new KeyFrame(mCurrentFrame, mpMap, mpKeyFrameDB);
+
+	#ifdef tum_rgbd
+	pKF->mTimeStamp_id = mCurrentFrame.mTimeStamp_id;
+	#endif
 
 	ROS_WARN_STREAM("Created new keyframe!   " << pKF->mnId << "   total ID  " << pKF->mnFrameId);
 
