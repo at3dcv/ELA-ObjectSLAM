@@ -11,6 +11,60 @@
 using namespace Eigen;
 using namespace std;
 
+#ifdef at3dcv_size
+// Scale Vector3d(length_half, width_half, height_half), example: car = (1.9420, 0.8143, 0.7631)
+std::unordered_map<std::string, Eigen::Vector3d> cuboid::obj_class_scales{
+    {"1",Eigen::Vector3d(0.15, 0.20, 0.85)},        // person
+    {"2", Eigen::Vector3d(0.7, 0.2, 0.55)},         // bicycle 
+    {"3", Eigen::Vector3d(1.9420, 0.8143, 0.7631)}, // car   
+    {"4", Eigen::Vector3d(0.85, 0.3, 0.55)},        // motorcycle
+    {"6", Eigen::Vector3d(0.6, 0.3, 1.55)},         // bus
+    {"8", Eigen::Vector3d(0.6, 0.3, 2.00)},         // truck
+    {"10", Eigen::Vector3d(0.12, 0.10, 0.3)},        // traffic light
+    {"11", Eigen::Vector3d(0.11, 0.11, 0.25)},        // fire hydrant
+    {"12", Eigen::Vector3d(0.01, 0.20, 0.20)},        // stop sign
+    {"13", Eigen::Vector3d(0.06, 0.10, 0.60)},        // parking meter
+    {"14", Eigen::Vector3d(0.24, 0.90, 0.40)},        // bench
+    {"15", Eigen::Vector3d(0.05, 0.05, 0.05)},        // bird
+    {"16", Eigen::Vector3d(0.21, 0.07, 0.12)},        // cat 
+    {"17", Eigen::Vector3d(0.25, 0.10, 0.25)},        // dog
+    {"25", Eigen::Vector3d(0.08, 0.15, 0.18)},        // backpack
+    {"26", Eigen::Vector3d(0.06, 0.06, 0.30)},        // umbrella
+    {"27", Eigen::Vector3d(0.07, 0.12, 0.12)},        // handbag
+    {"29", Eigen::Vector3d(0.06, 0.17, 0.15)},        // suticase
+    {"40", Eigen::Vector3d(0.035, 0.035, 0.14)},        // bottle
+    //{"41", Eigen::Vector3d(0.6, 0.3, 0.55)},        // wine glass
+    //{"42", Eigen::Vector3d(0.035, 0.035, 0.045)},        // cup
+    //{"43", Eigen::Vector3d(0.6, 0.3, 0.55)},        // fork
+    //{"44", Eigen::Vector3d(0.6, 0.3, 0.55)},        // knife
+    //{"45", Eigen::Vector3d(0.6, 0.3, 0.55)},        // spoon
+    //{"46", Eigen::Vector3d(0.6, 0.3, 0.55)},        // bowl
+    //{"47", Eigen::Vector3d(0.6, 0.3, 0.55)},        // banana
+    //{"48", Eigen::Vector3d(0.6, 0.3, 0.55)},        // apple
+    //{"49", Eigen::Vector3d(0.6, 0.3, 0.55)},        // sandwich
+    //{"50", Eigen::Vector3d(0.6, 0.3, 0.55)},        // orange
+    {"57", Eigen::Vector3d(0.21, 0.22, 0.40)},        // chair
+    {"58", Eigen::Vector3d(0.75, 0.25, 0.40)},        // couch
+    {"59", Eigen::Vector3d(0.13, 0.13, 0.35)},        // potted plant
+    {"61", Eigen::Vector3d(0.6, 0.3, 0.55)},        // dining table
+    {"63", Eigen::Vector3d(0.45, 0.3, 0.05)},        // tv
+    {"64", Eigen::Vector3d(0.15, 0.11, 0.9)},        // laptop
+    {"65", Eigen::Vector3d(0.035, 0.05, 0.025)},        // mouse
+    {"66", Eigen::Vector3d(0.03, 0.09, 0.015)},        // remote
+    {"67", Eigen::Vector3d(0.055, 0.15, 0.01)},        // key board
+    {"68", Eigen::Vector3d(0.035, 0.07, 0.01)},        // cellphone
+    {"69", Eigen::Vector3d(0.2, 0.15, 0.15)},        // microwave
+    {"70", Eigen::Vector3d(0.3, 0.3, 0.25)},        // Oven
+    //{"71", Eigen::Vector3d(0.6, 0.3, 0.55)},        // Toaster
+    //{"72", Eigen::Vector3d(0.6, 0.3, 0.55)},        // sink
+    //{"73", Eigen::Vector3d(0.6, 0.3, 0.55)},        // refrigerator
+    //{"74", Eigen::Vector3d(0.6, 0.3, 0.55)},        // book
+    //{"75", Eigen::Vector3d(0.6, 0.3, 0.55)},        // clock
+    //{"76", Eigen::Vector3d(0.6, 0.3, 0.55)},        // vase
+    //{"78", Eigen::Vector3d(0.6, 0.3, 0.55)},        // scissors
+    //{"79", Eigen::Vector3d(0.6, 0.3, 0.55)},        // teddy bear
+    };
+#endif
 Matrix4d similarityTransformation(const cuboid &cube_obj)
 {
     Matrix3d rot;
