@@ -1707,7 +1707,7 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 
 	// LL: Added by Leander
 	// LL: Making the object class accessable outside the if/else case
-	#ifdef at3dcv_tum
+	#ifdef at3dcv_tum || at3dcv_mask
 	std::string frame_index_c;
 	std::vector<string> object_classes_clean;
 	#endif
@@ -1717,7 +1717,7 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 	// LL: - Offline: We used ReadAllObjecttxt of the file Tracking_util.cc to read all the all object proposels and saved them to all_offline_object_cubes
 	// LL: - Offline: We the information of all_offline_object_cubes line by line an use it to initalizen new cuboid instances and in addition ad the relevant info to all_obj2d_bbox
 	// LL: - Offline: The new cuboid instances are then pushed to all_obj_cubes
-	// LL: - Online: Given the path to the folder (data_yolo_obj_dir) uses the read_obj_detection_txt function of matrix_util.cc to write all the detections to raw_all_obj2d_bbox
+	// LL: - Online: Given the path to the folder (data_mrcnn_obj_dir) uses the read_obj_detection_txt function of matrix_util.cc to write all the detections to raw_all_obj2d_bbox
 	// LL: - Online: Filtering out all boxes to close to the images boundaries saving the filterd bunch to all_obj2d_bbox_infov_mat and all_obj2d_bbox
 	// LL: - Online: all_obj2d_bbox_infov_mat is then in turn passed to the detect_cuboid function of the detect_3d_cuboid class from the box_proposal_detail.cc
 	// LL: - Online: The detect_cuboid function then writes the object cuboids the all_obj_cubes vector that was passed to the function.
@@ -1758,7 +1758,7 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 	else
 	{
 		std::string data_edge_data_dir = base_data_folder + "/edge_detection/LSD/";
-		std::string data_yolo_obj_dir = base_data_folder + "/mats/filter_match_2d_boxes_txts/";
+		std::string data_mrcnn_obj_dir = base_data_folder + "/mats/filter_match_2d_boxes_txts/";
 		
 		#ifdef at3dcv_tum
 		frame_index_c = pKF->mTimeStamp_id;
@@ -1775,19 +1775,19 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 			std::ofstream outfile (data_edge_data_dir + frame_index_c + "_edge.txt");
 			outfile.close();
 			read_all_number_txt(data_edge_data_dir + frame_index_c + "_edge.txt", all_lines_raw);
-			ROS_ERROR_STREAM("Create file  " << data_yolo_obj_dir + frame_index_c + "_edge.txt");
+			ROS_ERROR_STREAM("Create file  " << data_mrcnn_obj_dir + frame_index_c + "_edge.txt");
 		}
 
 		// read yolo object detection
 		Eigen::MatrixXd raw_all_obj2d_bbox(10, 5);
 		std::vector<string> object_classes;
-		if (!read_obj_detection_txt(data_yolo_obj_dir + frame_index_c + "_mrcnn.txt", raw_all_obj2d_bbox, object_classes))
+		if (!read_obj_detection_txt(data_mrcnn_obj_dir + frame_index_c + "_mrcnn.txt", raw_all_obj2d_bbox, object_classes))
 		{
-			ROS_ERROR_STREAM("Cannot read yolo txt  " << data_yolo_obj_dir + frame_index_c + "_mrcnn.txt");
-			std::ofstream outfile (data_yolo_obj_dir + frame_index_c + "_mrcnn.txt");
+			ROS_ERROR_STREAM("Cannot read yolo txt  " << data_mrcnn_obj_dir + frame_index_c + "_mrcnn.txt");
+			std::ofstream outfile (data_mrcnn_obj_dir + frame_index_c + "_mrcnn.txt");
 			outfile.close();
-			read_obj_detection_txt(data_yolo_obj_dir + frame_index_c + "_mrcnn.txt",raw_all_obj2d_bbox, object_classes);
-			ROS_ERROR_STREAM("Created file  " << data_yolo_obj_dir + frame_index_c + "_mrcnn.txt");
+			read_obj_detection_txt(data_mrcnn_obj_dir + frame_index_c + "_mrcnn.txt",raw_all_obj2d_bbox, object_classes);
+			ROS_ERROR_STREAM("Created file  " << data_mrcnn_obj_dir + frame_index_c + "_mrcnn.txt");
 		}
 
 		// remove some 2d boxes too close to boundary.
@@ -1811,14 +1811,42 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 			all_obj2d_bbox_infov_mat.row(i) = raw_all_obj2d_bbox.row(good_object_ids[i]);
 			all_obj2d_bbox.push_back(raw_all_obj2d_bbox.row(good_object_ids[i]));
 			all_box_confidence.push_back(1); //TODO change here.
-		// LL: Added by Leander
 		// LL: Filtering the object classes in the same manor as the bb's are filtered
 		#ifdef at3dcv_tum
 			if(good_object_ids[i] < object_classes.size())
 				object_classes_clean.push_back(object_classes[good_object_ids[i]]);
 		#endif
-		// LL: Added by Leander
 		}
+
+
+		#ifdef at3dcv_mask
+				// LL: Added by Leander - read detected cuboids vertices
+				std::string data_inst_seg_vertices_dir = base_data_folder + "/mats/instance_segmentation_vertices/";
+				std::vector<Eigen::Matrix2Xd> raw_read_inst_segment_vert;
+				if (!read_inst_segment_vertices(data_inst_seg_vertices_dir + frame_index_c + "_ch.txt", raw_read_inst_segment_vert))
+				{	
+					ROS_ERROR_STREAM("Cannot read mask txt  " << data_inst_seg_vertices_dir + frame_index_c + "_ch.txt");
+					std::ofstream outfile (data_inst_seg_vertices_dir + frame_index_c + "_ch.txt");
+					outfile.close();
+					read_inst_segment_vertices(data_inst_seg_vertices_dir + frame_index_c + "_ch.txt",raw_read_inst_segment_vert);
+					ROS_ERROR_STREAM("Created file  " << data_inst_seg_vertices_dir + frame_index_c + "_ch.txt");		
+				}
+				// LL: Add the raw instance segmentation convex hull vertices and class names to the key frame
+				// LL: Flip x and y axis
+				for(int j = 0; j != raw_read_inst_segment_vert.size(); ++j)
+				{
+					Eigen::MatrixXd raw_read_inst_segment_vert_x_y_fliped(raw_read_inst_segment_vert[j].rows(), raw_read_inst_segment_vert[j].cols());
+					raw_read_inst_segment_vert_x_y_fliped << raw_read_inst_segment_vert[j].row(1), raw_read_inst_segment_vert[j].row(0);
+					raw_read_inst_segment_vert[j] = raw_read_inst_segment_vert_x_y_fliped;
+					}
+
+				// LL: Added by Leander: Filter the raw_read_inst_segment_vert and read_inst_segment_vert
+				std::vector<Eigen::Matrix2Xd> read_inst_segment_vert;
+				for (size_t i = 0; i < good_object_ids.size(); i++)
+				{
+					read_inst_segment_vert.push_back(raw_read_inst_segment_vert[good_object_ids[i]]);
+				}
+		#endif
 
 		cv::Mat frame_pose_to_init = pKF->GetPoseInverse(); // camera to init world
 		cv::Mat frame_pose_to_ground;
@@ -1833,10 +1861,10 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 		
 
 		// LL: Added by Leander
-		#ifdef at3dcv_size
+		#ifdef at3dcv_size && at3dcv_mask && at3dcv_tum
 				// LL: Added by Leander: Added `object_classes` and `read_inst_segment_vert` to this function call
-				detect_cuboid_obj->detect_cuboid(pKF->raw_img, cam_transToGround.cast<double>(), all_obj2d_bbox_infov_mat, all_lines_raw, all_obj_cubes, object_classes_clean);
-		#else
+				detect_cuboid_obj->detect_cuboid(pKF->raw_img, cam_transToGround.cast<double>(), all_obj2d_bbox_infov_mat, all_lines_raw, all_obj_cubes, read_inst_segment_vert, object_classes_clean, frame_index_c, pKF->raw_depth);
+		#elif
 				detect_cuboid_obj->detect_cuboid(pKF->raw_img, cam_transToGround.cast<double>(), all_obj2d_bbox_infov_mat, all_lines_raw, all_obj_cubes);		
 		#endif
 
