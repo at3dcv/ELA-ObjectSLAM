@@ -113,6 +113,8 @@ std::string CLASS_NAMES[81] = {"BG", "person", "bicycle", "car", "motorcycle", "
     std::vector<cv::KeyPoint> mvIniKeys;
     std::vector<int> mvIniMatches;
     int mState;
+    // AC: add KeysStatic
+    std::vector<bool> mvKeysStatic;
 
     Map *mpMap;
 

@@ -425,9 +425,6 @@ void Frame::DetectMovingKeypoints(const cv::Mat &imgray)
     // AC: output of state: output status vector (of unsigned chars); each element of the vector is set to 1 if the flow for the corresponding features has been found, otherwise, it is set to 0.
 	// AC: check whether the KP is too far to the edge of the image or the difference to each other is too large
 
-    std::chrono::steady_clock::time_point mid1 = std::chrono::steady_clock::now();
-    if (show_debug) std::cout << "Init = " << std::chrono::duration_cast<std::chrono::microseconds>(mid1 - begin).count() << "[µs]" << std::endl;
-
     for (int i = 0; i < state.size(); i++)
     {
         if(state[i] != 0)
@@ -454,8 +451,6 @@ void Frame::DetectMovingKeypoints(const cv::Mat &imgray)
             }
         }
     }
-
-    if (show_debug) std::cout << "Size: " << F_prepoint.size() << std::endl;
 
     // F-Matrix
     cv::Mat mask = cv::Mat(cv::Size(1, 700), CV_8UC1);
@@ -512,7 +507,7 @@ void Frame::CheckMovingObjects(Eigen::MatrixXd mCurrentBBoxes, std::vector<std::
         if (show_debug) std::cout << "class " << std::stoi(classes[j]) << std::endl;
 
         // AC: Only consider the class people
-        if (std::stoi(classes[j]) != 1) continue;
+        // if (std::stoi(classes[j]) != 1) continue;
 
         int bbLeft = mCurrentBBoxes(j, 0);
         int bbTop = mCurrentBBoxes(j, 1);
@@ -543,12 +538,12 @@ void Frame::CheckMovingObjects(Eigen::MatrixXd mCurrentBBoxes, std::vector<std::
     {
         for (size_t i = 0; i < mvKeys.size(); i++)
         {
-            float bbLeft = (float)mCurrentBBoxes(j, 0);
-            float bbTop = (float)mCurrentBBoxes(j, 1);
-            float bbRight = bbLeft + mCurrentBBoxes(j, 2);
-            float bbBottom = bbTop - mCurrentBBoxes(j, 3);
+            int bbLeft = mCurrentBBoxes(j, 0);
+            int bbTop = mCurrentBBoxes(j, 1);
+            int bbRight = bbLeft + mCurrentBBoxes(j, 2);
+            int bbBottom = bbTop - mCurrentBBoxes(j, 3);
 
-            if ((int)mvKeys[i].pt.x >= bbLeft && (int)mvKeys[i].pt.x <= bbRight && (int)mvKeys[i].pt.y <= bbTop && (int)mvKeys[i].pt.y >= bbBottom)
+            if (mvKeys[i].pt.x >= bbLeft && mvKeys[i].pt.x <= bbRight && mvKeys[i].pt.y <= bbTop && mvKeys[i].pt.y >= bbBottom)
             {
                 // add keypoints of each BBox to association
                 keypoint_associate_objectID[i] = j;
