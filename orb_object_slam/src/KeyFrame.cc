@@ -58,6 +58,10 @@ KeyFrame::KeyFrame(Frame &F, Map *pMap, KeyFrameDatabase *pKFDB) : mnFrameId(F.m
 {
     mnId = nNextId++;
 
+    #ifdef at3dcv_tum
+    mTimeStamp_id = F.mTimeStamp_id;
+    #endif
+
     mGrid.resize(mnGridCols);
     for (int i = 0; i < mnGridCols; i++)
     {

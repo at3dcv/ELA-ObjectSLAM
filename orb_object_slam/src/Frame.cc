@@ -80,6 +80,11 @@ Frame::Frame(const Frame &frame)
       mvScaleFactors(frame.mvScaleFactors), mvInvScaleFactors(frame.mvInvScaleFactors),
       mvLevelSigma2(frame.mvLevelSigma2), mvInvLevelSigma2(frame.mvInvLevelSigma2)
 {
+
+    #ifdef at3dcv_tum
+    mTimeStamp_id = frame.mTimeStamp_id;
+    #endif
+
     for (int i = 0; i < FRAME_GRID_COLS; i++)
         for (int j = 0; j < FRAME_GRID_ROWS; j++)
             mGrid[i][j] = frame.mGrid[i][j];
@@ -482,9 +487,14 @@ void Frame::FilterOutMovingPoints()
 {
     if(show_debug) std::cout << "Frame::FilterOutMovingPoints" << std::endl;
 
-    // AC: Read bounding boxes
+    #ifdef at3dcv_tum
+    std::string frame_index_c = mTimeStamp_id;
+    std::cout <<  "FilterOutMovingPoints: frame_index_c ---------------------> " << frame_index_c << std::endl;
+    #else
     char frame_index_c[256];
     sprintf(frame_index_c, "%04d", (int)mnId); // format into 4 digit
+    #endif
+    // AC: Read bounding boxes
     Eigen::MatrixXd raw_all_obj2d_bbox(10, 5);
 	std::vector<string> object_classes;
     if (show_debug) std::cout << frame_index_c << std::endl;

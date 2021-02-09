@@ -31,6 +31,9 @@
 // AC: custom class
 #include "ObjDetectionHelper.h"
 
+// LL: Added config header to pass macro that switches Leander's code off and on
+#include "At3dcv_config.h"
+
 namespace ORB_SLAM2
 {
 #define FRAME_GRID_ROWS 48
@@ -148,6 +151,11 @@ public:
 
     // Feature extractor. The right is used only in the stereo case.
     ORBextractor *mpORBextractorLeft, *mpORBextractorRight;
+
+    // LL: Timestamp based frame ID
+    #ifdef at3dcv_tum
+    std::string mTimeStamp_id;
+    #endif
 
     // Frame timestamp.
     double mTimeStamp;

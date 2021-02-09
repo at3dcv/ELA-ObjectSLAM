@@ -105,7 +105,7 @@ public:
 
 // LL: Added by Leander 
 // LL: Setting the detected object class names as member field
-#ifdef at3dcv_tum_rgbd
+#ifdef at3dcv_tum
     std::string object_class;
 #endif
 // LL: Added by Leander

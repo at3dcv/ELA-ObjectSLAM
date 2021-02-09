@@ -37,9 +37,6 @@
 
 #include <time.h>
 
-// AC: Added config header to pass macro that switches out custom code off and on
-#include "At3dcv_config.h"
-
 bool has_suffix(const std::string &str, const std::string &suffix)
 {
     std::size_t index = str.find(suffix, str.size() - suffix.size());
@@ -177,6 +174,56 @@ cv::Mat System::TrackStereo(const cv::Mat &imLeft, const cv::Mat &imRight, const
     return mpTracker->GrabImageStereo(imLeft, imRight, timestamp);
 }
 
+#ifdef at3dcv_tum
+cv::Mat System::TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const double &timestamp, std::string timestamp_id)
+{
+#ifdef at3dcv_andy
+#else
+    // AC: skip check as we are not utilizing the depth for initialization
+    if (mSensor != RGBD)
+    {
+        cerr << "ERROR: you called TrackRGBD but input sensor was not set to RGBD." << endl;
+        exit(-1);
+    }
+#endif
+
+    // Check mode change
+    {
+        unique_lock<mutex> lock(mMutexMode);
+        if (mbActivateLocalizationMode)
+        {
+            mpLocalMapper->RequestStop();
+
+            // Wait until Local Mapping has effectively stopped
+            while (!mpLocalMapper->isStopped())
+            {
+                usleep(1000);
+            }
+
+            mpTracker->InformOnlyTracking(true);
+            mbActivateLocalizationMode = false;
+        }
+        if (mbDeactivateLocalizationMode)
+        {
+            mpTracker->InformOnlyTracking(false);
+            mpLocalMapper->Release();
+            mbDeactivateLocalizationMode = false;
+        }
+    }
+
+    // Check reset
+    {
+        unique_lock<mutex> lock(mMutexReset);
+        if (mbReset)
+        {
+            mpTracker->Reset();
+            mbReset = false;
+        }
+    }
+
+    return mpTracker->GrabImageRGBD(im, depthmap, timestamp, timestamp_id);
+}
+#else
 cv::Mat System::TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const double &timestamp)
 {
 #ifdef at3dcv_andy
@@ -225,7 +272,54 @@ cv::Mat System::TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const doub
 
     return mpTracker->GrabImageRGBD(im, depthmap, timestamp);
 }
+#endif
 
+#ifdef at3dcv_tum
+cv::Mat System::TrackMonocular(const cv::Mat &im, const double &timestamp, std::string timestamp_id, int msg_seq_id)
+{
+    if (mSensor != MONOCULAR)
+    {
+        cerr << "ERROR: you called TrackMonocular but input sensor was not set to Monocular." << endl;
+        exit(-1);
+    }
+
+    // Check mode change
+    {
+        unique_lock<mutex> lock(mMutexMode);
+        if (mbActivateLocalizationMode)
+        {
+            mpLocalMapper->RequestStop();
+
+            // Wait until Local Mapping has effectively stopped
+            while (!mpLocalMapper->isStopped())
+            {
+                usleep(1000);
+            }
+
+            mpTracker->InformOnlyTracking(true);
+            mbActivateLocalizationMode = false;
+        }
+        if (mbDeactivateLocalizationMode)
+        {
+            mpTracker->InformOnlyTracking(false);
+            mpLocalMapper->Release();
+            mbDeactivateLocalizationMode = false;
+        }
+    }
+
+    // Check reset
+    {
+        unique_lock<mutex> lock(mMutexReset);
+        if (mbReset)
+        {
+            mpTracker->Reset();
+            mbReset = false;
+        }
+    }
+
+    return mpTracker->GrabImageMonocular(im, timestamp, timestamp_id, msg_seq_id);
+}
+#else
 cv::Mat System::TrackMonocular(const cv::Mat &im, const double &timestamp, int msg_seq_id)
 {
     if (mSensor != MONOCULAR)
@@ -270,6 +364,7 @@ cv::Mat System::TrackMonocular(const cv::Mat &im, const double &timestamp, int m
 
     return mpTracker->GrabImageMonocular(im, timestamp, msg_seq_id);
 }
+#endif
 
 void System::ActivateLocalizationMode()
 {
