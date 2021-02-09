@@ -284,7 +284,7 @@ void FrameDrawer::Update(Tracking *pTracker)
     mbOnlyTracking = pTracker->mbOnlyTracking;
 
     // AC: consider static/dynamic keys
-    mvKeysStatic = vector<bool>(N, false);
+    mvKeysStatic = vector<bool>(N, true);
 #ifdef at3dcv_show_not_matched_dyn_kpts
     if (whether_dynamic_object)
         mvKeysStatic = pTracker->mCurrentFrame.KeysStatic;
