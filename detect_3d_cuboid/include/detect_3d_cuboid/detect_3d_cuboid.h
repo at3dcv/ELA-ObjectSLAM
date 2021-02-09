@@ -71,13 +71,17 @@ class detect_3d_cuboid
 
       // object detector needs image, camera pose, and 2D bounding boxes(n*5, each row: xywh+prob)  long edges: n*4.  all number start from 0
       void detect_cuboid(const cv::Mat &rgb_img, const Eigen::Matrix4d &transToWolrd, const Eigen::MatrixXd &obj_bbox_coors, Eigen::MatrixXd edges,
-                         std::vector<ObjectSet> &all_object_cuboids, std::vector<std::string> mrcnn_obj_class);
+                        std::vector<ObjectSet> &all_object_cuboids);
 
       // LL: Overloaded the function call to make use of the object classes, masks and etc.
       // object detector needs image, camera pose, and 2D bounding boxes(n*5, each row: xywh+prob)  long edges: n*4.  all number start from 0
+      #ifdef at3dcv_size 
+      #ifdef at3dcv_mask
       void detect_cuboid(const cv::Mat &rgb_img, const Eigen::Matrix4d &transToWolrd, const Eigen::MatrixXd &obj_bbox_coors, Eigen::MatrixXd edges,
-                        std::vector<ObjectSet> &all_object_cuboids);
-
+                        std::vector<ObjectSet> &all_object_cuboids, std::vector<Eigen::Matrix2Xd> read_inst_segment_vert , std::vector<std::string> yolo_obj_class, std::string frame_number, cv::Mat depth_map);
+      #endif
+      #endif
+      
       bool whether_plot_detail_images = false;
       bool whether_plot_final_images = false;
       bool whether_save_final_images = false;

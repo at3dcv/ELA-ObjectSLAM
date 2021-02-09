@@ -69,7 +69,7 @@ void detect_3d_cuboid::set_cam_pose(const Matrix4d &transToWolrd)
 #ifdef at3dcv_size
 // LL: Added by Leander: Overloaded function by adding `read_inst_segment_vert` and `mrcnn_obj_class`
 void detect_3d_cuboid::detect_cuboid(const cv::Mat &rgb_img, const Matrix4d &transToWolrd, const MatrixXd &obj_bbox_coors, MatrixXd all_lines_raw, 
-									std::vector<ObjectSet> &all_object_cuboids, std::vector<std::string> mrcnn_obj_class)
+									std::vector<ObjectSet> &all_object_cuboids, std::vector<Eigen::Matrix2Xd> read_inst_segment_vert, std::vector<std::string> mrcnn_obj_class, std::string frame_number, cv::Mat depth_map)
 {
 	/* Args:
 	* 		rgb_img: Raw RGB image
@@ -82,7 +82,8 @@ void detect_3d_cuboid::detect_cuboid(const cv::Mat &rgb_img, const Matrix4d &tra
 	*		mrcnn_obj_class: The class names of the detected objects in the current frame 
 	*/
 
-	#ifdef at3dcv_no_depth
+	#ifdef at3dcv_mask
+	#ifdef at3dcv_size
 	// LL: Added by Leander: Ensure both vectors (vertices and cuboids) have the same length (same number of objects).
 	if ((int)all_object_cuboids.size() != (int)read_inst_segment_vert.size() && (int)mrcnn_obj_class.size() != (int)read_inst_segment_vert.size())
 	{
@@ -91,6 +92,7 @@ void detect_3d_cuboid::detect_cuboid(const cv::Mat &rgb_img, const Matrix4d &tra
 		ROS_DEBUG_STREAM("box_proposal_detail: mrcnn_obj_class.size" << (int)mrcnn_obj_class.size() );
 		ROS_ERROR_STREAM("The number of cuboids, instance segmentation masks and class names does not match");
 	}
+	#endif
 	#endif 
 
 	// LL: Calibrate the camera using the provided transformation matrix for camera to world trans.
@@ -714,9 +716,8 @@ void detect_3d_cuboid::detect_cuboid(const cv::Mat &rgb_img, const Matrix4d &tra
 			eigen_2d_cub_surfaces_to_boost_poly_surfaces(eigen_2d_surfaces, boost_poly_surfaces);
 
 			// ###### Convex hull of instance segmentation mask to boost polygon
-			// LL: Switch x and y axis
 			Eigen::MatrixXi inst_segment_vert_mat(2, read_inst_segment_vert[object_id].cols());
-			inst_segment_vert_mat << read_inst_segment_vert[object_id].row(1).cast<int>(), read_inst_segment_vert[object_id].row(0).cast<int>();
+			inst_segment_vert_mat = read_inst_segment_vert[object_id].cast<int>();
 
 
 			std::vector<Eigen::MatrixXi> inst_segment_vert_vec;
@@ -761,7 +762,7 @@ void detect_3d_cuboid::detect_cuboid(const cv::Mat &rgb_img, const Matrix4d &tra
 			// LL: Convex hull of instance segmentation mask
 			// LL: Switch x and y axis
 			Eigen::MatrixXd cv_hull_depth(2, read_inst_segment_vert[object_id].cols());
-			cv_hull_depth << read_inst_segment_vert[object_id].row(1), read_inst_segment_vert[object_id].row(0);
+			cv_hull_depth = read_inst_segment_vert[object_id];
 
 			// LL: Convert to 3D and add the depth information and fill z row with onces
 			cv_hull_depth.conservativeResize(3, Eigen::NoChange);
@@ -862,8 +863,7 @@ void detect_3d_cuboid::detect_cuboid(const cv::Mat &rgb_img, const Matrix4d &tra
 }
 #endif
 
-void detect_3d_cuboid::detect_cuboid(const cv::Mat &rgb_img, const Matrix4d &transToWolrd, const MatrixXd &obj_bbox_coors,
-									 MatrixXd all_lines_raw, std::vector<ObjectSet> &all_object_cuboids)
+void detect_3d_cuboid::detect_cuboid(const cv::Mat &rgb_img, const Matrix4d &transToWolrd, const MatrixXd &obj_bbox_coors, MatrixXd all_lines_raw, std::vector<ObjectSet> &all_object_cuboids)
 {
 	std::cout << "detect_3d_cuboid::detect_cuboid" << std::endl;
 	// LL: Given the transformation matrix camera to world calibrate the camera

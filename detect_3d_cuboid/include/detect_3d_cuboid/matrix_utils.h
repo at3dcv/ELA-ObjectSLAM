@@ -7,6 +7,14 @@
 // LL: Added config header to pass macro that switches Leander's code off and on
 #include "At3dcv_config.h"
 
+// LL: Needed for calculating the overlap between the 2D cuboid proposels and the segmentation masks
+#ifdef at3dcv_mask
+#include <boost/geometry.hpp>
+#include <boost/geometry/io/io.hpp>
+#include <boost/geometry/algorithms/area.hpp>
+#include <boost/geometry/geometries/point_xy.hpp>
+#include <boost/geometry/geometries/polygon.hpp>
+#endif
 template <class T>
 Eigen::Quaternion<T> zyx_euler_to_quat(const T &roll, const T &pitch, const T &yaw);
 
@@ -45,6 +53,25 @@ void fast_RemoveRow(Eigen::MatrixXd &matrix, int rowToRemove, int &total_line_nu
 // make sure column size is given. not check here. row will be adjusted automatically. if more cols given, will be zero.
 template <class T>
 bool read_all_number_txt(const std::string txt_file_name, Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> &read_number_mat);
+
+#ifdef at3dcv_mask
+// LL: Function for reading the segmentation masks
+bool read_inst_segment_vertices(const std::string txt_file_name, std::vector<Eigen::Matrix2Xd> &read_number_mat);
+# ifdef at3dcv_no_depth
+typedef boost::geometry::model::polygon<boost::geometry::model::d2::point_xy<double>> polygon;
+typedef boost::geometry::model::d2::point_xy<double> point_type;
+
+void poly_eigen_to_string_rep(Eigen::MatrixXi convex_hull_vertices, std::string &poly_string_rep);
+void poly_vec_eigen_to_string_rep(std::vector<Eigen::MatrixXi> raw_all_obj2d_ss_vertix, std::vector<std::string> &geometries);
+int poly_string_to_boost_poly(std::string poly_txt_rep, polygon &poly);
+double perc_poly2_covered_by_poly1(polygon poly1, polygon poly2);
+int visualize_polygons(std::string file_name, std::vector<polygon> polygons);
+
+void sort_2d_cuboid_vertices(double vp_1_position, Eigen::Matrix2Xi all_configs_error_one_objH_int, Eigen::MatrixXi &cub_prop_2di);
+void cuboid_2d_vertices_to_2d_surfaces(Eigen::Matrix2Xi cub_prop_2d, std::vector<Eigen::MatrixXi> &eigen_2d_surfaces);
+void eigen_2d_cub_surfaces_to_boost_poly_surfaces(std::vector<Eigen::MatrixXi> eigen_2d_surfaces, std::vector<polygon> &boost_poly_surfaces);
+# endif
+#endif
 
 // each line: one string, several numbers. make sure column size is correct.
 bool read_obj_detection_txt(const std::string txt_file_name, Eigen::MatrixXd &read_number_mat, std::vector<std::string> &strings);
