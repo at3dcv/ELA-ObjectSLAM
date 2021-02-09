@@ -2099,14 +2099,16 @@ void Tracking::CreateNewKeyFrame()
 	mCurrentFrame.mpReferenceKF = pKF;
 
 	//EC: insert Key Frame into point cloud viewer
-
+	int rows = mCurrentFrame.mpReferenceKF->raw_rgb.rows;
+	int cols = mCurrentFrame.mpReferenceKF->raw_rgb.cols;
+	
 	cv::Mat mImS_C;
-	mImS_C = pKF->raw_rgb.clone();
+	mImS_C = mCurrentFrame.mpReferenceKF->raw_rgb.clone();
 
 	cv::Mat mImS = cv::Mat::zeros(cv::Size(rows,cols), CV_64FC1); 
-	//ROS_ERROR_STREAM("lalalal " << mCurrentFrame.mpReferenceKF->raw_depth.type() );
 
-	//EC: need to scale depth values to cm, they use 50 but it didn't work for me.
+	//EC: need to scale depth values to cm, they use 50 but it didn't work for me
+	// so I set to 1
 	float mDepthMapFactor = 1;
 	mDepthMapFactor = 1.0f/mDepthMapFactor;
 	mCurrentFrame.mpReferenceKF->raw_depth.convertTo(mCurrentFrame.mpReferenceKF->raw_depth,CV_32F,mDepthMapFactor);
