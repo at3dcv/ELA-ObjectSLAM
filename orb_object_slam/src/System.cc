@@ -221,8 +221,12 @@ cv::Mat System::TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const doub
 
     // Check reset
     {
-        cerr << "ERROR: you called TrackRGBD but input sensor was not set to RGBD." << endl;
-        exit(-1);
+        unique_lock<mutex> lock(mMutexReset);
+        if (mbReset)
+        {
+            mpTracker->Reset();
+            mbReset = false;
+        }
     }
 
     return mpTracker->GrabImageRGBD(im, depthmap, timestamp, timestamp_id);
@@ -276,7 +280,7 @@ cv::Mat System::TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const doub
 
     return mpTracker->GrabImageRGBD(im, depthmap, timestamp);
 }
-
+#endif
 #ifdef at3dcv_tum
 cv::Mat System::TrackMonocular(const cv::Mat &im, const double &timestamp, std::string timestamp_id, int msg_seq_id)
 {

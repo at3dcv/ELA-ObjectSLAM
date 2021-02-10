@@ -70,6 +70,7 @@
 
 #include "KeyFrame.h"
 #include "MapPoint.h"
+#include "MapObject.h"
 //The lable of people is 15
 #define PEOPLE_LABLE 3
 // using namespace ORB_SLAM2;

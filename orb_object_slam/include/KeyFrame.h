@@ -249,6 +249,12 @@ public:
 
     bool show_debug = true;
 
+    //EC: normally protected
+   // MapPoints associated to keypoints, NULL pointer if no association. same length as keypoints.
+    // for stereo/RGBD, some close keypoints are direactly associated with map points
+    // for monocular, need to triangulate with old frame
+    std::vector<MapPoint *> mvpMapPoints; // has nothing to do with Frame. mvpMapPoints after copying! private variable!!!! only add by AddMapPoint()
+
     // The following variables need to be accessed trough a mutex to be thread safe.
 protected:
     // SE3 Pose and camera center
@@ -258,10 +264,6 @@ protected:
 
     cv::Mat Cw; // Stereo middel point. Only for visualization
 
-   // MapPoints associated to keypoints, NULL pointer if no association. same length as keypoints.
-    // for stereo/RGBD, some close keypoints are direactly associated with map points
-    // for monocular, need to triangulate with old frame
-    std::vector<MapPoint *> mvpMapPoints; // has nothing to do with Frame. mvpMapPoints after copying! private variable!!!! only add by AddMapPoint()
 
     // BoW
     KeyFrameDatabase *mpKeyFrameDB;

@@ -2354,6 +2354,8 @@ void Tracking::CreateNewKeyFrame()
 
 	//EC: need to scale depth values to cm, they use 50 but it didn't work for me
 	// so I set to 1
+		ROS_WARN_STREAM("mpPointCloudMapping->insertKeyFrame " );
+
 	float mDepthMapFactor = 1;
 	mDepthMapFactor = 1.0f/mDepthMapFactor;
 	mCurrentFrame.mpReferenceKF->raw_depth.convertTo(mCurrentFrame.mpReferenceKF->raw_depth,CV_32F,mDepthMapFactor);
