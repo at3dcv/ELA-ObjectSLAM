@@ -724,12 +724,12 @@ void Frame::FilterOutMovingPoints()
 {
     if(show_debug) std::cout << "Frame::FilterOutMovingPoints" << std::endl;
 
-    #ifdef at3dcv_tum
+#ifdef at3dcv_tum
     std::string frame_index_c = mTimeStamp_id;
-    #else
+#else
     char frame_index_c[256];
     sprintf(frame_index_c, "%04d", (int)mnId); // format into 4 digit
-    #endif
+#endif
     // AC: Read bounding boxes
     Eigen::MatrixXd raw_all_obj2d_bbox(10, 5);
 	std::vector<string> object_classes;
@@ -778,7 +778,10 @@ void Frame::CheckMovingObjects(Eigen::MatrixXd mCurrentBBoxes, std::vector<std::
             {
 #ifdef at3dcv_dyn_kpts_using_segmentation
                 if (show_debug) std::cout << "CheckKeyPointInConvexHull" << std::endl;
-                if(CheckKeyPointInConvexHull((int)T_M[i].x, (int)T_M[i].y, boost_poly_surfaces, i)) continue;
+                if (idx < boost_poly_surfaces.rows())
+                    if(CheckKeyPointInConvexHull((int)T_M[i].x, (int)T_M[i].y, boost_poly_surfaces, i)) continue;
+                else
+                    std::cout << "There are less boost objects than bounding boxes..." << std::endl;
 #endif
                 movingKeypointCounter++;
                 // AC: if two keypoints are in object, it is considered moving
@@ -864,13 +867,15 @@ bool Frame::CheckKeyPointInConvexHull(int kptX, int kptY, std::vector<polygon> &
     std::vector<Eigen::MatrixXi> keypointVector;
     keypointVector.push_back(poly_point);
 
-    // std::vector<polygon> boostKeypoint;
-    // // LL: convert the matrix representations of the point to boost polygons and append them to the end of _boost_poly_surfaces
-    // eigen_2d_cub_surfaces_to_boost_poly_surfaces(keypointVector, boostKeypoint);
+    std::vector<polygon> boostKeypoint;
+    std::cout << "check surface" << std::endl;
+    // LL: convert the matrix representations of the point to boost polygons and append them to the end of _boost_poly_surfaces
+    eigen_2d_cub_surfaces_to_boost_poly_surfaces(keypointVector, boostKeypoint);
+    std::cout << "after check surface" << std::endl;
 
-    // // LL: Calculate how whether keypoint is in surface
-    double percent_covered = 0.0;
-    // percent_covered = perc_poly2_covered_by_poly1(_boost_poly_surfaces[idx], boostKeypoint[0]);
+    // LL: Calculate how whether keypoint is in surface
+    double percent_covered;
+    percent_covered = perc_poly2_covered_by_poly1(_boost_poly_surfaces[idx], boostKeypoint[0]);
 
     if (percent_covered > 0.5)
         return 1;
