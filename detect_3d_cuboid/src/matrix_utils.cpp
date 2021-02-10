@@ -289,7 +289,7 @@ bool read_inst_segment_vertices(const std::string txt_file_name, std::vector<Eig
         row_counter += 2;
     
         // LL: Reduce the number of columns from a hundred to the actual number
-        single_object_is_vertices.conservativeResize(3,colu);
+        single_object_is_vertices.conservativeResize(2,colu);
         // LL: Push the vertices matrix of the current object to the vector containing the info. on all the objects in the frame.
         read_inst_segment_vert.push_back(single_object_is_vertices);
     }
