@@ -58,6 +58,10 @@ KeyFrame::KeyFrame(Frame &F, Map *pMap, KeyFrameDatabase *pKFDB) : mnFrameId(F.m
 {
     mnId = nNextId++;
 
+    #ifdef at3dcv_tum
+    mTimeStamp_id = F.mTimeStamp_id;
+    #endif
+
     mGrid.resize(mnGridCols);
     for (int i = 0; i < mnGridCols; i++)
     {
@@ -68,6 +72,7 @@ KeyFrame::KeyFrame(Frame &F, Map *pMap, KeyFrameDatabase *pKFDB) : mnFrameId(F.m
 
     SetPose(F.mTcw);
 
+    // AC: cache img, depth, rgb image
     if (whether_detect_object)
     {
         raw_img = F.raw_img.clone();

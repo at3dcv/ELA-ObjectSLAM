@@ -1023,9 +1023,24 @@ void Optimizer::LocalBACameraPointObjects(KeyFrame *pKF, bool *pbStopFlag, Map *
 
 #ifdef ObjectFixScale
         if (scene_unique_id == kitti)
+        {
+            // LL: Use the corresponding object class scale instead of the default "car" scale
+        #ifndef at3dcv_size
             vObject->fixedscale = Eigen::Vector3d(1.9420, 0.8143, 0.7631);
+        #else
+            vObject->fixedscale = pMObject->mrcnn_map_obj_scale;
+        #endif
+
+        }
         else
+        {
+            // LL: Use the corresponding object class scale
+            #ifndef at3dcv_size
+            vObject->fixedscale = pMObject->mrcnn_map_obj_scale;
+            #else
             ROS_ERROR_STREAM("Please see cuboid scale!!!, otherwise use VertexCuboid()");
+            #endif
+        }
 
         // set the roll=M_PI/2, pitch=0, yaw., later did this in tracking.
         // initialize object absolute height?  or set based on camera height?
@@ -1280,7 +1295,13 @@ void Optimizer::LocalBACameraPointObjects(KeyFrame *pKF, bool *pbStopFlag, Map *
                     if (scene_unique_id == kitti)
                     {
                         e->max_outside_margin_ratio = 2;
-                        e->prior_object_half_size = Eigen::Vector3d(1.9420, 0.8143, 0.7631);
+
+                        // LL: Use the corresponding object class scale instead of the default "car" scale
+                        #ifndef at3dcv_size
+                            e->prior_object_half_size = Eigen::Vector3d(1.9420, 0.8143, 0.7631);
+                        #else
+                            e->prior_object_half_size = pMO->mrcnn_map_obj_scale;
+                        #endif
                     }
                     optimizer.addEdge(e);
                 }
@@ -1753,7 +1774,10 @@ void Optimizer::LocalBACameraPointObjectsDynamic(KeyFrame *pKF, bool *pbStopFlag
 
     // Set MapObject vertices
     long int maxObjectid = 0;
-    Eigen::Vector3d objfixscale = Eigen::Vector3d(1.9420, 0.8143, 0.7631);
+    
+    // LL: Removed by Leander
+    // Fixed scale was set here. Pushed it down in to the loop
+    // LL: Removed by Leander
     long int maxIdTillObject = ++maxKFid;
     for (vector<MapObject *>::iterator lit = lLocalMapObjects.begin(), lend = lLocalMapObjects.end(); lit != lend; lit++)
     {
@@ -1785,9 +1809,23 @@ void Optimizer::LocalBACameraPointObjectsDynamic(KeyFrame *pKF, bool *pbStopFlag
 
 #ifdef ObjectFixScale
             if (scene_unique_id == kitti)
-                vObject->fixedscale = Eigen::Vector3d(1.9420, 0.8143, 0.7631); // for kitti object, scale may don't need to set...
+            {
+                // LL: Use the corresponding object class scale instead of the default "car" scale
+            #ifndef at3dcv_size
+                vObject->fixedscale = Eigen::Vector3d(1.9420, 0.8143, 0.7631);
+            #else
+                vObject->fixedscale = pMObject->mrcnn_map_obj_scale;
+            #endif
+            }
             else
+            {
+                // LL: Use the corresponding object class scale
+                #ifndef at3dcv_size
+                vObject->fixedscale = pMObject->mrcnn_map_obj_scale;
+                #else
                 ROS_ERROR_STREAM("Please see cuboid scale!!!, otherwise use VertexCuboid()");
+                #endif
+            }
 
             if (scene_unique_id == kitti)
             {
@@ -1981,6 +2019,13 @@ void Optimizer::LocalBACameraPointObjectsDynamic(KeyFrame *pKF, bool *pbStopFlag
             Eigen::Matrix3d info;
             info.setIdentity();
             e2->setInformation(info * 10);
+            
+            // LL: Use the corresponding object class scale instead of the default "car" scale
+            #ifndef at3dcv_size
+                Eigen::Vector3d objfixscale = Eigen::Vector3d(1.9420, 0.8143, 0.7631);
+            #else
+                Eigen::Vector3d objfixscale = belongedobj->mrcnn_map_obj_scale;
+            #endif
             e2->objectscale = objfixscale;
             e2->max_outside_margin_ratio = 2;
             optimizer.addEdge(e2);
@@ -2163,7 +2208,12 @@ void Optimizer::LocalBACameraPointObjectsDynamic(KeyFrame *pKF, bool *pbStopFlag
                     if (scene_unique_id == kitti)
                     {
                         e->max_outside_margin_ratio = 2;
-                        e->prior_object_half_size = Eigen::Vector3d(1.9420, 0.8143, 0.7631);
+                        // LL: Use the corresponding object class scale instead of the default "car" scale
+                        #ifndef at3dcv_size
+                            e->prior_object_half_size = Eigen::Vector3d(1.9420, 0.8143, 0.7631);
+                        #else
+                            e->prior_object_half_size = pMO->mrcnn_map_obj_scale;
+                        #endif
                     }
                     optimizer.addEdge(e);
                 }

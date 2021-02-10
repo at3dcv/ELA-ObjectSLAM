@@ -30,6 +30,9 @@
 #include <Eigen/Geometry>
 #include <opencv2/opencv.hpp>
 
+// LL: Added config header to pass macro that switches Leander's code off and on
+#include "At3dcv_config.h"
+
 namespace ORB_SLAM2
 {
 
@@ -169,6 +172,12 @@ public:
     long unsigned int mnId;            // key frame id
     const long unsigned int mnFrameId; // frame id in all images
 
+    // LL: Timestamp based frame ID    
+    #ifdef at3dcv_tum
+    std::string mTimeStamp_id;
+    #endif
+
+    // LL: Frame timestamp.
     const double mTimeStamp;
 
     int record_txtrow_id = -1; //final save to txt row id.
@@ -240,7 +249,6 @@ public:
 
     bool show_debug = true;
 
-    
     // The following variables need to be accessed trough a mutex to be thread safe.
 protected:
     // SE3 Pose and camera center

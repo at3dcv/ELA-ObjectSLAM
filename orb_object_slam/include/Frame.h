@@ -31,6 +31,9 @@
 // AC: custom class
 #include "ObjDetectionHelper.h"
 
+// LL: Added config header to pass macro that switches Leander's code off and on
+#include "At3dcv_config.h"
+
 namespace ORB_SLAM2
 {
 #define FRAME_GRID_ROWS 48
@@ -48,17 +51,26 @@ public:
     // Copy constructor.
     Frame(const Frame &frame);
 
-    // Constructor for stereo cameras. extract keypoints, descriptors
-    Frame(const cv::Mat &imLeft, const cv::Mat &imRight, const double &timeStamp, ORBextractor *extractorLeft, ORBextractor *extractorRight, ORBVocabulary *voc,
+    // LL: Adding the function argument timeStamp_id for the unix time stamp identifier to the mono and RGB-D constructor
+    #ifdef at3dcv_tum
+    // Constructor for RGB-D cameras. extract keypoints, descriptors
+    Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeStamp, std::string timeStamp_id, ORBextractor *extractor, ORBVocabulary *voc,
           cv::Mat &K, cv::Mat &distCoef, const float &bf, const float &thDepth);
-
+    // Constructor for Monocular cameras. extract keypoints, descriptors
+    Frame(const cv::Mat &imGray, const double &timeStamp, std::string timeStamp_id, ORBextractor *extractor, ORBVocabulary *voc, cv::Mat &K, cv::Mat &distCoef,
+      const float &bf, const float &thDepth);
+    #else
     // Constructor for RGB-D cameras. extract keypoints, descriptors
     Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeStamp, ORBextractor *extractor, ORBVocabulary *voc,
           cv::Mat &K, cv::Mat &distCoef, const float &bf, const float &thDepth);
-
     // Constructor for Monocular cameras. extract keypoints, descriptors
     Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor *extractor, ORBVocabulary *voc, cv::Mat &K, cv::Mat &distCoef,
           const float &bf, const float &thDepth);
+    #endif
+
+    // Constructor for stereo cameras. extract keypoints, descriptors
+    Frame(const cv::Mat &imLeft, const cv::Mat &imRight, const double &timeStamp, ORBextractor *extractorLeft, ORBextractor *extractorRight, ORBVocabulary *voc,
+          cv::Mat &K, cv::Mat &distCoef, const float &bf, const float &thDepth);
 
     // Extract ORB on the image. 0 for left image and 1 for right image.
     void ExtractORB(int flag, const cv::Mat &im);
@@ -118,7 +130,8 @@ public:
     ObjDetectionHelper mCurrentObjDetection;
     std::vector<vector<float > > mCurrentBBoxes;
 
-    void CheckMovingKeyPoints(Eigen::MatrixXd mCurrentBBoxes, std::vector<std::string> classes);
+    void CheckMovingObjects(Eigen::MatrixXd mCurrentBBoxes, std::vector<std::string> classes);
+    std::vector<bool> objectsAreMoving;
 
 public:
     // by me, detect_3d_cuboid needs raw image
@@ -148,6 +161,11 @@ public:
 
     // Feature extractor. The right is used only in the stereo case.
     ORBextractor *mpORBextractorLeft, *mpORBextractorRight;
+
+    // LL: Timestamp based frame ID
+    #ifdef at3dcv_tum
+    std::string mTimeStamp_id;
+    #endif
 
     // Frame timestamp.
     double mTimeStamp;

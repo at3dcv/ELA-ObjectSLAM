@@ -363,6 +363,62 @@ cv::Mat Tracking::GrabImageStereo(const cv::Mat &imRectLeft, const cv::Mat &imRe
 	return mCurrentFrame.mTcw.clone();
 }
 
+#ifdef at3dcv_tum
+cv::Mat Tracking::GrabImageRGBD(const cv::Mat &imRGB, const cv::Mat &imD, const double &timestamp, std::string timestamp_id)
+{
+	std::cout << "Tracking::GrabImageRGBD" << std::endl;
+	mImGray = imRGB;
+	cv::Mat imDepth = imD;
+
+	if (mImGray.channels() == 3)
+	{
+		if (mbRGB)
+			cvtColor(mImGray, mImGray, CV_RGB2GRAY);
+		else
+			cvtColor(mImGray, mImGray, CV_BGR2GRAY);
+	}
+	else if (mImGray.channels() == 4)
+	{
+		if (mbRGB)
+			cvtColor(mImGray, mImGray, CV_RGBA2GRAY);
+		else
+			cvtColor(mImGray, mImGray, CV_BGRA2GRAY);
+	}
+
+	// AC: cv::Mat type 5 corresponds to CV_32F
+	// https://stackoverflow.com/questions/10167534/how-to-find-out-what-type-of-a-mat-object-is-with-mattype-in-opencv
+	// AC: TODO: if change to RGBD init uncomment this: mDepthMapFactor != 1 || 
+	if (imDepth.type() != 5) // imDepth.type() != CV_32F || 
+	{
+		ROS_DEBUG_STREAM("Depth map is converted");
+		imDepth.convertTo(imDepth, CV_32F, mDepthMapFactor);
+	}	
+	// AC: comment out depth frame!
+#ifdef at3dcv_andy
+	mCurrentFrame = Frame(mImGray, timestamp, timestamp_id, mpORBextractorLeft, mpORBVocabulary, mK, mDistCoef, mbf, mThDepth); // create new frames.
+#else
+	mCurrentFrame = Frame(mImGray, imDepth, timestamp, timestamp_id, mpORBextractorLeft, mpORBVocabulary, mK, mDistCoef, mbf, mThDepth);
+#endif
+
+
+	if (whether_detect_object)
+	{
+		mCurrentFrame.raw_img = mImGray;
+		mCurrentFrame.raw_depth = imDepth;
+		mCurrentFrame.raw_rgb = imRGB;
+	}
+
+	if (mCurrentFrame.mnId == 0)
+	{
+		mpMap->img_height = mImGray.rows;
+		mpMap->img_width = mImGray.cols;
+	}
+
+	Track();
+
+	return mCurrentFrame.mTcw.clone();
+}
+#else
 cv::Mat Tracking::GrabImageRGBD(const cv::Mat &imRGB, const cv::Mat &imD, const double &timestamp)
 {
 	std::cout << "Tracking::GrabImageRGBD" << std::endl;
@@ -416,7 +472,87 @@ cv::Mat Tracking::GrabImageRGBD(const cv::Mat &imRGB, const cv::Mat &imD, const 
 
 	return mCurrentFrame.mTcw.clone();
 }
+#endif
 
+#ifdef at3dcv_tum
+cv::Mat Tracking::GrabImageMonocular(const cv::Mat &im, const double &timestamp, std::string timestamp_id, int msg_seq_id)
+{
+	mImGray = im;
+
+	if (mImGray.channels() == 3)
+	{
+		if (mbRGB)
+			cvtColor(mImGray, mImGray, CV_RGB2GRAY);
+		else
+			cvtColor(mImGray, mImGray, CV_BGR2GRAY);
+	}
+	else if (mImGray.channels() == 4)
+	{
+		if (mbRGB)
+			cvtColor(mImGray, mImGray, CV_RGBA2GRAY);
+		else
+			cvtColor(mImGray, mImGray, CV_BGRA2GRAY);
+	}
+
+	// create frame and detect features!
+	if (mState == NOT_INITIALIZED || mState == NO_IMAGES_YET)
+	{
+		if ((!mono_firstframe_truth_depth_init) || (mCurrentFrame.mnId > 0))
+		{
+			mCurrentFrame = Frame(mImGray, timestamp, timestamp_id, mpIniORBextractor, mpORBVocabulary, mK, mDistCoef, mbf, mThDepth);
+		}
+		else
+		{ // read (truth) depth /stereo image for first frame
+			// not good to read first frame's predicted depth by object. quite inaccurate.
+			// orb slam will create left/right coordinates based on that, and will be used for optimizer.
+			std::string right_kitti_img_file = base_data_folder + "/000000_right.png";
+			cv::Mat right_stereo_img = cv::imread(right_kitti_img_file, 0);
+			if (!right_stereo_img.data)
+				ROS_ERROR_STREAM("Cannot read first stereo file  " << right_kitti_img_file);
+			else
+				ROS_WARN_STREAM("Read first right stereo size  " << right_stereo_img.rows);
+			std::cout << "Read first right depth size  " << right_stereo_img.rows << "  baseline  " << mbf << std::endl;
+			mCurrentFrame = Frame(mImGray, right_stereo_img, timestamp, mpORBextractorLeft, mpORBextractorRight, mpORBVocabulary, mK, mDistCoef, mbf, mThDepth);
+			// LL: I did not overload the stero constructor (added a function argument for the timestamp id), therefore set mTimeStamp_id afterwards
+			#ifdef at3dcv_tum
+			mCurrentFrame.mTimeStamp_id = timestamp_id;
+			#endif
+		}
+	}
+	else
+	{
+		mCurrentFrame = Frame(mImGray, timestamp, timestamp_id, mpORBextractorLeft, mpORBVocabulary, mK, mDistCoef, mbf, mThDepth); // create new frames.
+	}
+
+	if (mCurrentFrame.mnId == 0)
+		start_msg_seq_id = msg_seq_id;
+	// if read offline txts, frame id must match!!!
+	if (all_offline_object_cubes.size() > 0)
+	{
+		if ((mCurrentFrame.mnId > 0) && (msg_seq_id > 0))					// if msg_seq_id=0 may because the value is not set.
+			if (int(mCurrentFrame.mnId) != (msg_seq_id - start_msg_seq_id)) // can use frame->IdinRawImages = msg_seq_id-start_msg_seq_id  need to change lots of stuff.
+			{
+				ROS_ERROR_STREAM("Different frame ID, might due to lost frame from bag.   " << mCurrentFrame.mnId << "  " << msg_seq_id - start_msg_seq_id);
+				exit(0);
+			}
+	}
+
+	if (mCurrentFrame.mnId == 0)
+	{
+		mpMap->img_height = mImGray.rows;
+		mpMap->img_width = mImGray.cols;
+	}
+
+	if (whether_detect_object)
+	{
+		mCurrentFrame.raw_img = mImGray; // I clone in Keyframe.cc  don't need to clone here.
+	}
+
+	Track(); // main code here
+
+	return mCurrentFrame.mTcw.clone();
+}
+#else
 cv::Mat Tracking::GrabImageMonocular(const cv::Mat &im, const double &timestamp, int msg_seq_id)
 {
 	mImGray = im;
@@ -490,6 +626,7 @@ cv::Mat Tracking::GrabImageMonocular(const cv::Mat &im, const double &timestamp,
 
 	return mCurrentFrame.mTcw.clone();
 }
+#endif
 
 void Tracking::Track()
 {
@@ -1563,10 +1700,15 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 	std::vector<Vector4d> all_obj2d_bbox;
 	std::vector<double> all_box_confidence;
 	vector<int> truth_tracklet_ids;
+	// AC: show dynamic objects in mapdrawer
+#ifdef at3dcv_dyn_obj_mapdrawer
+	std::vector<bool> good_moving_objects;
+#endif
 
 	// LL: Added by Leander
 	// LL: Making the object class accessable outside the if/else case
-	#ifdef at3dcv_tum_rgbd
+	#ifdef at3dcv_tum || at3dcv_mask
+	std::string frame_index_c;
 	std::vector<string> object_classes_clean;
 	#endif
 	// LL: Added by Leander
@@ -1575,7 +1717,7 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 	// LL: - Offline: We used ReadAllObjecttxt of the file Tracking_util.cc to read all the all object proposels and saved them to all_offline_object_cubes
 	// LL: - Offline: We the information of all_offline_object_cubes line by line an use it to initalizen new cuboid instances and in addition ad the relevant info to all_obj2d_bbox
 	// LL: - Offline: The new cuboid instances are then pushed to all_obj_cubes
-	// LL: - Online: Given the path to the folder (data_yolo_obj_dir) uses the read_obj_detection_txt function of matrix_util.cc to write all the detections to raw_all_obj2d_bbox
+	// LL: - Online: Given the path to the folder (data_mrcnn_obj_dir) uses the read_obj_detection_txt function of matrix_util.cc to write all the detections to raw_all_obj2d_bbox
 	// LL: - Online: Filtering out all boxes to close to the images boundaries saving the filterd bunch to all_obj2d_bbox_infov_mat and all_obj2d_bbox
 	// LL: - Online: all_obj2d_bbox_infov_mat is then in turn passed to the detect_cuboid function of the detect_3d_cuboid class from the box_proposal_detail.cc
 	// LL: - Online: The detect_cuboid function then writes the object cuboids the all_obj_cubes vector that was passed to the function.
@@ -1596,6 +1738,12 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 			raw_cuboid->pos = pred_frame_objects.row(i).head(3);
 			raw_cuboid->rotY = pred_frame_objects(i, 3);
 			raw_cuboid->scale = Vector3d(pred_frame_objects(i, 4), pred_frame_objects(i, 5), pred_frame_objects(i, 6));
+			
+			// LL: If no class names are provided, set mrcnn_obj_scale to 3 (car)
+			#ifdef at3dcv_size
+				raw_cuboid->mrcnn_obj_scale = raw_cuboid->obj_class_scales["3"];
+			#endif
+			
 			raw_cuboid->rect_detect_2d = pred_frame_objects.row(i).segment<4>(7);
 			raw_cuboid->box_config_type = Vector2d(1, 1); // randomly given unless provided. for latter visualization
 			all_obj2d_bbox.push_back(raw_cuboid->rect_detect_2d);
@@ -1610,19 +1758,37 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 	else
 	{
 		std::string data_edge_data_dir = base_data_folder + "/edge_detection/LSD/";
-		std::string data_yolo_obj_dir = base_data_folder + "/mats/filter_match_2d_boxes_txts/";
+		std::string data_mrcnn_obj_dir = base_data_folder + "/mats/filter_match_2d_boxes_txts/";
+		
+		#ifdef at3dcv_tum
+		frame_index_c = pKF->mTimeStamp_id;
+		#else
 		char frame_index_c[256];
 		sprintf(frame_index_c, "%04d", (int)pKF->mnFrameId); // format into 4 digit
+		#endif
 
 		// read detected edges
 		Eigen::MatrixXd all_lines_raw(100, 4); // 100 is some large frame number,   the txt edge index start from 0
-		read_all_number_txt(data_edge_data_dir + frame_index_c + "_edge.txt", all_lines_raw);
+		if(!read_all_number_txt(data_edge_data_dir + frame_index_c + "_edge.txt", all_lines_raw))
+		{
+			ROS_ERROR_STREAM("Cannot read edge txt  " << data_edge_data_dir + frame_index_c + "_edge.txt");
+			std::ofstream outfile (data_edge_data_dir + frame_index_c + "_edge.txt");
+			outfile.close();
+			read_all_number_txt(data_edge_data_dir + frame_index_c + "_edge.txt", all_lines_raw);
+			ROS_ERROR_STREAM("Create file  " << data_mrcnn_obj_dir + frame_index_c + "_edge.txt");
+		}
 
 		// read yolo object detection
 		Eigen::MatrixXd raw_all_obj2d_bbox(10, 5);
 		std::vector<string> object_classes;
-		if (!read_obj_detection_txt(data_yolo_obj_dir + frame_index_c + "_mrcnn.txt", raw_all_obj2d_bbox, object_classes))
-			ROS_ERROR_STREAM("Cannot read yolo txt  " << data_yolo_obj_dir + frame_index_c + "_mrcnn.txt");
+		if (!read_obj_detection_txt(data_mrcnn_obj_dir + frame_index_c + "_mrcnn.txt", raw_all_obj2d_bbox, object_classes))
+		{
+			ROS_ERROR_STREAM("Cannot read yolo txt  " << data_mrcnn_obj_dir + frame_index_c + "_mrcnn.txt");
+			std::ofstream outfile (data_mrcnn_obj_dir + frame_index_c + "_mrcnn.txt");
+			outfile.close();
+			read_obj_detection_txt(data_mrcnn_obj_dir + frame_index_c + "_mrcnn.txt",raw_all_obj2d_bbox, object_classes);
+			ROS_ERROR_STREAM("Created file  " << data_mrcnn_obj_dir + frame_index_c + "_mrcnn.txt");
+		}
 
 		// remove some 2d boxes too close to boundary.
 		int boundary_threshold = 20;
@@ -1632,18 +1798,55 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 			if ((raw_all_obj2d_bbox(i, 0) > boundary_threshold) && (raw_all_obj2d_bbox(i, 0) + raw_all_obj2d_bbox(i, 2) < img_width - boundary_threshold))
 				good_object_ids.push_back(i);
 		Eigen::MatrixXd all_obj2d_bbox_infov_mat(good_object_ids.size(), 5);
+		// AC: save all selected bboxes
+		if (show_debug) std::cout << "Sizes of objects in Tracking/Frame " << raw_all_obj2d_bbox.rows() << "|" << mCurrentFrame.objectsAreMoving.size() << "|" << good_object_ids.size() << std::endl;
 		for (size_t i = 0; i < good_object_ids.size(); i++)
 		{
+#ifdef at3dcv_dyn_obj_mapdrawer
+			if (std::stoi(object_classes[i]) == 1 && mCurrentFrame.objectsAreMoving[good_object_ids[i]])
+				if (show_debug) std::cout << "Moving people considered!!!" << std::endl;
+			// AC: take moving objects into account
+			good_moving_objects.push_back(mCurrentFrame.objectsAreMoving[good_object_ids[i]]);
+#endif
 			all_obj2d_bbox_infov_mat.row(i) = raw_all_obj2d_bbox.row(good_object_ids[i]);
 			all_obj2d_bbox.push_back(raw_all_obj2d_bbox.row(good_object_ids[i]));
 			all_box_confidence.push_back(1); //TODO change here.
-		// LL: Added by Leander
 		// LL: Filtering the object classes in the same manor as the bb's are filtered
-		#ifdef at3dcv_tum_rgbd
-			object_classes_clean.push_back(object_classes[good_object_ids[i]]);
+		#ifdef at3dcv_tum
+			if(good_object_ids[i] < object_classes.size())
+				object_classes_clean.push_back(object_classes[good_object_ids[i]]);
 		#endif
-		// LL: Added by Leander
 		}
+
+
+		#ifdef at3dcv_mask
+				// LL: Added by Leander - read detected cuboids vertices
+				std::string data_inst_seg_vertices_dir = base_data_folder + "/mats/instance_segmentation_vertices/";
+				std::vector<Eigen::Matrix2Xd> raw_read_inst_segment_vert;
+				if (!read_inst_segment_vertices(data_inst_seg_vertices_dir + frame_index_c + "_ch.txt", raw_read_inst_segment_vert))
+				{	
+					ROS_ERROR_STREAM("Cannot read mask txt  " << data_inst_seg_vertices_dir + frame_index_c + "_ch.txt");
+					std::ofstream outfile (data_inst_seg_vertices_dir + frame_index_c + "_ch.txt");
+					outfile.close();
+					read_inst_segment_vertices(data_inst_seg_vertices_dir + frame_index_c + "_ch.txt",raw_read_inst_segment_vert);
+					ROS_ERROR_STREAM("Created file  " << data_inst_seg_vertices_dir + frame_index_c + "_ch.txt");		
+				}
+				// LL: Add the raw instance segmentation convex hull vertices and class names to the key frame
+				// LL: Flip x and y axis
+				for(int j = 0; j != raw_read_inst_segment_vert.size(); ++j)
+				{
+					Eigen::MatrixXd raw_read_inst_segment_vert_x_y_fliped(raw_read_inst_segment_vert[j].rows(), raw_read_inst_segment_vert[j].cols());
+					raw_read_inst_segment_vert_x_y_fliped << raw_read_inst_segment_vert[j].row(1), raw_read_inst_segment_vert[j].row(0);
+					raw_read_inst_segment_vert[j] = raw_read_inst_segment_vert_x_y_fliped;
+					}
+
+				// LL: Added by Leander: Filter the raw_read_inst_segment_vert and read_inst_segment_vert
+				std::vector<Eigen::Matrix2Xd> read_inst_segment_vert;
+				for (size_t i = 0; i < good_object_ids.size(); i++)
+				{
+					read_inst_segment_vert.push_back(raw_read_inst_segment_vert[good_object_ids[i]]);
+				}
+		#endif
 
 		cv::Mat frame_pose_to_init = pKF->GetPoseInverse(); // camera to init world
 		cv::Mat frame_pose_to_ground;
@@ -1655,7 +1858,16 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 
 		pop_pose_to_ground = frame_pose_to_ground;
 		Eigen::Matrix4f cam_transToGround = Converter::toMatrix4f(pop_pose_to_ground);
-		detect_cuboid_obj->detect_cuboid(pKF->raw_img, cam_transToGround.cast<double>(), all_obj2d_bbox_infov_mat, all_lines_raw, all_obj_cubes);
+		
+
+		// LL: Added by Leander
+		#ifdef at3dcv_size && at3dcv_mask && at3dcv_tum
+				// LL: Added by Leander: Added `object_classes` and `read_inst_segment_vert` to this function call
+				detect_cuboid_obj->detect_cuboid(pKF->raw_img, cam_transToGround.cast<double>(), all_obj2d_bbox_infov_mat, all_lines_raw, all_obj_cubes, read_inst_segment_vert, object_classes_clean, frame_index_c, pKF->raw_depth);
+		#elif
+				detect_cuboid_obj->detect_cuboid(pKF->raw_img, cam_transToGround.cast<double>(), all_obj2d_bbox_infov_mat, all_lines_raw, all_obj_cubes);		
+		#endif
+
 	}
 
 	// LL: Going through the all_obj_cubes vector holding the object proposels and converting a to a class instance of type MapObject.
@@ -1666,6 +1878,10 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 	g2o::SE3Quat InitToGround_se3 = Converter::toSE3Quat(InitToGround);
 	for (int ii = 0; ii < (int)all_obj_cubes.size(); ii++) // LL: Loop over all cuboids detected in the key frame
 	{
+#ifdef at3dcv_dyn_obj_mapdrawer
+		if (good_moving_objects[ii] && all_obj_cubes[ii].size() == 0)
+			if (show_debug) std::cout << "Empty moving people..." << std::endl;
+#endif
 		if (all_obj_cubes[ii].size() > 0) // if has detected 3d Cuboid
 		{
 			cuboid *raw_cuboid = all_obj_cubes[ii][0];
@@ -1682,10 +1898,17 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 			newcuboid->cube_meas = cube_local_meas;
 			// LL: Added by Leander
 			// LL: Adding the object classes as a member field to the cuboids
-		#ifdef at3dcv_tum_rgbd
+			#ifdef at3dcv_tum
 			if(ii < object_classes_clean.size())
 				newcuboid->object_class = object_classes_clean[ii];
-		#endif
+				//std::cout <<  "newcuboid->object_class ---------------------> " << newcuboid->object_class << std::endl;
+			#endif
+
+			// LL: Set the scale of the map object to that ot the raw cuboid which was derived from the look up table
+			#ifdef at3dcv_size
+			newcuboid->mrcnn_map_obj_scale = raw_cuboid->mrcnn_obj_scale;
+    		//std::cout <<  "newcuboid->mrcnn_map_obj_scale ---------------------> " << newcuboid->mrcnn_map_obj_scale << std::endl;
+			#endif
 			newcuboid->bbox_2d = cv::Rect(raw_cuboid->rect_detect_2d[0], raw_cuboid->rect_detect_2d[1], raw_cuboid->rect_detect_2d[2], raw_cuboid->rect_detect_2d[3]);
 			newcuboid->bbox_vec = Vector4d((double)newcuboid->bbox_2d.x + (double)newcuboid->bbox_2d.width / 2, (double)newcuboid->bbox_2d.y + (double)newcuboid->bbox_2d.height / 2,
 										   (double)newcuboid->bbox_2d.width, (double)newcuboid->bbox_2d.height);
@@ -1706,7 +1929,14 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 
 			if (whether_dynamic_object)
 			{
-				newcuboid->is_dynamic = true;							// for debug, later should check!
+#ifdef at3dcv_dyn_obj_mapdrawer
+				// AC: assign dynamic tag to cuboids
+				if (good_moving_objects[ii])
+				{
+					if (show_debug) std::cout << "Set " << newcuboid->mnId << "th new cuboid as dynamic!" << std::endl;
+					newcuboid->is_dynamic = true;
+				}
+#endif
 				newcuboid->pose_Twc_latestKF = global_obj_pose_to_init; //set pose for dynamic object
 			}
 			if (scene_unique_id == kitti)
@@ -1993,7 +2223,11 @@ void Tracking::AssociateCuboids(KeyFrame *pKF)
 			if (scene_unique_id == kitti) // object scale change back and forth
 			{
 				g2o::cuboid cubeglobalpose = candidateObject->GetWorldPos();
-				cubeglobalpose.setScale(Eigen::Vector3d(1.9420, 0.8143, 0.7631));
+				#ifndef at3dcv_size
+				    cubeglobalpose.setScale(Eigen::Vector3d(1.9420, 0.8143, 0.7631));
+				#else
+				    cubeglobalpose.setScale(candidateObject->mrcnn_map_obj_scale);
+				#endif
 				candidateObject->SetWorldPos(cubeglobalpose);
 				candidateObject->pose_Twc_latestKF = cubeglobalpose;
 				candidateObject->pose_noopti = cubeglobalpose;
@@ -2016,13 +2250,24 @@ void Tracking::AssociateCuboids(KeyFrame *pKF)
 			if (scene_unique_id == kitti)
 			{
 				g2o::cuboid cubeglobalpose = candidateObject->GetWorldPos();
-				cubeglobalpose.setScale(Eigen::Vector3d(1.9420, 0.8143, 0.7631));
+				#ifndef at3dcv_size
+				    cubeglobalpose.setScale(Eigen::Vector3d(1.9420, 0.8143, 0.7631));
+				#else
+				    cubeglobalpose.setScale(candidateObject->mrcnn_map_obj_scale);
+				#endif
 
 				largest_shared_objectlandmark->allDynamicPoses[refframe] = make_pair(cubeglobalpose, false);
 				largest_shared_objectlandmark->SetWorldPos(cubeglobalpose);
 				largest_shared_objectlandmark->pose_Twc_latestKF = cubeglobalpose; //if want to test without BA
 				largest_shared_objectlandmark->pose_noopti = cubeglobalpose;
 			}
+#ifdef at3dcv_dyn_obj_mapdrawer
+			// AC: add dynamic poses to generic case
+			// largest_shared_objectlandmark->allDynamicPoses[refframe] = make_pair(cubeglobalpose, false);
+			// largest_shared_objectlandmark->SetWorldPos(cubeglobalpose);
+			// largest_shared_objectlandmark->pose_Twc_latestKF = cubeglobalpose; //if want to test without BA
+			// largest_shared_objectlandmark->pose_noopti = cubeglobalpose;
+#endif
 			largest_shared_objectlandmark->MergeIntoLandmark(candidateObject);
 		}
 	}
