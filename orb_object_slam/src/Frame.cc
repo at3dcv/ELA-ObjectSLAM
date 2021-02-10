@@ -29,8 +29,6 @@
 
 #include "Parameters.h"
 
-#include "detect_3d_cuboid/matrix_utils.h"
-
 #include <fstream>
 #include <iostream>
 #include <string>
@@ -748,18 +746,23 @@ void Frame::FilterOutMovingPoints()
 // TODO: Add semantic mask
 void Frame::CheckMovingObjects(Eigen::MatrixXd mCurrentBBoxes, std::vector<std::string> classes)
 {
-    objectsAreMoving = vector<bool>(mCurrentBBoxes.rows(), false);
     numobject = mCurrentBBoxes.rows();
+    objectsAreMoving = vector<bool>(numobject, false);
+
+#ifdef at3dcv_dyn_kpts_using_segmentation
+    std::vector<polygon> boost_poly_surfaces;
+    GetConvexHulls(boost_poly_surfaces, cv_hulls);
+#endif
 
     // Make further judgment
     // AC: Check whether an object is moving
     int dynamicObjectsCounter = 0;
-    for (int j = 0; j < mCurrentBBoxes.rows(); j++)
+    for (int j = 0; j < numobject; j++)
     {
         if (show_debug) std::cout << "class " << std::stoi(classes[j]) << std::endl;
 
         // AC: Only consider the class people
-        // if (std::stoi(classes[j]) != 1) continue;
+        if (std::stoi(classes[j]) != 1) continue;
 
         int bbLeft = mCurrentBBoxes(j, 0);
         int bbTop = mCurrentBBoxes(j, 1);
@@ -773,6 +776,10 @@ void Frame::CheckMovingObjects(Eigen::MatrixXd mCurrentBBoxes, std::vector<std::
             // AC: Check whether keypoint is in bounding box
             if(T_M[i].x >= bbLeft && T_M[i].x <= bbRight && T_M[i].y <= bbTop && T_M[i].y >= bbBottom)
             {
+#ifdef at3dcv_dyn_kpts_using_segmentation
+                if (show_debug) std::cout << "CheckKeyPointInConvexHull" << std::endl;
+                if(CheckKeyPointInConvexHull((int)T_M[i].x, (int)T_M[i].y, boost_poly_surfaces, i)) continue;
+#endif
                 movingKeypointCounter++;
                 // AC: if two keypoints are in object, it is considered moving
                 if (movingKeypointCounter > 1)
@@ -786,7 +793,7 @@ void Frame::CheckMovingObjects(Eigen::MatrixXd mCurrentBBoxes, std::vector<std::
     }
 
     int dynamicKeypointsCounter = 0;
-    for (int j = 0; j < mCurrentBBoxes.rows(); j++)
+    for (int j = 0; j < numobject; j++)
     {
         for (size_t i = 0; i < mvKeys.size(); i++)
         {
@@ -820,6 +827,56 @@ void Frame::CheckMovingObjects(Eigen::MatrixXd mCurrentBBoxes, std::vector<std::
     if (show_debug) std::cout << "Found " << dynamicKeypointsCounter << "/" << mvKeys.size() << " dynamic keypoints" << std::endl;
     if (show_debug) std::cout << "Found " << dynamicObjectsCounter << " dynamic objects" << std::endl;
 }
+
+#ifdef at3dcv_dyn_kpts_using_segmentation
+bool Frame::GetConvexHulls(std::vector<polygon> &_boost_poly_surfaces, std::vector<Eigen::MatrixXi> &cv_hulls)
+{
+    std::string convexHullFile =  base_data_folder + "/mats/instance_segmentation_vertices/" + mTimeStamp_id + "_ch.txt";
+    
+    // LL: read in convex hulls of the current frame
+    std::vector<Eigen::Matrix2Xd> cv_hulls_d;
+    if (!read_inst_segment_vertices(convexHullFile, cv_hulls_d))
+        return 0;
+
+    std::cout << "Found " << cv_hulls_d.size() << " objects" << std::endl;
+    for (int i = 0; i < cv_hulls_d.size(); i++)
+        cv_hulls.push_back(cv_hulls_d[i].cast<int>());
+
+    // LL: convert the matrix representations of the convex hulls to boost polygons and write them to boost_poly_surfaces
+    eigen_2d_cub_surfaces_to_boost_poly_surfaces(cv_hulls, _boost_poly_surfaces);
+    return 1;
+}
+
+bool Frame::CheckKeyPointInConvexHull(int kptX, int kptY, std::vector<polygon> &_boost_poly_surfaces, int idx)
+{
+    // LL: expand the single point to a polygon structure
+    Eigen::MatrixXi poly_point(2,4);
+    Eigen::MatrixXi keypoint(2, 1);
+    Eigen::MatrixXi offset_1_1(2, 1);
+    Eigen::MatrixXi offset_1_0(2, 1);
+    Eigen::MatrixXi offset_0_1(2, 1);
+    keypoint << kptX, kptY;
+    offset_1_1 << 1,1;
+    offset_1_0 << 1,0;
+    offset_0_1 << 0,1;
+    poly_point << keypoint, keypoint+offset_1_0, keypoint+offset_1_1, keypoint+offset_0_1;
+
+    std::vector<Eigen::MatrixXi> keypointVector;
+    keypointVector.push_back(poly_point);
+
+    // std::vector<polygon> boostKeypoint;
+    // // LL: convert the matrix representations of the point to boost polygons and append them to the end of _boost_poly_surfaces
+    // eigen_2d_cub_surfaces_to_boost_poly_surfaces(keypointVector, boostKeypoint);
+
+    // // LL: Calculate how whether keypoint is in surface
+    double percent_covered = 0.0;
+    // percent_covered = perc_poly2_covered_by_poly1(_boost_poly_surfaces[idx], boostKeypoint[0]);
+
+    if (percent_covered > 0.5)
+        return 1;
+    return 0;
+}
+#endif
 
 void Frame::AssignFeaturesToGrid()
 {
