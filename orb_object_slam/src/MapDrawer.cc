@@ -237,21 +237,21 @@ void MapDrawer::DrawMapCuboids() // ideally this should be draw map cuboids.
 		}
 		glEnd();
 
-		// draw dynamic object history path
-		if (whether_dynamic_object && obj_landmark->is_dynamic && obj_landmark->allDynamicPoses.size() > 0)
-		{
-			glLineWidth(mGraphLineWidth * 2);
-			glBegin(GL_LINE_STRIP);									   // line strip connects adjacent points
-			glColor4f(box_color(0), box_color(1), box_color(2), 1.0f); // draw all edges  cyan
-			for (auto it = obj_landmark->allDynamicPoses.begin(); it != obj_landmark->allDynamicPoses.end(); it++)
-			{
-				if (bundle_object_opti && !it->second.second) //only show optimized frame object pose
-					continue;
-				g2o::cuboid cubepose = it->second.first;
-				glVertex3f(cubepose.pose.translation()(0), cubepose.pose.translation()(1), cubepose.pose.translation()(2));
-			}
-			glEnd();
-		}
+		//// draw dynamic object history path
+		//if (whether_dynamic_object && obj_landmark->is_dynamic && obj_landmark->allDynamicPoses.size() > 0)
+		//{
+		//	glLineWidth(mGraphLineWidth * 2);
+		//	glBegin(GL_LINE_STRIP);									   // line strip connects adjacent points
+		//	glColor4f(box_color(0), box_color(1), box_color(2), 1.0f); // draw all edges  cyan
+		//	for (auto it = obj_landmark->allDynamicPoses.begin(); it != obj_landmark->allDynamicPoses.end(); it++)
+		//	{
+		//		if (bundle_object_opti && !it->second.second) //only show optimized frame object pose
+		//			continue;
+		//		g2o::cuboid cubepose = it->second.first;
+		//		glVertex3f(cubepose.pose.translation()(0), cubepose.pose.translation()(1), cubepose.pose.translation()(2));
+		//	}
+		//	glEnd();
+		//}
 	}
 }
 
