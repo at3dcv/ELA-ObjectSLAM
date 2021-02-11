@@ -106,7 +106,7 @@ public:
     // LL: Setting the mrcnn object scale as member field
     // LL: Init with deafault value ("car" size)
     #ifdef at3dcv_size
-    Eigen::Vector3d mrcnn_map_obj_scale = Eigen::Vector3d(1.9420, 0.8143, 0.7631);
+    Eigen::Vector3d mrcnn_map_obj_scale;
     #endif
     
     // LL: Setting the detected object class names as member field

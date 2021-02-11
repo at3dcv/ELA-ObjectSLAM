@@ -236,6 +236,7 @@ void MapDrawer::DrawMapCuboids() // ideally this should be draw map cuboids.
 			glVertex3f(cube_corners(0, front_edge_pt_ids(line_id, 1)), cube_corners(1, front_edge_pt_ids(line_id, 1)), cube_corners(2, front_edge_pt_ids(line_id, 1)));
 		}
 		glEnd();
+		obj_landmark->obj_been_optimized = false;
 
 		//// draw dynamic object history path
 		//if (whether_dynamic_object && obj_landmark->is_dynamic && obj_landmark->allDynamicPoses.size() > 0)
