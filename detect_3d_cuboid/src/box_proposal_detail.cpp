@@ -64,7 +64,7 @@ void detect_3d_cuboid::set_cam_pose(const Matrix4d &transToWolrd)
 }
 
 // LL: Added by Leander
-#ifdef at3dcv_size
+#if defined(at3dcv_mask) || defined(at3dcv_size)
 // LL: Added by Leander: Overloaded function by adding `read_inst_segment_vert` and `mrcnn_obj_class`
 void detect_3d_cuboid::detect_cuboid(const cv::Mat &rgb_img, const Matrix4d &transToWolrd, const MatrixXd &obj_bbox_coors, MatrixXd all_lines_raw, 
 									std::vector<ObjectSet> &all_object_cuboids, std::vector<Eigen::Matrix2Xd> read_inst_segment_vert, std::vector<std::string> mrcnn_obj_class, std::string frame_number, cv::Mat depth_map)
@@ -80,8 +80,7 @@ void detect_3d_cuboid::detect_cuboid(const cv::Mat &rgb_img, const Matrix4d &tra
 	*		mrcnn_obj_class: The class names of the detected objects in the current frame 
 	*/
 
-	#ifdef at3dcv_mask
-	#ifdef at3dcv_size
+    #if defined(at3dcv_mask) && defined(at3dcv_size)
 	// LL: Added by Leander: Ensure both vectors (vertices and cuboids) have the same length (same number of objects).
 	if ((int)all_object_cuboids.size() != (int)read_inst_segment_vert.size() && (int)mrcnn_obj_class.size() != (int)read_inst_segment_vert.size())
 	{
@@ -90,7 +89,6 @@ void detect_3d_cuboid::detect_cuboid(const cv::Mat &rgb_img, const Matrix4d &tra
 		ROS_DEBUG_STREAM("box_proposal_detail: mrcnn_obj_class.size" << (int)mrcnn_obj_class.size() );
 		ROS_ERROR_STREAM("The number of cuboids, instance segmentation masks and class names does not match");
 	}
-	#endif
 	#endif 
 
 	// LL: Calibrate the camera using the provided transformation matrix for camera to world trans.
@@ -586,7 +584,7 @@ void detect_3d_cuboid::detect_cuboid(const cv::Mat &rgb_img, const Matrix4d &tra
 
 				// LL: Added by Leander
 				// Incase that no depth data is provided 
-			#ifdef at3dcv_no_depth_all_proposals
+		    #if defined(at3dcv_no_depth_all_proposals) && defined(at3dcv_mask)
 				
 				// ###### 2D eigen vector BB proposels to boost polygon surfaces
 				
@@ -641,6 +639,8 @@ void detect_3d_cuboid::detect_cuboid(const cv::Mat &rgb_img, const Matrix4d &tra
 
 				change_2d_corner_to_3d_object(all_box_corners_2d_one_objH.block(2 * raw_cube_ind, 0, 2, 8), all_configs_error_one_objH.row(raw_cube_ind).head<3>(),
 											  ground_plane_sensor, cam_pose.transToWolrd, cam_pose.invK, cam_pose.projectionMatrix, *sample_obj);
+				
+				#ifdef at3dcv_size
 				// sample_obj->print_cuboid();
 				if ((sample_obj->scale.array() < 0).any())
 					continue; // scale should be positive
@@ -662,7 +662,7 @@ void detect_3d_cuboid::detect_cuboid(const cv::Mat &rgb_img, const Matrix4d &tra
     				sample_obj->mrcnn_obj_scale = sample_obj -> scale;
 				}
 				// LL: Added by Leander
-				
+				#endif
 		
 				sample_obj->rect_detect_2d = Vector4d(left_x_raw, top_y_raw, obj_width_raw, obj_height_raw);
 				sample_obj->edge_distance_error = all_configs_error_one_objH(raw_cube_ind, 4); // record the original error
@@ -704,7 +704,7 @@ void detect_3d_cuboid::detect_cuboid(const cv::Mat &rgb_img, const Matrix4d &tra
 		sort_indexes(all_combined_score, sort_idx_small, actual_cuboid_num_small);
 		for (int ii = 0; ii < actual_cuboid_num_small; ii++) // use sorted index
 		{
-			# ifdef at3dcv_no_depth_best_proposal
+			#if defined(at3dcv_no_depth_best_proposal) && defined(at3dcv_mask)
 			// LL: Retrive sorted 2d bb vertices from current sample object
 			std::vector<Eigen::MatrixXi> eigen_2d_surfaces;
 			cuboid_2d_vertices_to_2d_surfaces(raw_obj_proposals[sort_idx_small[ii]]->box_corners_2d, eigen_2d_surfaces);
@@ -747,7 +747,7 @@ void detect_3d_cuboid::detect_cuboid(const cv::Mat &rgb_img, const Matrix4d &tra
 			if (percent_covered >= 0.9)
 				all_object_cuboids[object_id].push_back(raw_obj_proposals[sort_idx_small[ii]]);
 			
-			# elif defined at3dcv_depth
+			# elif defined(at3dcv_depth) && defined(at3dcv_mask)
 
 			ROS_DEBUG_STREAM("box_proposal_detail: # image columns:" << rgb_img.cols );
 			ROS_DEBUG_STREAM("box_proposal_detail: # image rows:" << rgb_img.rows );

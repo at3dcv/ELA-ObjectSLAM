@@ -46,8 +46,8 @@ std::unordered_map<std::string, Eigen::Vector3d> cuboid::obj_class_scales{
     {"57", Eigen::Vector3d(0.21, 0.22, 0.40)},        // chair
     {"58", Eigen::Vector3d(0.75, 0.25, 0.40)},        // couch
     {"59", Eigen::Vector3d(0.13, 0.13, 0.35)},        // potted plant
-    {"61", Eigen::Vector3d(0.3, 0.7, 0.55)},        // dining table
-    {"63", Eigen::Vector3d(0.05, 0.25, 0.18)},        // tv
+    {"61", Eigen::Vector3d(0.6, 0.3, 0.55)},        // dining table
+    {"63", Eigen::Vector3d(0.45, 0.3, 0.05)},        // tv
     {"64", Eigen::Vector3d(0.15, 0.11, 0.9)},        // laptop
     {"65", Eigen::Vector3d(0.035, 0.05, 0.025)},        // mouse
     {"66", Eigen::Vector3d(0.03, 0.09, 0.015)},        // remote

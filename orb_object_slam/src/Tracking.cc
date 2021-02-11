@@ -1703,7 +1703,7 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 
 	// LL: Added by Leander
 	// LL: Making the object class accessable outside the if/else case
-	#ifdef at3dcv_tum || at3dcv_mask
+	#if defined(at3dcv_tum) || defined(at3dcv_mask)
 	std::string frame_index_c;
 	std::vector<string> object_classes_clean;
 	#endif
@@ -1848,14 +1848,18 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 		pop_pose_to_ground = frame_pose_to_ground;
 		Eigen::Matrix4f cam_transToGround = Converter::toMatrix4f(pop_pose_to_ground);
 		
-
-		// LL: Added by Leander
-		#ifdef at3dcv_size && at3dcv_mask && at3dcv_tum
-				// LL: Added by Leander: Added `object_classes` and `read_inst_segment_vert` to this function call
-				detect_cuboid_obj->detect_cuboid(pKF->raw_img, cam_transToGround.cast<double>(), all_obj2d_bbox_infov_mat, all_lines_raw, all_obj_cubes, read_inst_segment_vert, object_classes_clean, frame_index_c, pKF->raw_depth);
-		#elif
-				detect_cuboid_obj->detect_cuboid(pKF->raw_img, cam_transToGround.cast<double>(), all_obj2d_bbox_infov_mat, all_lines_raw, all_obj_cubes);		
-		#endif
+		
+	// LL: Added by Leander
+	#ifdef at3dcv_mask
+			// LL: Added by Leander: Added `object_classes` and `read_inst_segment_vert` to this function call
+			detect_cuboid_obj->detect_cuboid(pKF->raw_img, cam_transToGround.cast<double>(), all_obj2d_bbox_infov_mat, all_lines_raw, all_obj_cubes, read_inst_segment_vert, object_classes_clean, frame_index_c, pKF->raw_depth);
+	#elif defined(at3dcv_size) 
+			// LL: Empty dummy data
+			std::vector<Eigen::Matrix2Xd> dummy_read_inst_segment_vert;
+			detect_cuboid_obj->detect_cuboid(pKF->raw_img, cam_transToGround.cast<double>(), all_obj2d_bbox_infov_mat, all_lines_raw, all_obj_cubes, dummy_read_inst_segment_vert, object_classes_clean);
+	#elif
+			detect_cuboid_obj->detect_cuboid(pKF->raw_img, cam_transToGround.cast<double>(), all_obj2d_bbox_infov_mat, all_lines_raw, all_obj_cubes);		
+	#endif
 
 	}
 
