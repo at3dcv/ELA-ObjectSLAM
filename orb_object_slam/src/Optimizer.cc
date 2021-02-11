@@ -1036,7 +1036,7 @@ void Optimizer::LocalBACameraPointObjects(KeyFrame *pKF, bool *pbStopFlag, Map *
         else
         {
             // LL: Use the corresponding object class scale
-            #ifndef at3dcv_size
+            #ifdef at3dcv_size
             vObject->fixedscale = pMObject->mrcnn_map_obj_scale;
             #else
             ROS_ERROR_STREAM("Please see cuboid scale!!!, otherwise use VertexCuboid()");
@@ -1821,7 +1821,7 @@ void Optimizer::LocalBACameraPointObjectsDynamic(KeyFrame *pKF, bool *pbStopFlag
             else
             {
                 // LL: Use the corresponding object class scale
-                #ifndef at3dcv_size
+                #ifdef at3dcv_size
                 vObject->fixedscale = pMObject->mrcnn_map_obj_scale;
                 #else
                 ROS_ERROR_STREAM("Please see cuboid scale!!!, otherwise use VertexCuboid()");

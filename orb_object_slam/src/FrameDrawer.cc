@@ -343,7 +343,9 @@ void FrameDrawer::Update(Tracking *pTracker)
                 {
                     for (const MapObject *object : pTracker->mCurrentFrame.mpReferenceKF->local_cuboids)
                     {
+                        #ifdef at3dcv_tum
                         object_class.push_back(object->object_class);
+                        #endif
                         bbox_2ds.push_back(object->bbox_2d);
                         box_corners_2ds.push_back(object->box_corners_2d);
                         edge_markers_2ds.push_back(object->edge_markers);
