@@ -122,7 +122,7 @@ public:
     // AC: EXTENSION
     void DetectMovingKeypoints(const cv::Mat &imgray);
     std::vector<cv::Point2f> T_M;
-    double limit_dis_epi = 1; 
+    double limit_dis_epi = 0.7; 
     double limit_of_check = 2120;
     int limit_edge_corner = 5;
 

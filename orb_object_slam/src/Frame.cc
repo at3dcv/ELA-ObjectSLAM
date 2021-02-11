@@ -665,7 +665,7 @@ void Frame::DetectMovingKeypoints(const cv::Mat &imgray)
 	T_M.clear();
 
 	// Detect dynamic target and ultimately optput the T matrix
-    cv::goodFeaturesToTrack(imGrayPre, prepoint, 2000, 0.01, 8, cv::Mat(), 3, true, 0.04);
+    cv::goodFeaturesToTrack(imGrayPre, prepoint, 1000, 0.01, 8, cv::Mat(), 3, true, 0.04);
     cv::cornerSubPix(imGrayPre, prepoint, cv::Size(10, 10), cv::Size(-1, -1), cv::TermCriteria(CV_TERMCRIT_ITER | CV_TERMCRIT_EPS, 20, 0.03));
 	cv::calcOpticalFlowPyrLK(imGrayPre, imgray, prepoint, nextpoint, state, err, cv::Size(22, 22), 5, cv::TermCriteria(CV_TERMCRIT_ITER | CV_TERMCRIT_EPS, 20, 0.01));
     // AC: output of state: output status vector (of unsigned chars); each element of the vector is set to 1 if the flow for the corresponding features has been found, otherwise, it is set to 0.
@@ -771,17 +771,18 @@ void Frame::CheckMovingObjects(Eigen::MatrixXd mCurrentBBoxes, std::vector<std::
 
         int movingKeypointCounter = 0;
 
+        if (show_debug) std::cout << "T_M size: " << T_M.size() << std::endl;
+
         for (int i = 0; i < T_M.size(); i++)
         {
             // AC: Check whether keypoint is in bounding box
             if(T_M[i].x >= bbLeft && T_M[i].x <= bbRight && T_M[i].y <= bbTop && T_M[i].y >= bbBottom)
             {
 #ifdef at3dcv_dyn_kpts_using_segmentation
-                if (show_debug) std::cout << "CheckKeyPointInConvexHull" << std::endl;
-                if (idx < boost_poly_surfaces.rows())
-                    if(CheckKeyPointInConvexHull((int)T_M[i].x, (int)T_M[i].y, boost_poly_surfaces, i)) continue;
-                else
-                    std::cout << "There are less boost objects than bounding boxes..." << std::endl;
+                // if (i >= boost_poly_surfaces.size())´
+                //     continue;
+                // if(!CheckKeyPointInConvexHull((int)T_M[i].y, (int)T_M[i].x, boost_poly_surfaces, i))
+                //     continue;
 #endif
                 movingKeypointCounter++;
                 // AC: if two keypoints are in object, it is considered moving
@@ -820,12 +821,8 @@ void Frame::CheckMovingObjects(Eigen::MatrixXd mCurrentBBoxes, std::vector<std::
 
     int objectKeypointsCounter = 0;
     for (int k = 0; k < keypoint_associate_objectID.size(); k++)
-    {
         if (keypoint_associate_objectID[k] != -1)
-        {
             objectKeypointsCounter++;
-        }
-    }
     if (show_debug) std::cout << "Found " << objectKeypointsCounter << "/" << mvKeys.size() << " keypoints in objects" << std::endl;
     if (show_debug) std::cout << "Found " << dynamicKeypointsCounter << "/" << mvKeys.size() << " dynamic keypoints" << std::endl;
     if (show_debug) std::cout << "Found " << dynamicObjectsCounter << " dynamic objects" << std::endl;
