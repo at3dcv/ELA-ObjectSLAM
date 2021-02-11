@@ -20,7 +20,9 @@
 
 #ifndef SYSTEM_H
 #define SYSTEM_H
-
+//EC:
+#include <boost/thread.hpp>
+#include "pointcloudmapping.h"
 #include <mutex>
 #include <string>
 #include <thread>
@@ -42,7 +44,7 @@ class Tracking;
 class LocalMapping;
 class LoopClosing;
 class KeyFrameDatabase;
-
+class PointCloudMapping;
 class System
 {
   public:
@@ -167,6 +169,8 @@ class System
     std::mutex mMutexMode;
     bool mbActivateLocalizationMode;
     bool mbDeactivateLocalizationMode;
+    //EC: point cloud mapping
+    boost::shared_ptr<PointCloudMapping> mpPointCloudMapping;
 };
 
 } // namespace ORB_SLAM2

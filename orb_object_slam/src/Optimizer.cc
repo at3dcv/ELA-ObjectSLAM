@@ -1022,7 +1022,6 @@ void Optimizer::LocalBACameraPointObjects(KeyFrame *pKF, bool *pbStopFlag, Map *
         g2o_object_vertex *vObject = new g2o_object_vertex();
 
 #ifdef ObjectFixScale
-
         if (scene_unique_id == kitti)
         {
             // LL: Use the corresponding object class scale instead of the default "car" scale

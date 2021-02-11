@@ -11,7 +11,6 @@
 // LL: Added by Leander
 #include <algorithm>
 
-
 // opencv pcl
 #include <opencv/cv.h>
 #include <opencv2/core/core.hpp>
@@ -63,7 +62,6 @@ void detect_3d_cuboid::set_cam_pose(const Matrix4d &transToWolrd)
 	cam_pose.camera_yaw = cam_pose.euler_angle(2);
 	//TODO relative measure? not good... then need to change transToWolrd.
 }
-
 
 // LL: Added by Leander
 #ifdef at3dcv_size
@@ -641,7 +639,6 @@ void detect_3d_cuboid::detect_cuboid(const cv::Mat &rgb_img, const Matrix4d &tra
 
 				cuboid *sample_obj = new cuboid();
 
-
 				change_2d_corner_to_3d_object(all_box_corners_2d_one_objH.block(2 * raw_cube_ind, 0, 2, 8), all_configs_error_one_objH.row(raw_cube_ind).head<3>(),
 											  ground_plane_sensor, cam_pose.transToWolrd, cam_pose.invK, cam_pose.projectionMatrix, *sample_obj);
 				// sample_obj->print_cuboid();
@@ -718,7 +715,6 @@ void detect_3d_cuboid::detect_cuboid(const cv::Mat &rgb_img, const Matrix4d &tra
 			// ###### Convex hull of instance segmentation mask to boost polygon
 			Eigen::MatrixXi inst_segment_vert_mat(2, read_inst_segment_vert[object_id].cols());
 			inst_segment_vert_mat = read_inst_segment_vert[object_id].cast<int>();
-
 
 			std::vector<Eigen::MatrixXi> inst_segment_vert_vec;
 			inst_segment_vert_vec.push_back(inst_segment_vert_mat);

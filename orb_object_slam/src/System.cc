@@ -37,6 +37,9 @@
 
 #include <time.h>
 
+// AC: Added config header to pass macro that switches out custom code off and on
+#include "At3dcv_config.h"
+
 bool has_suffix(const std::string &str, const std::string &suffix)
 {
     std::size_t index = str.find(suffix, str.size() - suffix.size());
@@ -95,11 +98,16 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
     //Create Drawers. These are used by the Viewer
     mpFrameDrawer = new FrameDrawer(mpMap);
     mpMapDrawer = new MapDrawer(mpMap, strSettingsFile);
+   //EC: Initialize pointcloud mapping
+    // For point cloud resolution
+    float resolution = fsSettings["PointCloudMapping.Resolution"];
+	
+    mpPointCloudMapping = boost::make_shared<PointCloudMapping>( resolution );
 
     //Initialize the Tracking thread
     //(it will live in the main thread of execution, the one that called this constructor)
     mpTracker = new Tracking(this, mpVocabulary, mpFrameDrawer, mpMapDrawer,
-                             mpMap, mpKeyFrameDatabase, strSettingsFile, mSensor); // setting file read by tracker, not by mapper!
+                             mpMap, mpPointCloudMapping, mpKeyFrameDatabase, strSettingsFile, mSensor); // setting file read by tracker, not by mapper!
 
     //Initialize the Local Mapping thread and launch
     mpLocalMapper = new LocalMapping(mpMap, mSensor == MONOCULAR);
@@ -213,12 +221,8 @@ cv::Mat System::TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const doub
 
     // Check reset
     {
-        unique_lock<mutex> lock(mMutexReset);
-        if (mbReset)
-        {
-            mpTracker->Reset();
-            mbReset = false;
-        }
+        cerr << "ERROR: you called TrackRGBD but input sensor was not set to RGBD." << endl;
+        exit(-1);
     }
 
     return mpTracker->GrabImageRGBD(im, depthmap, timestamp, timestamp_id);
@@ -272,7 +276,6 @@ cv::Mat System::TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const doub
 
     return mpTracker->GrabImageRGBD(im, depthmap, timestamp);
 }
-#endif
 
 #ifdef at3dcv_tum
 cv::Mat System::TrackMonocular(const cv::Mat &im, const double &timestamp, std::string timestamp_id, int msg_seq_id)

@@ -39,7 +39,7 @@
 #include "Optimizer.h"
 #include "Viewer.h"
 #include "System.h"
-
+#include "pointcloudmapping.h"
 #include "ORBmatcher.h"
 #include "ORBextractor.h"
 #include "Converter.h"
@@ -69,8 +69,8 @@ using namespace std;
 namespace ORB_SLAM2
 {
 
-Tracking::Tracking(System *pSys, ORBVocabulary *pVoc, FrameDrawer *pFrameDrawer, MapDrawer *pMapDrawer, Map *pMap, KeyFrameDatabase *pKFDB,
-				   const string &strSettingPath, const int sensor) : mState(NO_IMAGES_YET), mSensor(sensor), mbOnlyTracking(false), mbVO(false), mpORBVocabulary(pVoc),
+Tracking::Tracking(System *pSys, ORBVocabulary *pVoc, FrameDrawer *pFrameDrawer, MapDrawer *pMapDrawer, Map *pMap, boost::shared_ptr<PointCloudMapping> pPointCloud, KeyFrameDatabase *pKFDB,
+				   const string &strSettingPath, const int sensor) : mState(NO_IMAGES_YET), mSensor(sensor), mbOnlyTracking(false), mbVO(false), mpORBVocabulary(pVoc), mpPointCloudMapping( pPointCloud ), 
 																	 mpKeyFrameDB(pKFDB), mpInitializer(static_cast<Initializer *>(NULL)), mpSystem(pSys),
 																	 mpFrameDrawer(pFrameDrawer), mpMapDrawer(pMapDrawer), mpMap(pMap), mnLastRelocFrameId(0)
 {
@@ -2067,7 +2067,8 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 				{
 					if (pKF->keypoint_associate_objectID[i] >= 0 && pKF->keypoint_associate_objectID[i] >= pKF->local_cuboids.size())
 					{
-						ROS_ERROR_STREAM("Detect cuboid find bad pixel obj id  " << pKF->keypoint_associate_objectID[i] << "  " << pKF->local_cuboids.size());
+						//ROS_ERROR_STREAM("Detect cuboid find bad pixel obj id  " << pKF->keypoint_associate_objectID[i] << "  " << pKF->local_cuboids.size());
+						int aaaaaa = 0;
 					}
 					if (pKF->keypoint_associate_objectID[i] > -1)
 					{
@@ -2341,6 +2342,23 @@ void Tracking::CreateNewKeyFrame()
 
 	mpReferenceKF = pKF;
 	mCurrentFrame.mpReferenceKF = pKF;
+
+	//EC: insert Key Frame into point cloud viewer
+	int rows = mCurrentFrame.mpReferenceKF->raw_rgb.rows;
+	int cols = mCurrentFrame.mpReferenceKF->raw_rgb.cols;
+	
+	cv::Mat mImS_C;
+	mImS_C = mCurrentFrame.mpReferenceKF->raw_rgb.clone();
+
+	cv::Mat mImS = cv::Mat::zeros(cv::Size(rows,cols), CV_64FC1); 
+
+	//EC: need to scale depth values to cm, they use 50 but it didn't work for me
+	// so I set to 1
+	float mDepthMapFactor = 1;
+	mDepthMapFactor = 1.0f/mDepthMapFactor;
+	mCurrentFrame.mpReferenceKF->raw_depth.convertTo(mCurrentFrame.mpReferenceKF->raw_depth,CV_32F,mDepthMapFactor);
+
+    mpPointCloudMapping->insertKeyFrame( mCurrentFrame.mpReferenceKF, mCurrentFrame.mpReferenceKF->raw_rgb, mImS, mCurrentFrame.mpReferenceKF->raw_rgb, mCurrentFrame.mpReferenceKF->raw_depth);
 
 	if (whether_detect_object)
 	{
