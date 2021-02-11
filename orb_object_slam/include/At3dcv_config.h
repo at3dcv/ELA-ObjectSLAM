@@ -2,6 +2,7 @@
 #include <iostream>
 // LL: Added macro to switch on Leander's code
 #define at3dcv_andy
+#define at3dcv_skip_rgbd_check
 #define at3dcv_dyn_kpts_using_segmentation
 // #define at3dcv_show_not_matched_dyn_kpts
 

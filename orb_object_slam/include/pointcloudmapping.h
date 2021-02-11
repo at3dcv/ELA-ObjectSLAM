@@ -93,7 +93,7 @@ public:
 
 protected:
     PointCloud::Ptr generatePointCloud(KeyFrame* kf, cv::Mat& semantic_color,cv::Mat& semantic, cv::Mat& color, cv::Mat& depth);
-    PointCloud::Ptr generatePointCloudfromFeature(KeyFrame* kf, cv::Mat& semantic_color,cv::Mat& semantic, cv::Mat& color, cv::Mat& depth);
+    // PointCloud::Ptr generatePointCloudfromFeature(KeyFrame* kf, cv::Mat& semantic_color,cv::Mat& semantic, cv::Mat& color, cv::Mat& depth);
 
     PointCloud::Ptr globalMap;
 
