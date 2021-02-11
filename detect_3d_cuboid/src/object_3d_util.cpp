@@ -710,7 +710,7 @@ void change_2d_corner_to_3d_object(const MatrixXd &box_corners_2d_float, const V
     Matrix3Xd obj_gnd_pt_world_3d;
     plane_hits_3d(transToWolrd, invK, ground_plane_sensor, box_corners_2d_float.rightCols(4), obj_gnd_pt_world_3d); //% 3*n each column is a 3D point  floating point
 
-    double length_half =  mrcnn_obj_scale[0]// along object x direction   corner 5-8
+    double length_half =  mrcnn_obj_scale[0];// along object x direction   corner 5-8
     double width_half = mrcnn_obj_scale[1];  // along object y direction   corner 5-6
 
     Vector4d partwall_plane_world = get_wall_plane_equation(obj_gnd_pt_world_3d.col(0), obj_gnd_pt_world_3d.col(1)); //% to compute height, need to unproject-hit-planes formed by 5-6 corner
