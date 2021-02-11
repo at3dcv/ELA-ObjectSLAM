@@ -96,7 +96,6 @@ src/Initializer.cc
 src/Viewer.cc
 src/Parameters.cpp
 src/g2o_Object.cpp
-src/ObjDetectionHelper.cc
 src/pointcloudmapping.cc
 ) 
 

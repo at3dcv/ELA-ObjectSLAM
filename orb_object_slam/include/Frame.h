@@ -29,7 +29,7 @@
 #include "Eigen/Dense"
 
 // AC: custom class
-#include "ObjDetectionHelper.h"
+#include "detect_3d_cuboid/matrix_utils.h"
 
 // LL: Added config header to pass macro that switches Leander's code off and on
 #include "At3dcv_config.h"
@@ -122,16 +122,22 @@ public:
     // AC: EXTENSION
     void DetectMovingKeypoints(const cv::Mat &imgray);
     std::vector<cv::Point2f> T_M;
-    double limit_dis_epi = 1; 
+    double limit_dis_epi = 0.7; 
     double limit_of_check = 2120;
     int limit_edge_corner = 5;
 
     void FilterOutMovingPoints();
-    ObjDetectionHelper mCurrentObjDetection;
     std::vector<vector<float > > mCurrentBBoxes;
 
     void CheckMovingObjects(Eigen::MatrixXd mCurrentBBoxes, std::vector<std::string> classes);
     std::vector<bool> objectsAreMoving;
+
+#ifdef at3dcv_dyn_kpts_using_segmentation
+    bool GetConvexHulls(std::vector<polygon> &_boost_poly_surfaces, std::vector<Eigen::MatrixXi> &cv_hulls);
+    std::vector<Eigen::MatrixXi> cv_hulls;
+
+    bool CheckKeyPointInConvexHull(int kptX, int kptY, std::vector<polygon> &_boost_poly_surfaces, int idx);
+#endif
 
 public:
     // by me, detect_3d_cuboid needs raw image

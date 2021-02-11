@@ -353,7 +353,7 @@ double perc_poly2_covered_by_poly1(polygon poly1, polygon poly2)
     std::deque<polygon> output;
     // LL: Given two geometries identify their intersecting geometries a write them to output
     boost::geometry::intersection(poly1, poly2, output);
-    // LL: Sum the area of all intersecting geomtries 
+    // LL: Sum the area of all intersecting geomtries
     double area = 0;
     for (auto& p : output)
         area += boost::geometry::area(p);

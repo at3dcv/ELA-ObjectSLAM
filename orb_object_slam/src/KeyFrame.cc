@@ -37,6 +37,13 @@
 #include <ctime>
 #include "math.h"
 
+// AC: add opencv dependency
+#include <opencv2/opencv.hpp>
+#include <opencv2/core/eigen.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/highgui.hpp>
+#include <opencv2/imgcodecs.hpp>
+
 namespace ORB_SLAM2
 {
 
@@ -77,9 +84,16 @@ KeyFrame::KeyFrame(Frame &F, Map *pMap, KeyFrameDatabase *pKFDB) : mnFrameId(F.m
     {
         raw_img = F.raw_img.clone();
         raw_depth = F.raw_depth.clone();
+
         // AC: Replace NaN with 0s
         if (raw_depth.rows > 0 && raw_depth.cols > 0)
+        {
             cv::patchNaNs(raw_depth, 0);
+
+            objectsAreMoving = F.objectsAreMoving;
+            cv_hulls = F.cv_hulls;
+            AddMaskToDepthMap();
+        } 
         raw_rgb = F.raw_rgb.clone();
     }
 
@@ -87,6 +101,34 @@ KeyFrame::KeyFrame(Frame &F, Map *pMap, KeyFrameDatabase *pKFDB) : mnFrameId(F.m
     {
         KeysStatic = F.KeysStatic;
         keypoint_associate_objectID = F.keypoint_associate_objectID;
+    }
+}
+
+void KeyFrame::AddMaskToDepthMap()
+{
+    if (show_debug) std::cout << "AddMaskToDepthMap" << std::endl;
+    for (int i = 0; i < objectsAreMoving.size(); i++)
+    {
+        // AC: skip if object is not moving
+        if (!objectsAreMoving[i]) continue;
+
+        if (i >= cv_hulls.size()) continue;
+
+        std::cout << "cv::eigen2cv" << std::endl;
+        cv::Mat contour;
+        cv::eigen2cv(cv_hulls[i], contour);
+
+        std::cout << "contourPoints" << std::endl;
+        cv::Point contourPoints[1][contour.cols];
+        for (int j = 0; j < contour.cols; j++)
+            contourPoints[0][j] = cv::Point(contour.at<int>(1, j), contour.at<int>(0, j));
+        std::cout << "fillPoly: " << raw_depth.size() << std::endl;
+        std::cout << "contourPoints: " << contourPoints << std::endl;
+        std::cout << raw_depth.type() << std::endl;
+
+        const cv::Point* ppt[1] = { contourPoints[0] };
+        int npt[] = { contour.cols };
+        cv::fillPoly(raw_depth, ppt, npt, 1, cv::Scalar(0, 0, 0), cv::LINE_8);
     }
 }
 

@@ -126,6 +126,11 @@ public:
         return pKF1->mnId < pKF2->mnId;
     }
 
+    // AC: add segmentation to depth mask
+    void AddMaskToDepthMap();
+    std::vector<bool> objectsAreMoving;
+    std::vector<Eigen::MatrixXi> cv_hulls;
+
     // The following variables are accesed from only 1 thread or never change (no mutex needed).
 public:
     // by me, detect_3d_cuboid needs canny edge.
