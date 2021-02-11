@@ -1877,8 +1877,13 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 
 			g2o::cuboid cube_ground_value; // offline cuboid txt in local ground frame.  [x y z yaw l w h]
 			Vector9d cube_pose;
+			#ifdef at3dcv_size
+			cube_pose << raw_cuboid->pos[0], raw_cuboid->pos[1], raw_cuboid->pos[2], 0, 0, raw_cuboid->rotY,
+					raw_cuboid->mrcnn_obj_scale[0], raw_cuboid->mrcnn_obj_scale[1], raw_cuboid->mrcnn_obj_scale[2];
+			#elif
 			cube_pose << raw_cuboid->pos[0], raw_cuboid->pos[1], raw_cuboid->pos[2], 0, 0, raw_cuboid->rotY,
 				raw_cuboid->scale[0], raw_cuboid->scale[1], raw_cuboid->scale[2];
+			#endif
 			cube_ground_value.fromMinimalVector(cube_pose);
 
 			// measurement in local camera frame! important
@@ -1960,8 +1965,14 @@ void Tracking::DetectCuboid(KeyFrame *pKF)
 				cuboid *raw_cuboid = all_obj_cubes[ii][0];
 				g2o::cuboid cube_ground_value;
 				Vector9d cube_pose;
+				
+				#ifdef at3dcv_size
+				cube_pose << raw_cuboid->pos[0], raw_cuboid->pos[1], raw_cuboid->pos[2], 0, 0, raw_cuboid->rotY,
+					raw_cuboid->mrcnn_obj_scale[0], raw_cuboid->mrcnn_obj_scale[1], raw_cuboid->mrcnn_obj_scale[2];
+				#elif
 				cube_pose << raw_cuboid->pos[0], raw_cuboid->pos[1], raw_cuboid->pos[2], 0, 0, raw_cuboid->rotY,
 					raw_cuboid->scale[0], raw_cuboid->scale[1], raw_cuboid->scale[2];
+				#endif
 				save_online_detected_cuboids << pKF->mnFrameId << "  " << cube_pose.transpose() << "\n";
 			}
 		}
