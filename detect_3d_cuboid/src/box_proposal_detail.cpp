@@ -655,9 +655,9 @@ void detect_3d_cuboid::detect_cuboid(const cv::Mat &rgb_img, const Matrix4d &tra
 							  ground_plane_sensor, cam_pose.transToWolrd, cam_pose.invK, cam_pose.projectionMatrix, *sample_obj, iter->second);
 					int scale = 2;
 				    sample_obj->mrcnn_obj_scale = iter->second;
-					sample_obj->mrcnn_obj_scale = sample_obj->mrcnn_obj_scale[0] *scale; 
-					sample_obj->mrcnn_obj_scale = sample_obj->mrcnn_obj_scale[1] *scale;
-					sample_obj->mrcnn_obj_scale = sample_obj->mrcnn_obj_scale[2] *scale;
+					sample_obj->mrcnn_obj_scale[0] = sample_obj->mrcnn_obj_scale[0] *scale; 
+					sample_obj->mrcnn_obj_scale[1] = sample_obj->mrcnn_obj_scale[1] *scale;
+					sample_obj->mrcnn_obj_scale[2] = sample_obj->mrcnn_obj_scale[2] *scale;
 				}
 				else
 				{
