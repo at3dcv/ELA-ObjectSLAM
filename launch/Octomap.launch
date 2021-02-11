@@ -17,10 +17,10 @@
 		
 		<remap from="cloud_in" to="/ORB_SLAM2_PointMap_SegNetM/Point_Clouds" />
 		
-		<param name="pointcloud_min_z" type="double" value="-10.0" />
-		<param name="pointcloud_max_z" type="double" value="1000000" />
-		<param name="occupancy_min_z" type="double" value="-10.0" />
-		<param name="occupancy_max_z" type="double" value="1000000" />
+		<param name="pointcloud_min_z" type="double" value="0" />
+		<param name="pointcloud_max_z" type="double" value="10" />
+		<param name="occupancy_min_z" type="double" value="0" />
+		<param name="occupancy_max_z" type="double" value="10" />
 		<param name="height_map" type="bool" value="False" />
 		<param name="colored_map" type="bool" value="True" />
 		
