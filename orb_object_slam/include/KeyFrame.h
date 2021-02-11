@@ -258,7 +258,7 @@ protected:
 
     cv::Mat Cw; // Stereo middel point. Only for visualization
 
-   // MapPoints associated to keypoints, NULL pointer if no association. same length as keypoints.
+    // MapPoints associated to keypoints, NULL pointer if no association. same length as keypoints.
     // for stereo/RGBD, some close keypoints are direactly associated with map points
     // for monocular, need to triangulate with old frame
     std::vector<MapPoint *> mvpMapPoints; // has nothing to do with Frame. mvpMapPoints after copying! private variable!!!! only add by AddMapPoint()

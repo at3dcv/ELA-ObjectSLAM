@@ -33,7 +33,7 @@
 #include "Eigen/Dense"
 #include <Eigen/Geometry>
 #include <opencv2/opencv.hpp>
-#include "boost/make_shared.hpp"
+
 #include "unordered_map"
 
 // LL: Added config header to pass macro that switches Leander's code off and on
@@ -58,14 +58,14 @@ class System;
 class ORBextractor;
 class KeyFrameDatabase;
 class Initializer;
-class PointCloudMapping;
+
 class Tracking
 {
 
 public:
     Tracking(){}; // for my post mapping...
     Tracking(System *pSys, ORBVocabulary *pVoc, FrameDrawer *pFrameDrawer, MapDrawer *pMapDrawer, Map *pMap,
-            boost::shared_ptr<PointCloudMapping> pPointCloud, KeyFrameDatabase *pKFDB, const std::string &strSettingPath, const int sensor);
+             KeyFrameDatabase *pKFDB, const std::string &strSettingPath, const int sensor);
 
     ~Tracking();
 
@@ -283,9 +283,7 @@ protected:
     cv::Mat mVelocity;
 
     //Color order (true RGB, false BGR, ignored if grayscale)
-    bool mbRGB; 
-    // EC:For point cloud viewing
-    boost::shared_ptr<PointCloudMapping> mpPointCloudMapping;
+    bool mbRGB;
 
     std::list<MapPoint *> mlpTemporalPoints;
 };
