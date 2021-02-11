@@ -160,145 +160,11 @@ pcl::PointCloud< PointCloudMapping::PointT >::Ptr PointCloudMapping::generatePoi
     return cloud;
 }
 
-// pcl::PointCloud< PointCloudMapping::PointT >::Ptr PointCloudMapping::generatePointCloudfromFeature(KeyFrame* kf, cv::Mat& semantic_color,cv::Mat& semantic, cv::Mat& color, cv::Mat& depth)
-// {
-//     std::vector<Eigen::Vector3f> box_colors;
 
-// 	box_colors.push_back(Eigen::Vector3f(230, 0, 0) / 255.0);	 // red  0
-// 	box_colors.push_back(Eigen::Vector3f(60, 180, 75) / 255.0);   // green  1
-// 	box_colors.push_back(Eigen::Vector3f(0, 0, 255) / 255.0);	 // blue  2
-// 	box_colors.push_back(Eigen::Vector3f(255, 0, 255) / 255.0);   // Magenta  3
-// 	box_colors.push_back(Eigen::Vector3f(255, 165, 0) / 255.0);   // orange 4
-// 	box_colors.push_back(Eigen::Vector3f(128, 0, 128) / 255.0);   //purple 5
-// 	box_colors.push_back(Eigen::Vector3f(0, 255, 255) / 255.0);   //cyan 6
-// 	box_colors.push_back(Eigen::Vector3f(210, 245, 60) / 255.0);  //lime  7
-// 	box_colors.push_back(Eigen::Vector3f(250, 190, 190) / 255.0); //pink  8
-// 	box_colors.push_back(Eigen::Vector3f(0, 128, 128) / 255.0);   //Teal  9
-//     //ROS_ERROR_STREAM("IN generatePointCloudfromFeature " <<  kf->N);
-//     PointCloud::Ptr tmp( new PointCloud() );
-
-//     // Set MapPoint vertices
-//     const int N = kf->N;
-
-//     {
-//     unique_lock<mutex> lock(MapPoint::mGlobalMutex);
-
-//     for (int i = 0; i < N; i++)
-//     {
-        
-//         MapPoint *pMP = kf->mvpMapPoints[i];
-//         if (!pMP)
-//             continue;
-//         if (pMP->is_dynamic)
-//             continue;
-//         if (!pMP->mbTrackInView)
-//             continue;
-//         if (pMP->isBad())
-//             continue;
-
-//         float x = pMP->GetWorldPos().at<float>(0);
-//         float y = pMP->GetWorldPos().at<float>(1);
-//         float d = pMP->GetWorldPos().at<float>(2); 
-        
-//         PointT p;
-//         // ROS_ERROR_STREAM(d << " " << x << " " << y);
-
-//         int xi = static_cast<int>(pMP->mTrackProjX);
-//         int yi = static_cast<int>(pMP->mTrackProjY);
-
-//         p.z = d;
-//         p.x = ( pMP->mTrackProjX - kf->cx) * p.z / kf->fx;
-//         p.y = ( pMP->mTrackProjY - kf->cy) * p.z / kf->fy;
-//         // Deal with color
-//         if((int)semantic.ptr<uchar>(xi)[yi]==0)
-//         {
-//             p.b = color.ptr<uchar>(xi)[yi*3];
-//             p.g = color.ptr<uchar>(xi)[yi*3+1];
-//             p.r = color.ptr<uchar>(xi)[yi*3+2];
-//         }
-//         else
-//         {
-//             p.b = 0;
-//             p.g = 0;
-//             p.r = 255;
-//         }
-//         tmp->points.push_back(p);
-    
-//     }
-
-//     //landmarks of keyframe
-//     std::vector<MapObject *> cuboids_landmark = kf->cuboids_landmark;
-
-//     // Dye instances , employed from MapDrawer
-//     for (size_t object_id = 0; object_id < cuboids_landmark.size(); object_id++)
-//     {
-//         MapObject *obj_landmark = cuboids_landmark[object_id];
-//         if( !obj_landmark)
-//             continue;
-
-//         if (obj_landmark->isBad())
-//             continue;
-
-//         //owned_mappoints = obj_landmark->used_points_in_BA_filtered; // points really used in BA
-//         //if (whether_dynamic_object)
-    
-//     	vector<MapPoint *> owned_mappoints = obj_landmark->GetUniqueMapPoints(); //map points that belongs to landmark object
-//         Eigen::Vector3f box_color = box_colors[obj_landmark->mnId % box_colors.size()];
-
-//         for (size_t pt_id = 0; pt_id < owned_mappoints.size(); pt_id++)
-//         {
-//             MapPoint *pMP = owned_mappoints[pt_id];
-//             if (!pMP)
-//                 continue;
-//             if (pMP->is_dynamic)
-//                 continue;
-//             if (!pMP->mbTrackInView)
-//                 continue;
-//             if (pMP->isBad())
-//                 continue;
-
-//             float x = pMP->GetWorldPos().at<float>(0);
-//             float y = pMP->GetWorldPos().at<float>(1);
-//             float d = pMP->GetWorldPos().at<float>(2); 
-//             PointT p;
-//             ROS_ERROR_STREAM(d << " " << x << " " << y);
-
-//             int xi = static_cast<int>(pMP->mTrackProjX);
-//             int yi = static_cast<int>(pMP->mTrackProjY);
-
-//             p.z = d;
-//             p.x = ( pMP->mTrackProjX - kf->cx) * p.z / kf->fx;
-//             p.y = ( pMP->mTrackProjY - kf->cy) * p.z / kf->fy;
-            
-//             // Deal with color
-        
-//             p.b = box_color.z();
-//             p.g = box_color.y();
-//             p.r = box_color.x();
-            
-//             tmp->points.push_back(p);
-//         }
-//     }
-//     } 
-    
-//     cv::Mat identity = cv::Mat::eye(4,4, CV_32F);
-
-//     Eigen::Isometry3d T = ORB_SLAM2::Converter::toSE3Quat( identity);
-    
-//     PointCloud::Ptr cloud(new PointCloud);
-//     pcl::transformPointCloud( *tmp, *cloud, T.inverse().matrix());
-//     cloud->is_dense = false;
-//     ROS_ERROR_STREAM("Generate point cloud for kf "<<kf->mnId<<", size="<<cloud->points.size());
-
-//     return cloud;
-    
-// }
 
 
 void PointCloudMapping::viewer()
 {
-    ROS_ERROR_STREAM("IN VIEWER");
-
     ros::NodeHandle n;
     pclPoint_pub = n.advertise<sensor_msgs::PointCloud2>("/ORB_SLAM2_PointMap_SegNetM/Point_Clouds",100000);
     ros::Rate r(5);
@@ -331,7 +197,6 @@ void PointCloudMapping::viewer()
         for ( size_t i=lastKeyframeSize; i<N ; i++ )
         {
             PointCloud::Ptr p = generatePointCloud( keyframes[i],semanticImgs_color[i], semanticImgs[i],colorImgs[i], depthImgs[i] );
-            // PointCloud::Ptr p = generatePointCloudfromFeature( keyframes[i],semanticImgs_color[i], semanticImgs[i],colorImgs[i], depthImgs[i] );
 
             *KfMap += *p;
 	        *globalMap += *p;	    

@@ -2346,9 +2346,6 @@ void Tracking::CreateNewKeyFrame()
 	//EC: insert Key Frame into point cloud viewer
 	int rows = mCurrentFrame.mpReferenceKF->raw_rgb.rows;
 	int cols = mCurrentFrame.mpReferenceKF->raw_rgb.cols;
-	
-	cv::Mat mImS_C;
-	mImS_C = mCurrentFrame.mpReferenceKF->raw_rgb.clone();
 
 	cv::Mat mImS = cv::Mat::zeros(cv::Size(rows,cols), CV_64FC1); 
 
