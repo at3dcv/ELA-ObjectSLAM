@@ -126,10 +126,12 @@ public:
         return pKF1->mnId < pKF2->mnId;
     }
 
+#ifdef at3dcv_add_mask_to_depth
     // AC: add segmentation to depth mask
     void AddMaskToDepthMap();
     std::vector<bool> objectsAreMoving;
     std::vector<Eigen::MatrixXi> cv_hulls;
+#endif
 
     // The following variables are accesed from only 1 thread or never change (no mutex needed).
 public:

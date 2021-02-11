@@ -90,9 +90,11 @@ KeyFrame::KeyFrame(Frame &F, Map *pMap, KeyFrameDatabase *pKFDB) : mnFrameId(F.m
         {
             cv::patchNaNs(raw_depth, 0);
 
+#ifdef at3dcv_add_mask_to_depth
             objectsAreMoving = F.objectsAreMoving;
             cv_hulls = F.cv_hulls;
             AddMaskToDepthMap();
+#endif
         } 
         raw_rgb = F.raw_rgb.clone();
     }
@@ -104,6 +106,7 @@ KeyFrame::KeyFrame(Frame &F, Map *pMap, KeyFrameDatabase *pKFDB) : mnFrameId(F.m
     }
 }
 
+#ifdef at3dcv_add_mask_to_depth
 void KeyFrame::AddMaskToDepthMap()
 {
     if (show_debug) std::cout << "AddMaskToDepthMap" << std::endl;
@@ -131,6 +134,7 @@ void KeyFrame::AddMaskToDepthMap()
         cv::fillPoly(raw_depth, ppt, npt, 1, cv::Scalar(0, 0, 0), cv::LINE_8);
     }
 }
+#endif
 
 void KeyFrame::ComputeBoW()
 {

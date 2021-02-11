@@ -4,6 +4,7 @@
 #define at3dcv_andy
 #define at3dcv_skip_rgbd_check
 #define at3dcv_dyn_kpts_using_segmentation
+#define at3dcv_add_mask_to_depth
 // #define at3dcv_show_not_matched_dyn_kpts
 
 // AC: not working yet as it is not testable since no people are considered to be dynamic
