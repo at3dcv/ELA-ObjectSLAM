@@ -3,6 +3,7 @@
 .DS_Store
 .AppleDouble
 .LSOverride
+docker_img_mrcnn/image_alt
 
 # Icon must end with two \r
 Icon
