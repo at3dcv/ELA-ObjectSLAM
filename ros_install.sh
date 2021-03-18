@@ -146,32 +146,33 @@ pip install setuptools wheel && pip install -r /usr/lib/web/requirements.txt
 sudo cp /usr/share/applications/terminator.desktop /root/Desktop
 echo "source /opt/ros/kinetic/setup.bash" >> /root/.bashrc
 
-echo "###################"
-echo "##### line 136 #####"
-echo "###################"
+# AC: Will not use shichaoy's cube slam...
+# echo "###################"
+# echo "##### line 136 #####"
+# echo "###################"
 
-sudo mkdir -p ~/cube_slam_ws/src
-cd ~/cube_slam_ws/src
-sudo git clone https://github.com/shichaoy/cube_slam.git ~/cube_slam_ws/src/cube_slam
-pwd
+# sudo mkdir -p ~/cube_slam_ws/src
+# cd ~/cube_slam_ws/src
+# sudo git clone https://github.com/shichaoy/cube_slam.git ~/cube_slam_ws/src/cube_slam
+# pwd
 
-cd ~/cube_slam_ws/src/cube_slam/object_slam/Thirdparty/g2o \
-	&& mkdir build \
-	&& cd build \
-	&& cmake ~/cube_slam_ws/src/cube_slam/object_slam/Thirdparty/g2o -DCMAKE_BUILD_TYPE=Release \
-	&& make -j2 
+# cd ~/cube_slam_ws/src/cube_slam/object_slam/Thirdparty/g2o \
+# 	&& mkdir build \
+# 	&& cd build \
+# 	&& cmake ~/cube_slam_ws/src/cube_slam/object_slam/Thirdparty/g2o -DCMAKE_BUILD_TYPE=Release \
+# 	&& make -j2 
 
-cd ~/cube_slam_ws/src/cube_slam/orb_object_slam/Thirdparty/g2o \
-	&& mkdir build \
-	&& cd build \
-	&& cmake ~/cube_slam_ws/src/cube_slam/orb_object_slam/Thirdparty/g2o -DCMAKE_BUILD_TYPE=Release \
-	&& make -j2 
+# cd ~/cube_slam_ws/src/cube_slam/orb_object_slam/Thirdparty/g2o \
+# 	&& mkdir build \
+# 	&& cd build \
+# 	&& cmake ~/cube_slam_ws/src/cube_slam/orb_object_slam/Thirdparty/g2o -DCMAKE_BUILD_TYPE=Release \
+# 	&& make -j2 
 
-cd ~/cube_slam_ws/src/cube_slam/orb_object_slam/Thirdparty/DBoW2 \
-	&& mkdir build \
-	&& cd build \
-	&& cmake ~/cube_slam_ws/src/cube_slam/orb_object_slam/Thirdparty/DBoW2 -DCMAKE_BUILD_TYPE=Release \
-	&& make -j2 
+# cd ~/cube_slam_ws/src/cube_slam/orb_object_slam/Thirdparty/DBoW2 \
+# 	&& mkdir build \
+# 	&& cd build \
+# 	&& cmake ~/cube_slam_ws/src/cube_slam/orb_object_slam/Thirdparty/DBoW2 -DCMAKE_BUILD_TYPE=Release \
+# 	&& make -j2 
 
 # Install ROS dependencies
 rosdep update
@@ -201,35 +202,37 @@ echo "##### line 186 #####"
 echo "###################"
 
 sudo apt-get install python-pip
-sudo pip install -U pip
-sudo pip install --ignore-installed enum34
-sudo pip install --ignore-installed pyasn1-modules
-sudo pip install tensorflow==1.4.1
-sudo pip install keras==2.1.2
+pip install -U pip
+pip install --ignore-installed enum34
+pip install --ignore-installed pyasn1-modules
+pip install six==1.10.0
+pip install tensorflow==1.4.1
+pip install keras==2.1.2
 
-sudo pip install h5py==2.7.0
-sudo pip install numpy==1.13.3
-#sudo pip install rviz
-sudo pip install scikit-image==0.13.0
-sudo pip install scikit-learn==0.19.1
-sudo pip install scipy==0.19.1
-sudo pip install ipython
+pip install h5py==2.7.0
+pip install numpy==1.13.3
+#pip install rviz
+pip install scikit-image==0.13.0
+pip install scikit-learn==0.19.1
+pip install scipy==0.19.1
+pip install ipython
 
 echo "###################"
 echo "##### line 205 #####"
 echo "###################"
 
-sudo apt-get install -y python3-pip
-sudo pip3 install --upgrade pip
-sudo pip3 install h5py==2.7.0
-sudo pip3 install Keras==2.1.2
-sudo pip3 install numpy==1.13.3
-#sudo pip3 install rviz==1.12.13
-sudo pip3 install opencv-python==3.4.0.12
-sudo pip3 install scikit-image==0.13.0
-sudo pip3 install scikit-learn==0.19.1
-sudo pip3 install scipy==0.19.1
-sudo pip3 install tensorflow
+# AC: pip3 support for python3.5 is deprecated...
+curl -fsSL -o- https://bootstrap.pypa.io/pip/3.5/get-pip.py | python3.5
+pip3 install --upgrade pip
+pip3 install h5py==2.7.0
+pip3 install Keras==2.1.2
+pip3 install numpy==1.13.3
+#pip3 install rviz==1.12.13
+pip3 install opencv-python==3.4.0.12
+pip3 install scikit-image==0.13.0
+pip3 install scikit-learn==0.19.1
+pip3 install scipy==0.19.1
+pip3 install tensorflow
 
 echo "###################"
 echo "##### line 221 #####"
