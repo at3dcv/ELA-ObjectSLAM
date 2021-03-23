@@ -4,6 +4,9 @@ echo "###################"
 echo "######## 3 ########"
 echo "###################"
 
+# AC: clean up ports
+bash kill_processes.sh
+
 # AC: somehow nginx is not installed properly
 sudo apt-get install nginx
 
