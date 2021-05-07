@@ -40,6 +40,8 @@ public:
     bool Initialize(const Frame &CurrentFrame, const std::vector<int> &vMatches12,
                     cv::Mat &R21, cv::Mat &t21, std::vector<cv::Point3f> &vP3D, std::vector<bool> &vbTriangulated);
 
+    bool show_debug = true;
+
 private:
     void FindHomography(std::vector<bool> &vbMatchesInliers, float &score, cv::Mat &H21);
     void FindFundamental(std::vector<bool> &vbInliers, float &score, cv::Mat &F21);

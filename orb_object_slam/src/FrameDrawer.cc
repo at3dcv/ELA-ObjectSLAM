@@ -62,6 +62,8 @@ cv::Mat FrameDrawer::DrawFrame()
     vector<cv::KeyPoint> vCurrentKeys; // KeyPoints in current frame
     vector<bool> vbVO, vbMap;          // Tracked MapPoints in current frame
     int state;                         // Tracking state
+    // AC: KeysStatic of Frame
+    vector<bool> vKeysStatic;   
 
     //for debug visualization
     vector<cv::KeyPoint> vCurrentKeys_inlastframe;
@@ -85,6 +87,7 @@ cv::Mat FrameDrawer::DrawFrame()
             vfeaturesklt_thisframe = mvfeaturesklt_thisframe;
             vIniKeys = mvIniKeys;
             vMatches = mvIniMatches;
+            vKeysStatic = mvKeysStatic;
         }
         else if (mState == Tracking::OK)
         {
@@ -94,6 +97,7 @@ cv::Mat FrameDrawer::DrawFrame()
             vfeaturesklt_thisframe = mvfeaturesklt_thisframe;
             vbVO = mvbVO;
             vbMap = mvbMap;
+            vKeysStatic = mvKeysStatic;
         }
         else if (mState == Tracking::LOST)
         {
@@ -101,6 +105,7 @@ cv::Mat FrameDrawer::DrawFrame()
             vCurrentKeys_inlastframe = mvCurrentKeys_inlastframe;
             vfeaturesklt_lastframe = mvfeaturesklt_lastframe;
             vfeaturesklt_thisframe = mvfeaturesklt_thisframe;
+            vKeysStatic = mvKeysStatic;
         }
     } // destroy scoped mutex -> release mutex
 
@@ -136,12 +141,19 @@ cv::Mat FrameDrawer::DrawFrame()
 
                 if (vbMap[i]) // This is a match to a MapPoint in the map    // green
                 {
-                    cv::circle(im, vCurrentKeys[i].pt, 3, cv::Scalar(0, 255, 0), -1);
+                    // AC: Visualize dynamic keypoints larger
+                    if (vKeysStatic[i])
+                        cv::circle(im, vCurrentKeys[i].pt, 3, cv::Scalar(0, 255, 0), -1);
+                    else
+                    {
+                        if (show_debug) std::cout << "FrameDrawer: MATCHED Dynamic Key!!" << std::endl;
+                        cv::circle(im, vCurrentKeys[i].pt, 10, cv::Scalar(0, 0, 255), -1);    // AC: dynamic keypoints
+                    }
                     mnTracked++;
                 }
                 else // This is match to a "visual odometry" MapPoint created in the last frame    // blue
                 {
-                    cv::circle(im, vCurrentKeys[i].pt, 3, cv::Scalar(255, 0, 0), -1);
+                    cv::circle(im, vCurrentKeys[i].pt, 3, cv::Scalar(0, 123, 255), -1);
                     mnTrackedVO++;
                 }
 
@@ -154,7 +166,16 @@ cv::Mat FrameDrawer::DrawFrame()
             }
             else // if not matched to map points. discarded points.
             {
-                // 		cv::circle(im,vCurrentKeys[i].pt,2,cv::Scalar(255,0,255),-1);  //magenda
+#ifdef at3dcv_show_not_matched_dyn_kpts
+                // AC: .
+                if (vKeysStatic[i]) {}
+                    // cv::circle(im,vCurrentKeys[i].pt,2,cv::Scalar(255,0,255),-1);  //magenda
+                else
+                {
+                    if (show_debug) std::cout << "FrameDrawer: NOT MATCHED Dynamic Key!!" << std::endl;
+                    cv::circle(im, vCurrentKeys[i].pt, 10, cv::Scalar(0, 0, 255), -1);    // AC: dynamic keypoints
+                }
+#endif
             }
         }
 
@@ -174,6 +195,15 @@ cv::Mat FrameDrawer::DrawFrame()
         for (size_t i = 0; i < bbox_2ds.size(); i++)
         {
             cv::rectangle(im, bbox_2ds[i], box_colors[i % box_colors.size()], 2); // 2d bounding box.
+
+            #ifdef at3dcv_tum
+            if(i < object_class.size())
+            {
+                std::string  box_identifier = CLASS_NAMES[std::stoi(object_class[i])]; 
+                cv::putText(im, box_identifier , cv::Point(bbox_2ds[i].x + 20, bbox_2ds[i].y + 20), cv::FONT_HERSHEY_PLAIN, 2, box_colors[i % box_colors.size()], 2); // # bgr
+            }
+            #endif 
+
             if ((scene_unique_id != kitti) && (box_corners_2ds[i].cols() > 0))    // for most offline read data, usually cannot read it, could use rviz.
             {
                 plot_image_with_cuboid_edges(im, box_corners_2ds[i], edge_markers_2ds[i]); // eight corners.
@@ -253,6 +283,13 @@ void FrameDrawer::Update(Tracking *pTracker)
     mvbMap = vector<bool>(N, false);
     mbOnlyTracking = pTracker->mbOnlyTracking;
 
+    // AC: consider static/dynamic keys
+    mvKeysStatic = vector<bool>(N, true);
+#ifdef at3dcv_show_not_matched_dyn_kpts
+    if (whether_dynamic_object)
+        mvKeysStatic = pTracker->mCurrentFrame.KeysStatic;
+#endif
+
     potential_ground_fit_inds.clear();
     current_frame_id = int(pTracker->mCurrentFrame.mnId);
 
@@ -294,6 +331,11 @@ void FrameDrawer::Update(Tracking *pTracker)
         box_corners_2ds.clear();
         edge_markers_2ds.clear();
         point_Object_AssoID.clear();
+        
+        #ifdef at3dcv_tum
+        object_class.clear();
+        #endif
+
         if (pTracker->mCurrentFrame.mpReferenceKF != NULL)                                             // mCurrentFrame.mpReferenceKF
             if ((pTracker->mCurrentFrame.mnId - pTracker->mCurrentFrame.mpReferenceKF->mnFrameId) < 1) // if current frame is a keyframe
             {
@@ -301,6 +343,9 @@ void FrameDrawer::Update(Tracking *pTracker)
                 {
                     for (const MapObject *object : pTracker->mCurrentFrame.mpReferenceKF->local_cuboids)
                     {
+                        #ifdef at3dcv_tum
+                        object_class.push_back(object->object_class);
+                        #endif
                         bbox_2ds.push_back(object->bbox_2d);
                         box_corners_2ds.push_back(object->box_corners_2d);
                         edge_markers_2ds.push_back(object->edge_markers);

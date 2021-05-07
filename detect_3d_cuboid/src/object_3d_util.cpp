@@ -11,6 +11,60 @@
 using namespace Eigen;
 using namespace std;
 
+#ifdef at3dcv_size
+// Scale Vector3d(length_half, width_half, height_half), example: car = (1.9420, 0.8143, 0.7631)
+std::unordered_map<std::string, Eigen::Vector3d> cuboid::obj_class_scales{
+    {"1",Eigen::Vector3d(0.15, 0.20, 0.85)},        // person
+    {"2", Eigen::Vector3d(0.7, 0.2, 0.55)},         // bicycle 
+    {"3", Eigen::Vector3d(1.9420, 0.8143, 0.7631)}, // car   
+    {"4", Eigen::Vector3d(0.85, 0.3, 0.55)},        // motorcycle
+    {"6", Eigen::Vector3d(0.6, 0.3, 1.55)},         // bus
+    {"8", Eigen::Vector3d(0.6, 0.3, 2.00)},         // truck
+    {"10", Eigen::Vector3d(0.12, 0.10, 0.3)},        // traffic light
+    {"11", Eigen::Vector3d(0.11, 0.11, 0.25)},        // fire hydrant
+    {"12", Eigen::Vector3d(0.01, 0.20, 0.20)},        // stop sign
+    {"13", Eigen::Vector3d(0.06, 0.10, 0.60)},        // parking meter
+    {"14", Eigen::Vector3d(0.24, 0.90, 0.40)},        // bench
+    {"15", Eigen::Vector3d(0.05, 0.05, 0.05)},        // bird
+    {"16", Eigen::Vector3d(0.21, 0.07, 0.12)},        // cat 
+    {"17", Eigen::Vector3d(0.25, 0.10, 0.25)},        // dog
+    {"25", Eigen::Vector3d(0.08, 0.15, 0.18)},        // backpack
+    {"26", Eigen::Vector3d(0.06, 0.06, 0.30)},        // umbrella
+    {"27", Eigen::Vector3d(0.07, 0.12, 0.12)},        // handbag
+    {"29", Eigen::Vector3d(0.06, 0.17, 0.15)},        // suticase
+    {"40", Eigen::Vector3d(0.035, 0.035, 0.14)},        // bottle
+    //{"41", Eigen::Vector3d(0.6, 0.3, 0.55)},        // wine glass
+    {"42", Eigen::Vector3d(0.15, 0.12, 0.12)},        // cup/garbage can
+    //{"43", Eigen::Vector3d(0.6, 0.3, 0.55)},        // fork
+    //{"44", Eigen::Vector3d(0.6, 0.3, 0.55)},        // knife
+    //{"45", Eigen::Vector3d(0.6, 0.3, 0.55)},        // spoon
+    //{"46", Eigen::Vector3d(0.6, 0.3, 0.55)},        // bowl
+    //{"47", Eigen::Vector3d(0.6, 0.3, 0.55)},        // banana
+    //{"48", Eigen::Vector3d(0.6, 0.3, 0.55)},        // apple
+    //{"49", Eigen::Vector3d(0.6, 0.3, 0.55)},        // sandwich
+    //{"50", Eigen::Vector3d(0.6, 0.3, 0.55)},        // orange
+    {"57", Eigen::Vector3d(0.21, 0.22, 0.40)},        // chair
+    {"58", Eigen::Vector3d(0.75, 0.25, 0.40)},        // couch
+    {"59", Eigen::Vector3d(0.13, 0.13, 0.35)},        // potted plant
+    {"61", Eigen::Vector3d(0.6, 0.3, 0.55)},        // dining table
+    {"63", Eigen::Vector3d(0.45, 0.3, 0.05)},        // tv
+    {"64", Eigen::Vector3d(0.15, 0.11, 0.9)},        // laptop
+    {"65", Eigen::Vector3d(0.035, 0.05, 0.025)},        // mouse
+    {"66", Eigen::Vector3d(0.03, 0.09, 0.015)},        // remote
+    {"67", Eigen::Vector3d(0.055, 0.15, 0.01)},        // key board
+    {"68", Eigen::Vector3d(0.035, 0.07, 0.01)},        // cellphone
+    {"69", Eigen::Vector3d(0.2, 0.15, 0.15)},        // microwave
+    {"70", Eigen::Vector3d(0.3, 0.3, 0.25)},        // Oven
+    //{"71", Eigen::Vector3d(0.6, 0.3, 0.55)},        // Toaster
+    //{"72", Eigen::Vector3d(0.6, 0.3, 0.55)},        // sink
+    //{"73", Eigen::Vector3d(0.6, 0.3, 0.55)},        // refrigerator
+    //{"74", Eigen::Vector3d(0.6, 0.3, 0.55)},        // book
+    //{"75", Eigen::Vector3d(0.6, 0.3, 0.55)},        // clock
+    //{"76", Eigen::Vector3d(0.6, 0.3, 0.55)},        // vase
+    //{"78", Eigen::Vector3d(0.6, 0.3, 0.55)},        // scissors
+    //{"79", Eigen::Vector3d(0.6, 0.3, 0.55)},        // teddy bear
+    };
+#endif
 Matrix4d similarityTransformation(const cuboid &cube_obj)
 {
     Matrix3d rot;
@@ -646,6 +700,50 @@ void change_2d_corner_to_3d_object(const MatrixXd &box_corners_2d_float, const V
 
     sample_obj.box_corners_3d_world = compute3D_BoxCorner(sample_obj);
 }
+
+#ifdef at3dcv_size
+// box_corners_2d_float is 2*8    change to my object struct from 2D box corners.
+void change_2d_corner_to_3d_object(const MatrixXd &box_corners_2d_float, const Vector3d &configs, const Vector4d &ground_plane_sensor,
+                                   const Matrix4d &transToWolrd, const Matrix3d &invK, Eigen::Matrix<double, 3, 4> &projectionMatrix,
+                                   cuboid &sample_obj, Eigen::Vector3d mrcnn_obj_scale)
+{
+    Matrix3Xd obj_gnd_pt_world_3d;
+    plane_hits_3d(transToWolrd, invK, ground_plane_sensor, box_corners_2d_float.rightCols(4), obj_gnd_pt_world_3d); //% 3*n each column is a 3D point  floating point
+
+    double length_half =  mrcnn_obj_scale[0];// along object x direction   corner 5-8
+    double width_half = mrcnn_obj_scale[1];  // along object y direction   corner 5-6
+
+    Vector4d partwall_plane_world = get_wall_plane_equation(obj_gnd_pt_world_3d.col(0), obj_gnd_pt_world_3d.col(1)); //% to compute height, need to unproject-hit-planes formed by 5-6 corner
+    Vector4d partwall_plane_sensor = transToWolrd.transpose() * partwall_plane_world;                                // wall plane in sensor frame
+
+    Matrix3Xd obj_top_pt_world_3d;
+    plane_hits_3d(transToWolrd, invK, partwall_plane_sensor, box_corners_2d_float.col(1), obj_top_pt_world_3d); // should match obj_gnd_pt_world_3d  % compute corner 2
+    double height_half = mrcnn_obj_scale[2];
+
+    double mean_obj_x = obj_gnd_pt_world_3d.row(0).mean();
+    double mean_obj_y = obj_gnd_pt_world_3d.row(1).mean();
+
+    double vp_1_position = configs(1);
+    double yaw_esti = configs(2);
+    sample_obj.pos = Vector3d(mean_obj_x, mean_obj_y, height_half);
+    sample_obj.rotY = yaw_esti;
+    sample_obj.scale = Vector3d(length_half, width_half, height_half);
+    sample_obj.box_config_type = configs.head<2>();
+    VectorXd cuboid_to_raw_boxstructIds(8);
+    if (vp_1_position == 1) // vp1 on left, for all configurations
+        cuboid_to_raw_boxstructIds << 6, 5, 8, 7, 2, 3, 4, 1;
+    if (vp_1_position == 2) // vp1 on right, for all configurations
+        cuboid_to_raw_boxstructIds << 5, 6, 7, 8, 3, 2, 1, 4;
+
+    Matrix2Xi box_corners_2d_int = box_corners_2d_float.cast<int>();
+    sample_obj.box_corners_2d.resize(2, 8);
+    for (int i = 0; i < 8; i++)
+        sample_obj.box_corners_2d.col(i) = box_corners_2d_int.col(cuboid_to_raw_boxstructIds(i) - 1); // minius one to match index
+
+    sample_obj.box_corners_3d_world = compute3D_BoxCorner(sample_obj);
+}
+#endif
+
 
 float bboxOverlapratio(const cv::Rect &rect1, const cv::Rect &rect2)
 {

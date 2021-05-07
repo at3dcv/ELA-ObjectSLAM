@@ -30,6 +30,9 @@
 #include <Eigen/Geometry>
 #include <opencv2/opencv.hpp>
 
+// LL: Added config header to pass macro that switches Leander's code off and on
+#include "At3dcv_config.h"
+
 namespace ORB_SLAM2
 {
 
@@ -127,6 +130,9 @@ public:
 public:
     // by me, detect_3d_cuboid needs canny edge.
     cv::Mat raw_img;
+    // AC: Used for 3d reconstruction
+    cv::Mat raw_depth;
+    cv::Mat raw_rgb;
 
     // NOTE the object_landmark vector need to push back, not pre-allocated vector
     // landmarks are copied from local cubes, not new-created
@@ -166,6 +172,12 @@ public:
     long unsigned int mnId;            // key frame id
     const long unsigned int mnFrameId; // frame id in all images
 
+    // LL: Timestamp based frame ID    
+    #ifdef at3dcv_tum
+    std::string mTimeStamp_id;
+    #endif
+
+    // LL: Frame timestamp.
     const double mTimeStamp;
 
     int record_txtrow_id = -1; //final save to txt row id.
@@ -234,6 +246,8 @@ public:
 
     // Grid over the image to speed up feature matching
     std::vector<std::vector<std::vector<size_t>>> mGrid;
+
+    bool show_debug = true;
 
     // The following variables need to be accessed trough a mutex to be thread safe.
 protected:

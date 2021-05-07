@@ -84,6 +84,7 @@ bool LocalMapping::RunMappingIteration()
     //     Check if there are keyframes in the queue
     if (CheckNewKeyFrames())
     {
+        if (show_debug) std::cout << "LocalMapping::RunMappingIteration CheckNewKeyFrames" << std::endl;
         // BoW conversion and insertion in Map
         ProcessNewKeyFrame();
 
@@ -176,6 +177,7 @@ bool LocalMapping::CheckNewKeyFrames()
 
 void LocalMapping::ProcessNewKeyFrame()
 {
+    if (show_debug) std::cout << "LocalMapping::ProcessNewKeyFrame" << std::endl;
     {
         unique_lock<mutex> lock(mMutexNewKFs);
         mpCurrentKeyFrame = mlNewKeyFrames.front(); // the oldest
@@ -244,6 +246,8 @@ void LocalMapping::ProcessNewKeyFrame()
 
     // Insert Keyframe in Map
     mpMap->AddKeyFrame(mpCurrentKeyFrame);
+
+    if (show_debug) std::cout << "LocalMapping::ProcessNewKeyFrame END" << std::endl;
 }
 
 void LocalMapping::MapPointCulling()
