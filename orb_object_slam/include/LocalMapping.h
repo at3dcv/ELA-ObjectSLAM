@@ -73,6 +73,8 @@ public:
         return mlNewKeyFrames.size();
     }
 
+    bool show_debug = true;
+
 protected:
     bool CheckNewKeyFrames();
     void ProcessNewKeyFrame(); // update keyframe, compute Bow, insert points, frames if any.

@@ -32,7 +32,7 @@ class MapObject
 {
 public:
     // whether update global unique map object ID. only used in keyframe creation.
-    MapObject(Map *pMap, bool update_index = false);
+    MapObject(Map *pMap, bool update_index = false); // AC: TODO: set to true??
 
     void SetWorldPos(const g2o::cuboid &Pos);
     g2o::cuboid GetWorldPos();     // get cuboid pose in world/init frame.
@@ -103,13 +103,17 @@ public:
     Vector6d velocityTwist;                                    //general 6dof twist. for cars can assume no roll pitch   pose_Twc*exp(twist)=newpose
     g2o::SE3Quat getMovePose(KeyFrame *kf, double deltaT = 0); // deltaT relative to kf. works for short period where velocity doesn't change much
 
-    // LL: Added by Leander 
-    // LL: Init with deafault value
-    #ifdef at3dcv_leander
-    Eigen::Vector3d yolo_map_obj_scale = Eigen::Vector3d(1.9420, 0.8143, 0.7631);
+    // LL: Setting the mrcnn object scale as member field
+    // LL: Init with deafault value ("car" size)
+    #ifdef at3dcv_size
+    Eigen::Vector3d mrcnn_map_obj_scale = Eigen::Vector3d(1.9420, 0.8143, 0.7631);
     #endif
-    // LL: Added by Leander
     
+    // LL: Setting the detected object class names as member field
+    #ifdef at3dcv_tum
+    std::string object_class;
+    #endif
+
     //----------for local MapObject--------     no mutex needed, for local cuboid storage, not landmark
     int object_id_in_localKF;        // object id in reference keyframe's local objects.
     Eigen::Matrix2Xi box_corners_2d; // 2*8 on image  usually for local cuboids on reference frame.
@@ -127,6 +131,8 @@ public:
     g2o::cuboid pose_noopti;
 
     int record_txtrow_id = -1;
+
+    bool show_debug = true;
 
 protected:
     g2o::cuboid pose_Twc; // cuboid pose to the init/world. initialized as the position from first observe frame

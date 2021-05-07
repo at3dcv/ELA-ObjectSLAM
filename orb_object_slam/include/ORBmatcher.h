@@ -94,6 +94,8 @@ public:
     static const int TH_HIGH;
     static const int HISTO_LENGTH;
 
+    bool show_debug = true;
+
 
 protected:
 

@@ -62,16 +62,14 @@ vector<float> ObjDetectionHelper::GetNthEntry(int n) {
   return entry;
 }
 
-vector<vector<float> > ObjDetectionHelper::GetBBoxesWithPerson() {
+vector<vector<float> > ObjDetectionHelper::GetBBoxes() {
   vector<vector<float> > bboxes;
   for (int i = 0; i < classes.size(); i++) {
     vector<float> bbox;
-    if (classes[i] == 1) {
-      bbox = GetNthEntry(i);
-      bboxes.push_back(bbox);
-    }
+    bbox = GetNthEntry(i);
+    bboxes.push_back(bbox);
   }
-  cout << "Found " << bboxes.size() << " people" << endl;
+  cout << "Found " << bboxes.size() << " objects" << endl;
   return bboxes;
 }
 }

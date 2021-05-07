@@ -29,6 +29,9 @@
 
 #include <mutex>
 
+// LL: Added config header to pass macro that switches Leander's code off and on
+#include "At3dcv_config.h"
+
 namespace ORB_SLAM2
 {
 
@@ -49,7 +52,34 @@ public:
     // Draw last processed frame.  called by separate Viewer thread.
     cv::Mat DrawFrame();
 
+    bool show_debug = true;
+
 protected:
+
+
+// LL: Added by Leander 
+// LL: Passing the object class information from the cube proposals to the frame drawer
+// LL: Passing the look up table for the class types to the frame drawer
+#ifdef at3dcv_tum
+std::vector<std::string> object_class;
+std::string CLASS_NAMES[81] = {"BG", "person", "bicycle", "car", "motorcycle", "airplane",
+           "bus", "train", "truck", "boat", "traffic light",
+           "fire hydrant", "stop sign", "parking meter", "bench", "bird",
+           "cat", "dog", "horse", "sheep", "cow", "elephant", "bear",
+           "zebra", "giraffe", "backpack", "umbrella", "handbag", "tie",
+           "suitcase", "frisbee", "skis", "snowboard", "sports ball",
+           "kite", "baseball bat", "baseball glove", "skateboard",
+           "surfboard", "tennis racket", "bottle", "wine glass", "cup",
+           "fork", "knife", "spoon", "bowl", "banana", "apple",
+           "sandwich", "orange", "broccoli", "carrot", "hot dog", "pizza",
+           "donut", "cake", "chair", "couch", "potted plant", "bed",
+           "dining table", "toilet", "tv", "laptop", "mouse", "remote",
+           "keyboard", "cell phone", "microwave", "oven", "toaster",
+           "sink", "refrigerator", "book", "clock", "vase", "scissors",
+           "teddy bear", "hair drier", "toothbrush"};
+#endif
+// LL: Added by Leander
+
     // by me  for object
     std::vector<cv::Rect> bbox_2ds;                // yolo detected 2D bbox_2d, which has 3D cuboid
     std::vector<Eigen::Matrix2Xi> box_corners_2ds; //2*8 corners on object.
@@ -62,7 +92,6 @@ protected:
 
     // just for debug visualization
     std::vector<cv::KeyPoint> mvCurrentKeys_inlastframe;
-    std::vector<bool> mvStaticKeys;
     std::vector<cv::Point2f> mvfeaturesklt_lastframe;
     std::vector<cv::Point2f> mvfeaturesklt_thisframe;
 
@@ -84,6 +113,8 @@ protected:
     std::vector<cv::KeyPoint> mvIniKeys;
     std::vector<int> mvIniMatches;
     int mState;
+    // AC: add KeysStatic
+    std::vector<bool> mvKeysStatic;
 
     Map *mpMap;
 

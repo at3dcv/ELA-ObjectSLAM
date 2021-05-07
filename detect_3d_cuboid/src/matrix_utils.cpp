@@ -13,10 +13,8 @@
 #include <ctime>
 
 // LL: Added by Leander
-#ifdef at3dcv_leander
 #include <vector>
-#endif
-// LL: Added by Leander
+
 
 using namespace Eigen;
 
@@ -199,7 +197,6 @@ void vert_stack_m_self(MatrixXf &a_in, const MatrixXf &b_in)
 }
 
 // make sure column size is given. no checks here. row will be adjusted automatically. if more cols given, will be zero.
-// AC: the offline values of bboxes and segmentation are read here!
 template <class T>
 bool read_all_number_txt(const std::string txt_file_name, Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> &read_number_mat)
 {
@@ -240,9 +237,8 @@ bool read_all_number_txt(const std::string txt_file_name, Eigen::Matrix<T, Eigen
 template bool read_all_number_txt(const std::string, MatrixXd &);
 template bool read_all_number_txt(const std::string, MatrixXi &);
 
-
 // LL: Added by Leander 
-#ifdef at3dcv_leander
+#ifdef at3dcv_mask
 bool read_inst_segment_vertices(const std::string txt_file_name, std::vector<Eigen::Matrix2Xd> &read_inst_segment_vert)
 {
     // LL: Check if the file can be read
@@ -293,7 +289,7 @@ bool read_inst_segment_vertices(const std::string txt_file_name, std::vector<Eig
         row_counter += 2;
     
         // LL: Reduce the number of columns from a hundred to the actual number
-        single_object_is_vertices.conservativeResize(3,colu);
+        single_object_is_vertices.conservativeResize(2,colu);
         // LL: Push the vertices matrix of the current object to the vector containing the info. on all the objects in the frame.
         read_inst_segment_vert.push_back(single_object_is_vertices);
     }
@@ -301,7 +297,7 @@ bool read_inst_segment_vertices(const std::string txt_file_name, std::vector<Eig
     return true;
 }
 
-# ifdef at3dcv_leander
+# ifdef at3dcv_no_depth
 void poly_eigen_to_string_rep(Eigen::MatrixXi convex_hull_vertices, std::string &poly_string_rep){
     // LL: Convert polygon to the string format required by boost/geometry.
     // LL: Important: First and last point allways have to be the same to get a correct result.
@@ -332,7 +328,7 @@ void poly_vec_eigen_to_string_rep(std::vector<Eigen::MatrixXi> raw_all_obj2d_ss_
     }
 }
 
-int poly_string_to_boost_pooly(std::string poly_txt_rep, polygon &poly){
+int poly_string_to_boost_poly(std::string poly_txt_rep, polygon &poly){
     
     // LL: Convert txt representation to boost polygon
     std::string reason;
@@ -430,49 +426,37 @@ void eigen_2d_cub_surfaces_to_boost_poly_surfaces(std::vector<Eigen::MatrixXi> e
     {
         polygon poly;
         poly_eigen_to_string_rep(eigen_2d_surfaces[i], boost_string_rep);
-        poly_string_to_boost_pooly(boost_string_rep, poly);
+        poly_string_to_boost_poly(boost_string_rep, poly);
         boost_poly_surfaces.push_back(poly);
     }
 }
 # endif
 // LL: Added by Leander 
 #endif
-
-
 bool read_obj_detection_txt(const std::string txt_file_name, Eigen::MatrixXd &read_number_mat, std::vector<std::string> &all_strings)
 {
-    // LL: Check if the file can be read
     if (!std::ifstream(txt_file_name))
     {
         std::cout << "ERROR!!! Cannot read txt file " << txt_file_name << std::endl;
         return false;
     }
-    
-    // LL: Clear the memory of the all_strings vector that will save the class names
     all_strings.clear();
-    
-    // LL: Read the text file to `filetxt`
     std::ifstream filetxt(txt_file_name.c_str());
-    
-    // LL: If the memory was not correctly assigned to `read_number_mat`, set rows to 100 and columns to 10 if rows==0
     if (read_number_mat.rows() == 0)
         read_number_mat.resize(100, 10);
     int row_counter = 0;
     std::string line;
-    // LL: Loop over all lines from the file
     while (getline(filetxt, line))
     {
         double t;
         if (!line.empty())
         {
-            // LL: Retrive the first string (column) in the current line and write it to `classname`
             std::stringstream ss(line);
             std::string classname;
             ss >> classname;
             all_strings.push_back(classname);
 
             int colu = 0;
-            // LL: Extracts one by one all remaining columns of the current row and writes them to read_number_mat
             while (ss >> t)
             {
                 read_number_mat(row_counter, colu) = t;

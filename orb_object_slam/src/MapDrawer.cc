@@ -32,6 +32,9 @@
 #include "Converter.h"
 #include "MapObject.h"
 
+// AC: Added config header to pass macro that switches out custom code off and on
+#include "At3dcv_config.h"
+
 using namespace std;
 namespace ORB_SLAM2
 {
@@ -183,6 +186,7 @@ void MapDrawer::DrawMapPoints()
 
 void MapDrawer::DrawMapCuboids() // ideally this should be draw map cuboids.
 {
+	if (show_debug) std::cout << "MapDrawer::DrawMapCuboids" << std::endl;
 	// make sure final cuboid is in init world frame.
 	// draw all map objects
 	const vector<MapObject *> all_Map_objs = mpMap->GetAllMapObjects();
@@ -191,6 +195,8 @@ void MapDrawer::DrawMapCuboids() // ideally this should be draw map cuboids.
 	for (size_t object_id = 0; object_id < all_Map_objs.size(); object_id++)
 	{
 		MapObject *obj_landmark = all_Map_objs[object_id];
+
+		if (show_debug) std::cout << "Current Map objs: " << obj_landmark->mnId << "/" << all_Map_objs.size() << std::endl;
 
 		if (obj_landmark->isBad()) // some good, some bad, some not determined
 			continue;
@@ -223,7 +229,18 @@ void MapDrawer::DrawMapCuboids() // ideally this should be draw map cuboids.
 			front_face_color = Vector4d(1.0, 0.0, 1.0, 1.0);
 		}
 		// draw cuboid
+		
+#ifdef at3dcv_dyn_obj_mapdrawer
+		// AC: change color whether object is dynamic or not
+		std::vector<MapPoint *> object_owned_pts = obj_landmark->GetPotentialMapPoints();
+		if (show_debug) std::cout << "Is object dynamic? " << obj_landmark->is_dynamic << std::endl;
+		int colorId = 2; // AC: draw objects blue
+		if (obj_landmark->is_dynamic)
+			colorId = 0; // AC: draw dynamic object red
+		Vector3f box_color = box_colors[colorId];
+#else
 		Vector3f box_color = box_colors[obj_landmark->mnId % box_colors.size()];
+#endif
 		glColor4f(box_color(0), box_color(1), box_color(2), 1.0f); // draw all edges  cyan
 		for (int line_id = 0; line_id < all_edge_pt_ids.rows(); line_id++)
 		{
@@ -237,21 +254,21 @@ void MapDrawer::DrawMapCuboids() // ideally this should be draw map cuboids.
 		}
 		glEnd();
 
-		// draw dynamic object history path
-		if (whether_dynamic_object && obj_landmark->is_dynamic && obj_landmark->allDynamicPoses.size() > 0)
-		{
-			glLineWidth(mGraphLineWidth * 2);
-			glBegin(GL_LINE_STRIP);									   // line strip connects adjacent points
-			glColor4f(box_color(0), box_color(1), box_color(2), 1.0f); // draw all edges  cyan
-			for (auto it = obj_landmark->allDynamicPoses.begin(); it != obj_landmark->allDynamicPoses.end(); it++)
-			{
-				if (bundle_object_opti && !it->second.second) //only show optimized frame object pose
-					continue;
-				g2o::cuboid cubepose = it->second.first;
-				glVertex3f(cubepose.pose.translation()(0), cubepose.pose.translation()(1), cubepose.pose.translation()(2));
-			}
-			glEnd();
-		}
+		//// draw dynamic object history path
+		//if (whether_dynamic_object && obj_landmark->is_dynamic && obj_landmark->allDynamicPoses.size() > 0)
+		//{
+		//	glLineWidth(mGraphLineWidth * 2);
+		//	glBegin(GL_LINE_STRIP);									   // line strip connects adjacent points
+		//	glColor4f(box_color(0), box_color(1), box_color(2), 1.0f); // draw all edges  cyan
+		//	for (auto it = obj_landmark->allDynamicPoses.begin(); it != obj_landmark->allDynamicPoses.end(); it++)
+		//	{
+		//		if (bundle_object_opti && !it->second.second) //only show optimized frame object pose
+		//			continue;
+		//		g2o::cuboid cubepose = it->second.first;
+		//		glVertex3f(cubepose.pose.translation()(0), cubepose.pose.translation()(1), cubepose.pose.translation()(2));
+		//	}
+		//	glEnd();
+		//}
 	}
 }
 

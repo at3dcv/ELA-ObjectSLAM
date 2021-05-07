@@ -24,9 +24,15 @@
 #include "Thirdparty/DBoW2/DBoW2/BowVector.h"
 #include "Thirdparty/DBoW2/DBoW2/FeatureVector.h"
 #include "ORBVocabulary.h"
-#include "ObjDetectionHelper.h"
 #include <vector>
 #include <opencv2/opencv.hpp>
+#include "Eigen/Dense"
+
+// AC: custom class
+#include "ObjDetectionHelper.h"
+
+// LL: Added config header to pass macro that switches Leander's code off and on
+#include "At3dcv_config.h"
 
 namespace ORB_SLAM2
 {
@@ -45,17 +51,26 @@ public:
     // Copy constructor.
     Frame(const Frame &frame);
 
-    // Constructor for stereo cameras. extract keypoints, descriptors
-    Frame(const cv::Mat &imLeft, const cv::Mat &imRight, const double &timeStamp, ORBextractor *extractorLeft, ORBextractor *extractorRight, ORBVocabulary *voc,
+    // LL: Adding the function argument timeStamp_id for the unix time stamp identifier to the mono and RGB-D constructor
+    #ifdef at3dcv_tum
+    // Constructor for RGB-D cameras. extract keypoints, descriptors
+    Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeStamp, std::string timeStamp_id, ORBextractor *extractor, ORBVocabulary *voc,
           cv::Mat &K, cv::Mat &distCoef, const float &bf, const float &thDepth);
-
+    // Constructor for Monocular cameras. extract keypoints, descriptors
+    Frame(const cv::Mat &imGray, const double &timeStamp, std::string timeStamp_id, ORBextractor *extractor, ORBVocabulary *voc, cv::Mat &K, cv::Mat &distCoef,
+      const float &bf, const float &thDepth);
+    #else
     // Constructor for RGB-D cameras. extract keypoints, descriptors
     Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeStamp, ORBextractor *extractor, ORBVocabulary *voc,
           cv::Mat &K, cv::Mat &distCoef, const float &bf, const float &thDepth);
-
     // Constructor for Monocular cameras. extract keypoints, descriptors
     Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor *extractor, ORBVocabulary *voc, cv::Mat &K, cv::Mat &distCoef,
           const float &bf, const float &thDepth);
+    #endif
+
+    // Constructor for stereo cameras. extract keypoints, descriptors
+    Frame(const cv::Mat &imLeft, const cv::Mat &imRight, const double &timeStamp, ORBextractor *extractorLeft, ORBextractor *extractorRight, ORBVocabulary *voc,
+          cv::Mat &K, cv::Mat &distCoef, const float &bf, const float &thDepth);
 
     // Extract ORB on the image. 0 for left image and 1 for right image.
     void ExtractORB(int flag, const cv::Mat &im);
@@ -104,26 +119,27 @@ public:
     // Backprojects a keypoint (if depth is available) into 3D world coordinates.
     cv::Mat UnprojectDepth(const int &i, float depth);
 
-    // EXTENSION
-    // detect moving points
+    // AC: EXTENSION
     void DetectMovingKeypoints(const cv::Mat &imgray);
     std::vector<cv::Point2f> T_M;
     double limit_dis_epi = 1; 
     double limit_of_check = 2120;
     int limit_edge_corner = 5;
 
-    // For semantic segmentation thread
-    void FilterOutMovingPoints(const cv::Mat &imGray);
+    void FilterOutMovingPoints();
     ObjDetectionHelper mCurrentObjDetection;
     std::vector<vector<float > > mCurrentBBoxes;
 
-    void CheckMovingKeyPoints(const cv::Mat &imGray, const std::vector<std::vector<float > > mCurrentBBoxes);
+    void CheckMovingObjects(Eigen::MatrixXd mCurrentBBoxes, std::vector<std::string> classes);
+    std::vector<bool> objectsAreMoving;
 
 public:
     // by me, detect_3d_cuboid needs raw image
     cv::Mat raw_img;
-    cv::Mat raw_depth;  // AC: Used for Cuboid + 3d reconstruction
-    cv::Mat raw_rgb;  // AC: Used for 3d reconstruction
+    // AC: Used for 3d reconstruction
+    cv::Mat raw_depth;
+    cv::Mat raw_rgb;
+
     std::vector<bool> KeysStatic;
     std::vector<int> keypoint_associate_objectID;
     int numobject;
@@ -145,6 +161,11 @@ public:
 
     // Feature extractor. The right is used only in the stereo case.
     ORBextractor *mpORBextractorLeft, *mpORBextractorRight;
+
+    // LL: Timestamp based frame ID
+    #ifdef at3dcv_tum
+    std::string mTimeStamp_id;
+    #endif
 
     // Frame timestamp.
     double mTimeStamp;
@@ -233,6 +254,8 @@ public:
     static float mnMaxY;
 
     static bool mbInitialComputations;
+
+    bool show_debug = true;
 
 private:
     // Undistort keypoints given OpenCV distortion parameters.

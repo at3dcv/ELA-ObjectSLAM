@@ -11,8 +11,7 @@
 using namespace Eigen;
 using namespace std;
 
-// LL: Added by Leander
-#ifdef at3dcv_leander
+#ifdef at3dcv_size
 // Scale Vector3d(length_half, width_half, height_half), example: car = (1.9420, 0.8143, 0.7631)
 std::unordered_map<std::string, Eigen::Vector3d> cuboid::obj_class_scales{
     {"1",Eigen::Vector3d(0.15, 0.20, 0.85)},        // person
@@ -33,40 +32,39 @@ std::unordered_map<std::string, Eigen::Vector3d> cuboid::obj_class_scales{
     {"26", Eigen::Vector3d(0.06, 0.06, 0.30)},        // umbrella
     {"27", Eigen::Vector3d(0.07, 0.12, 0.12)},        // handbag
     {"29", Eigen::Vector3d(0.06, 0.17, 0.15)},        // suticase
-    {"40", Eigen::Vector3d(0.035, 0.035, 0.14)},        // bottle 
-    {"41", Eigen::Vector3d(0.6, 0.3, 0.55)},        // wine glass
-    {"42", Eigen::Vector3d(0.035, 0.035, 0.045)},        // cup
-    {"43", Eigen::Vector3d(0.6, 0.3, 0.55)},        // fork
-    {"44", Eigen::Vector3d(0.6, 0.3, 0.55)},        // knife
-    {"45", Eigen::Vector3d(0.6, 0.3, 0.55)},        // spoon
-    {"46", Eigen::Vector3d(0.6, 0.3, 0.55)},        // bowl
-    {"47", Eigen::Vector3d(0.6, 0.3, 0.55)},        // banana
-    {"48", Eigen::Vector3d(0.6, 0.3, 0.55)},        // apple
-    {"49", Eigen::Vector3d(0.6, 0.3, 0.55)},        // sandwich
-    {"50", Eigen::Vector3d(0.6, 0.3, 0.55)},        // orange
-    {"57", Eigen::Vector3d(0.6, 0.3, 0.55)},        // chair
-    {"58", Eigen::Vector3d(0.6, 0.3, 0.55)},        // couch
-    {"59", Eigen::Vector3d(0.6, 0.3, 0.55)},        // potted plant
-    {"63", Eigen::Vector3d(0.6, 0.3, 0.55)},        // tv
-    {"64", Eigen::Vector3d(0.6, 0.3, 0.55)},        // laptop
-    {"65", Eigen::Vector3d(0.6, 0.3, 0.55)},        // mouse
-    {"66", Eigen::Vector3d(0.6, 0.3, 0.55)},        // remote
-    {"67", Eigen::Vector3d(0.6, 0.3, 0.55)},        // key board
-    {"68", Eigen::Vector3d(0.6, 0.3, 0.55)},        // cellphone
-    {"69", Eigen::Vector3d(0.6, 0.3, 0.55)},        // microwave
-    {"70", Eigen::Vector3d(0.6, 0.3, 0.55)},        // Oven
-    {"71", Eigen::Vector3d(0.6, 0.3, 0.55)},        // Toaster
-    {"72", Eigen::Vector3d(0.6, 0.3, 0.55)},        // sink
-    {"73", Eigen::Vector3d(0.6, 0.3, 0.55)},        // refrigerator
-    {"74", Eigen::Vector3d(0.6, 0.3, 0.55)},        // book
-    {"75", Eigen::Vector3d(0.6, 0.3, 0.55)},        // clock
-    {"76", Eigen::Vector3d(0.6, 0.3, 0.55)},        // vase
-    {"78", Eigen::Vector3d(0.6, 0.3, 0.55)},        // scissors
-    {"79", Eigen::Vector3d(0.6, 0.3, 0.55)},        // teddy bear
+    {"40", Eigen::Vector3d(0.035, 0.035, 0.14)},        // bottle
+    //{"41", Eigen::Vector3d(0.6, 0.3, 0.55)},        // wine glass
+    {"42", Eigen::Vector3d(0.15, 0.12, 0.12)},        // cup/garbage can
+    //{"43", Eigen::Vector3d(0.6, 0.3, 0.55)},        // fork
+    //{"44", Eigen::Vector3d(0.6, 0.3, 0.55)},        // knife
+    //{"45", Eigen::Vector3d(0.6, 0.3, 0.55)},        // spoon
+    //{"46", Eigen::Vector3d(0.6, 0.3, 0.55)},        // bowl
+    //{"47", Eigen::Vector3d(0.6, 0.3, 0.55)},        // banana
+    //{"48", Eigen::Vector3d(0.6, 0.3, 0.55)},        // apple
+    //{"49", Eigen::Vector3d(0.6, 0.3, 0.55)},        // sandwich
+    //{"50", Eigen::Vector3d(0.6, 0.3, 0.55)},        // orange
+    {"57", Eigen::Vector3d(0.21, 0.22, 0.40)},        // chair
+    {"58", Eigen::Vector3d(0.75, 0.25, 0.40)},        // couch
+    {"59", Eigen::Vector3d(0.13, 0.13, 0.35)},        // potted plant
+    {"61", Eigen::Vector3d(0.6, 0.3, 0.55)},        // dining table
+    {"63", Eigen::Vector3d(0.45, 0.3, 0.05)},        // tv
+    {"64", Eigen::Vector3d(0.15, 0.11, 0.9)},        // laptop
+    {"65", Eigen::Vector3d(0.035, 0.05, 0.025)},        // mouse
+    {"66", Eigen::Vector3d(0.03, 0.09, 0.015)},        // remote
+    {"67", Eigen::Vector3d(0.055, 0.15, 0.01)},        // key board
+    {"68", Eigen::Vector3d(0.035, 0.07, 0.01)},        // cellphone
+    {"69", Eigen::Vector3d(0.2, 0.15, 0.15)},        // microwave
+    {"70", Eigen::Vector3d(0.3, 0.3, 0.25)},        // Oven
+    //{"71", Eigen::Vector3d(0.6, 0.3, 0.55)},        // Toaster
+    //{"72", Eigen::Vector3d(0.6, 0.3, 0.55)},        // sink
+    //{"73", Eigen::Vector3d(0.6, 0.3, 0.55)},        // refrigerator
+    //{"74", Eigen::Vector3d(0.6, 0.3, 0.55)},        // book
+    //{"75", Eigen::Vector3d(0.6, 0.3, 0.55)},        // clock
+    //{"76", Eigen::Vector3d(0.6, 0.3, 0.55)},        // vase
+    //{"78", Eigen::Vector3d(0.6, 0.3, 0.55)},        // scissors
+    //{"79", Eigen::Vector3d(0.6, 0.3, 0.55)},        // teddy bear
     };
 #endif
-// LL: Added by Leander
-
 Matrix4d similarityTransformation(const cuboid &cube_obj)
 {
     Matrix3d rot;
@@ -551,31 +549,19 @@ double box_edge_alignment_angle_error(const MatrixXd &all_vp_bound_edge_angles, 
 void fuse_normalize_scores_v2(const VectorXd &dist_error, const VectorXd &angle_error, VectorXd &combined_scores, std::vector<int> &final_keep_inds,
                               double weight_vp_angle, bool whether_normalize)
 {
-    // LL: Retrive number of 2D vanishing point proposal sets
     int raw_data_size = dist_error.rows();
     if (raw_data_size > 4)
     {
-
-        // LL: breaking_num is used to only consider the xth first/best proposels 
         int breaking_num = round(float(raw_data_size) / 3.0 * 2.0);
-        
-        // LL: Vector that for the indices of distance errors sorted by size
         std::vector<int> dist_sorted_inds(raw_data_size);
-
-        // LL: File the index vector with indices start at zero and going till raw_data_size-1: [0, 1, 2, ..., raw_data_size-1]
         std::iota(dist_sorted_inds.begin(), dist_sorted_inds.end(), 0);
-        
-        // LL: Duplicate the vector for the angle error
         std::vector<int> angle_sorted_inds = dist_sorted_inds;
 
-        // LL: Identify smallest `breaking_num` distance and angle errors and sort the index vectors accordingly 
         sort_indexes(dist_error, dist_sorted_inds, breaking_num);
         sort_indexes(angle_error, angle_sorted_inds, breaking_num);
 
-        // LL: Only keep the best and sorted `breaking_num` distance errors
         std::vector<int> dist_keep_inds = std::vector<int>(dist_sorted_inds.begin(), dist_sorted_inds.begin() + breaking_num - 1); // keep best 2/3
 
-        // LL: Only consider the angle error in case that their is a considerable difference between the errors in angle_error - "angle error has maximum. may already saturate at breaking pt."
         if (angle_error(angle_sorted_inds[breaking_num - 1]) > angle_error(angle_sorted_inds[breaking_num - 2]))
         {
             std::vector<int> angle_keep_inds = std::vector<int>(angle_sorted_inds.begin(), angle_sorted_inds.begin() + breaking_num - 1); // keep best 2/3
@@ -597,7 +583,6 @@ void fuse_normalize_scores_v2(const VectorXd &dist_error, const VectorXd &angle_
         std::iota(final_keep_inds.begin(), final_keep_inds.end(), 0);
     }
 
-
     int new_data_size = final_keep_inds.size();
     // find max/min of kept errors.
     double min_dist_error = 1e6;
@@ -606,9 +591,6 @@ void fuse_normalize_scores_v2(const VectorXd &dist_error, const VectorXd &angle_
     double max_angle_error = -1;
     VectorXd dist_kept(new_data_size);
     VectorXd angle_kept(new_data_size);
-
-    // LL: Identify the max and min distance and angle error, necessary for normalization
-    // LL: Save the smallest errors, which correspond to the indices in the two prior creates index vectors
     for (int i = 0; i < new_data_size; i++)
     {
         double temp_dist = dist_error(final_keep_inds[i]);
@@ -679,32 +661,19 @@ void getVanishingPoints(const Matrix3d &KinvR, double yaw_esti, Vector2d &vp_1, 
 }
 
 // box_corners_2d_float is 2*8    change to my object struct from 2D box corners.
-// AC: Keypoints here?!?!?
 void change_2d_corner_to_3d_object(const MatrixXd &box_corners_2d_float, const Vector3d &configs, const Vector4d &ground_plane_sensor,
                                    const Matrix4d &transToWolrd, const Matrix3d &invK, Eigen::Matrix<double, 3, 4> &projectionMatrix,
                                    cuboid &sample_obj)
 {
-    /* Args:
-    * 		box_corners_2d_float: Matrix of 2*8, the eight 2D corners for cuboid proposal calculated via the vanishing point approach
-    *		configs: Vector with config_id, vp_1_position, obj_yaw_esti
-    *		ground_plane_sensor: The ground plane in sensor coordinates: Vector4d ground_plane_sensor = cam_pose.transToWolrd.transpose() * ground_plane_world;
-    *		transToWolrd: Matrix for the transition to world coordinates: cam_pose.transToWolrd
-    *		invK: Inverse camera intrinsic matrix
-    *		projectionMatrix: Projects world coordinates to camera
-    *       sample_obj: An instance of the cuboid class that should be populated. 
-    */
-
-    // LL: Derive the 3D vertices of the bottom of the cuboid proposels
     Matrix3Xd obj_gnd_pt_world_3d;
     plane_hits_3d(transToWolrd, invK, ground_plane_sensor, box_corners_2d_float.rightCols(4), obj_gnd_pt_world_3d); //% 3*n each column is a 3D point  floating point
-    
+
     double length_half = (obj_gnd_pt_world_3d.col(0) - obj_gnd_pt_world_3d.col(3)).norm() / 2; // along object x direction   corner 5-8
     double width_half = (obj_gnd_pt_world_3d.col(0) - obj_gnd_pt_world_3d.col(1)).norm() / 2;  // along object y direction   corner 5-6
 
     Vector4d partwall_plane_world = get_wall_plane_equation(obj_gnd_pt_world_3d.col(0), obj_gnd_pt_world_3d.col(1)); //% to compute height, need to unproject-hit-planes formed by 5-6 corner
     Vector4d partwall_plane_sensor = transToWolrd.transpose() * partwall_plane_world;                                // wall plane in sensor frame
 
-    // LL: Derive the 3D vertices of the top of the cuboid proposels
     Matrix3Xd obj_top_pt_world_3d;
     plane_hits_3d(transToWolrd, invK, partwall_plane_sensor, box_corners_2d_float.col(1), obj_top_pt_world_3d); // should match obj_gnd_pt_world_3d  % compute corner 2
     double height_half = obj_top_pt_world_3d(2, 0) / 2;

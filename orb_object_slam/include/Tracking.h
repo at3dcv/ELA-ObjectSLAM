@@ -33,7 +33,7 @@
 #include "Eigen/Dense"
 #include <Eigen/Geometry>
 #include <opencv2/opencv.hpp>
-#include "boost/make_shared.hpp"
+
 #include "unordered_map"
 
 // LL: Added config header to pass macro that switches Leander's code off and on
@@ -58,21 +58,32 @@ class System;
 class ORBextractor;
 class KeyFrameDatabase;
 class Initializer;
-class PointCloudMapping;
+
 class Tracking
 {
 
 public:
     Tracking(){}; // for my post mapping...
-    Tracking(System *pSys, ORBVocabulary *pVoc, FrameDrawer *pFrameDrawer, MapDrawer *pMapDrawer, Map *pMap, 
-            boost::shared_ptr<PointCloudMapping> pPointCloud,  KeyFrameDatabase *pKFDB, const std::string &strSettingPath, const int sensor);
+    Tracking(System *pSys, ORBVocabulary *pVoc, FrameDrawer *pFrameDrawer, MapDrawer *pMapDrawer, Map *pMap,
+             KeyFrameDatabase *pKFDB, const std::string &strSettingPath, const int sensor);
 
     ~Tracking();
 
     // Preprocess the input and call Track(). Extract features and performs stereo matching.
     cv::Mat GrabImageStereo(const cv::Mat &imRectLeft, const cv::Mat &imRectRight, const double &timestamp);
-    cv::Mat GrabImageRGBD(const cv::Mat &imRGB, const cv::Mat &imD, const double &timestamp, int msg_seq_id);
+    #ifdef at3dcv_tum
+    // LL: overloaded function to pass the unix file identifier 
+    cv::Mat GrabImageRGBD(const cv::Mat &imRGB, const cv::Mat &imD, const double &timestamp, std::string timestamp_id);
+    #else
+    cv::Mat GrabImageRGBD(const cv::Mat &imRGB, const cv::Mat &imD, const double &timestamp);
+    #endif
+    
+    #ifdef at3dcv_tum
+    // LL: overloaded function to pass the unix file identifier 
+    cv::Mat GrabImageMonocular(const cv::Mat &im, const double &timestamp, std::string timestamp_id, int msg_seq_id = -1);
+    #else
     cv::Mat GrabImageMonocular(const cv::Mat &im, const double &timestamp, int msg_seq_id = -1);
+    #endif
 
     void SetLocalMapper(LocalMapping *pLocalMapper);
     void SetLoopClosing(LoopClosing *pLoopClosing);
@@ -87,9 +98,6 @@ public:
     void InformOnlyTracking(const bool &flag);
 
 public:
-    // keep track of object detection frame id
-    int object_detection_frame_id = 0;
-
     // by me
     Eigen::Matrix3d Kalib;
     Eigen::Matrix3f Kalib_f;
@@ -158,7 +166,6 @@ public:
     // Current Frame
     Frame mCurrentFrame;
     cv::Mat mImGray;
-    cv::Mat mImRGB;
 
     // Initialization Variables (Monocular)
     std::vector<int> mvIniLastMatches;
@@ -178,6 +185,8 @@ public:
     bool mbOnlyTracking;
 
     void Reset();
+
+    bool show_debug = true;
 
 protected:
     // Main tracking function. It is independent of the input sensor.
@@ -275,8 +284,6 @@ protected:
 
     //Color order (true RGB, false BGR, ignored if grayscale)
     bool mbRGB;
-    // EC:For point cloud viewing
-    boost::shared_ptr<PointCloudMapping> mpPointCloudMapping;
 
     std::list<MapPoint *> mlpTemporalPoints;
 };

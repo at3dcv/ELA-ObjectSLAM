@@ -24,8 +24,6 @@
 #include "Map.h"
 #include "KeyFrame.h"
 
-#include <ros/ros.h>
-
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 
@@ -64,6 +62,8 @@ cv::Mat FrameDrawer::DrawFrame()
     vector<cv::KeyPoint> vCurrentKeys; // KeyPoints in current frame
     vector<bool> vbVO, vbMap;          // Tracked MapPoints in current frame
     int state;                         // Tracking state
+    // AC: KeysStatic of Frame
+    vector<bool> vKeysStatic;   
 
     //for debug visualization
     vector<cv::KeyPoint> vCurrentKeys_inlastframe;
@@ -87,6 +87,7 @@ cv::Mat FrameDrawer::DrawFrame()
             vfeaturesklt_thisframe = mvfeaturesklt_thisframe;
             vIniKeys = mvIniKeys;
             vMatches = mvIniMatches;
+            vKeysStatic = mvKeysStatic;
         }
         else if (mState == Tracking::OK)
         {
@@ -96,6 +97,7 @@ cv::Mat FrameDrawer::DrawFrame()
             vfeaturesklt_thisframe = mvfeaturesklt_thisframe;
             vbVO = mvbVO;
             vbMap = mvbMap;
+            vKeysStatic = mvKeysStatic;
         }
         else if (mState == Tracking::LOST)
         {
@@ -103,6 +105,7 @@ cv::Mat FrameDrawer::DrawFrame()
             vCurrentKeys_inlastframe = mvCurrentKeys_inlastframe;
             vfeaturesklt_lastframe = mvfeaturesklt_lastframe;
             vfeaturesklt_thisframe = mvfeaturesklt_thisframe;
+            vKeysStatic = mvKeysStatic;
         }
     } // destroy scoped mutex -> release mutex
 
@@ -138,16 +141,19 @@ cv::Mat FrameDrawer::DrawFrame()
 
                 if (vbMap[i]) // This is a match to a MapPoint in the map    // green
                 {
-                    // AC: Dynamic keys are colored red
-                    if (mvStaticKeys[i])
+                    // AC: Visualize dynamic keypoints larger
+                    if (vKeysStatic[i])
                         cv::circle(im, vCurrentKeys[i].pt, 3, cv::Scalar(0, 255, 0), -1);
                     else
-                        cv::circle(im, vCurrentKeys[i].pt, 10, cv::Scalar(0, 0, 255), -1);
+                    {
+                        if (show_debug) std::cout << "FrameDrawer: MATCHED Dynamic Key!!" << std::endl;
+                        cv::circle(im, vCurrentKeys[i].pt, 10, cv::Scalar(0, 0, 255), -1);    // AC: dynamic keypoints
+                    }
                     mnTracked++;
                 }
-                else // This is match to a "visual odometry" MapPoint created in the last frame    // red
+                else // This is match to a "visual odometry" MapPoint created in the last frame    // blue
                 {
-                    cv::circle(im, vCurrentKeys[i].pt, 3, cv::Scalar(255, 0, 0), -1);
+                    cv::circle(im, vCurrentKeys[i].pt, 3, cv::Scalar(0, 123, 255), -1);
                     mnTrackedVO++;
                 }
 
@@ -160,7 +166,16 @@ cv::Mat FrameDrawer::DrawFrame()
             }
             else // if not matched to map points. discarded points.
             {
-                // 		cv::circle(im,vCurrentKeys[i].pt,2,cv::Scalar(255,0,255),-1);  //magenda
+#ifdef at3dcv_show_not_matched_dyn_kpts
+                // AC: .
+                if (vKeysStatic[i]) {}
+                    // cv::circle(im,vCurrentKeys[i].pt,2,cv::Scalar(255,0,255),-1);  //magenda
+                else
+                {
+                    if (show_debug) std::cout << "FrameDrawer: NOT MATCHED Dynamic Key!!" << std::endl;
+                    cv::circle(im, vCurrentKeys[i].pt, 10, cv::Scalar(0, 0, 255), -1);    // AC: dynamic keypoints
+                }
+#endif
             }
         }
 
@@ -180,6 +195,15 @@ cv::Mat FrameDrawer::DrawFrame()
         for (size_t i = 0; i < bbox_2ds.size(); i++)
         {
             cv::rectangle(im, bbox_2ds[i], box_colors[i % box_colors.size()], 2); // 2d bounding box.
+
+            #ifdef at3dcv_tum
+            if(i < object_class.size())
+            {
+                std::string  box_identifier = CLASS_NAMES[std::stoi(object_class[i])]; 
+                cv::putText(im, box_identifier , cv::Point(bbox_2ds[i].x + 20, bbox_2ds[i].y + 20), cv::FONT_HERSHEY_PLAIN, 2, box_colors[i % box_colors.size()], 2); // # bgr
+            }
+            #endif 
+
             if ((scene_unique_id != kitti) && (box_corners_2ds[i].cols() > 0))    // for most offline read data, usually cannot read it, could use rviz.
             {
                 plot_image_with_cuboid_edges(im, box_corners_2ds[i], edge_markers_2ds[i]); // eight corners.
@@ -248,19 +272,23 @@ void FrameDrawer::DrawTextInfo(cv::Mat &im, int nState, cv::Mat &imText)
 
 void FrameDrawer::Update(Tracking *pTracker)
 {
-    ROS_DEBUG_STREAM("FrameDrawer::Update");
-
     if (!enable_viewimage)
         return;
 
     unique_lock<mutex> lock(mMutex);
     pTracker->mImGray.copyTo(mIm);
     mvCurrentKeys = pTracker->mCurrentFrame.mvKeys;
-    mvStaticKeys = pTracker->mCurrentFrame.KeysStatic;
     N = mvCurrentKeys.size();
     mvbVO = vector<bool>(N, false);
     mvbMap = vector<bool>(N, false);
     mbOnlyTracking = pTracker->mbOnlyTracking;
+
+    // AC: consider static/dynamic keys
+    mvKeysStatic = vector<bool>(N, true);
+#ifdef at3dcv_show_not_matched_dyn_kpts
+    if (whether_dynamic_object)
+        mvKeysStatic = pTracker->mCurrentFrame.KeysStatic;
+#endif
 
     potential_ground_fit_inds.clear();
     current_frame_id = int(pTracker->mCurrentFrame.mnId);
@@ -292,7 +320,6 @@ void FrameDrawer::Update(Tracking *pTracker)
             }
         }
     }
-    
     mState = static_cast<int>(pTracker->mLastProcessedState);
 
     if (whether_detect_object) // copy some object data for visualization
@@ -304,17 +331,21 @@ void FrameDrawer::Update(Tracking *pTracker)
         box_corners_2ds.clear();
         edge_markers_2ds.clear();
         point_Object_AssoID.clear();
-        ROS_DEBUG_STREAM("FrameDrawer::Update if 2");
-        if (pTracker->mCurrentFrame.mpReferenceKF != NULL)
-        {
-            ROS_DEBUG_STREAM("FrameDrawer::Update if 3");
+        
+        #ifdef at3dcv_tum
+        object_class.clear();
+        #endif
+
+        if (pTracker->mCurrentFrame.mpReferenceKF != NULL)                                             // mCurrentFrame.mpReferenceKF
             if ((pTracker->mCurrentFrame.mnId - pTracker->mCurrentFrame.mpReferenceKF->mnFrameId) < 1) // if current frame is a keyframe
             {
-                ROS_DEBUG_STREAM("FrameDrawer::Update if 4");
                 if (whether_detect_object)
                 {
                     for (const MapObject *object : pTracker->mCurrentFrame.mpReferenceKF->local_cuboids)
                     {
+                        #ifdef at3dcv_tum
+                        object_class.push_back(object->object_class);
+                        #endif
                         bbox_2ds.push_back(object->bbox_2d);
                         box_corners_2ds.push_back(object->box_corners_2d);
                         edge_markers_2ds.push_back(object->edge_markers);
@@ -326,7 +357,6 @@ void FrameDrawer::Update(Tracking *pTracker)
                         point_Object_AssoID = pTracker->mCurrentFrame.mpReferenceKF->keypoint_associate_objectID;
                 }
             }
-        } 
     }
 
     if (enable_ground_height_scale)
@@ -337,6 +367,6 @@ void FrameDrawer::Update(Tracking *pTracker)
                 potential_ground_fit_inds = pTracker->mCurrentFrame.mpReferenceKF->ground_region_potential_pts;
             }
     }
-    ROS_DEBUG_STREAM("FrameDrawer::Update END");
 }
+
 } // namespace ORB_SLAM2
