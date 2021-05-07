@@ -701,6 +701,50 @@ void change_2d_corner_to_3d_object(const MatrixXd &box_corners_2d_float, const V
     sample_obj.box_corners_3d_world = compute3D_BoxCorner(sample_obj);
 }
 
+#ifdef at3dcv_size
+// box_corners_2d_float is 2*8    change to my object struct from 2D box corners.
+void change_2d_corner_to_3d_object(const MatrixXd &box_corners_2d_float, const Vector3d &configs, const Vector4d &ground_plane_sensor,
+                                   const Matrix4d &transToWolrd, const Matrix3d &invK, Eigen::Matrix<double, 3, 4> &projectionMatrix,
+                                   cuboid &sample_obj, Eigen::Vector3d mrcnn_obj_scale)
+{
+    Matrix3Xd obj_gnd_pt_world_3d;
+    plane_hits_3d(transToWolrd, invK, ground_plane_sensor, box_corners_2d_float.rightCols(4), obj_gnd_pt_world_3d); //% 3*n each column is a 3D point  floating point
+
+    double length_half =  mrcnn_obj_scale[0];// along object x direction   corner 5-8
+    double width_half = mrcnn_obj_scale[1];  // along object y direction   corner 5-6
+
+    Vector4d partwall_plane_world = get_wall_plane_equation(obj_gnd_pt_world_3d.col(0), obj_gnd_pt_world_3d.col(1)); //% to compute height, need to unproject-hit-planes formed by 5-6 corner
+    Vector4d partwall_plane_sensor = transToWolrd.transpose() * partwall_plane_world;                                // wall plane in sensor frame
+
+    Matrix3Xd obj_top_pt_world_3d;
+    plane_hits_3d(transToWolrd, invK, partwall_plane_sensor, box_corners_2d_float.col(1), obj_top_pt_world_3d); // should match obj_gnd_pt_world_3d  % compute corner 2
+    double height_half = mrcnn_obj_scale[2];
+
+    double mean_obj_x = obj_gnd_pt_world_3d.row(0).mean();
+    double mean_obj_y = obj_gnd_pt_world_3d.row(1).mean();
+
+    double vp_1_position = configs(1);
+    double yaw_esti = configs(2);
+    sample_obj.pos = Vector3d(mean_obj_x, mean_obj_y, height_half);
+    sample_obj.rotY = yaw_esti;
+    sample_obj.scale = Vector3d(length_half, width_half, height_half);
+    sample_obj.box_config_type = configs.head<2>();
+    VectorXd cuboid_to_raw_boxstructIds(8);
+    if (vp_1_position == 1) // vp1 on left, for all configurations
+        cuboid_to_raw_boxstructIds << 6, 5, 8, 7, 2, 3, 4, 1;
+    if (vp_1_position == 2) // vp1 on right, for all configurations
+        cuboid_to_raw_boxstructIds << 5, 6, 7, 8, 3, 2, 1, 4;
+
+    Matrix2Xi box_corners_2d_int = box_corners_2d_float.cast<int>();
+    sample_obj.box_corners_2d.resize(2, 8);
+    for (int i = 0; i < 8; i++)
+        sample_obj.box_corners_2d.col(i) = box_corners_2d_int.col(cuboid_to_raw_boxstructIds(i) - 1); // minius one to match index
+
+    sample_obj.box_corners_3d_world = compute3D_BoxCorner(sample_obj);
+}
+#endif
+
+
 float bboxOverlapratio(const cv::Rect &rect1, const cv::Rect &rect2)
 {
     int overlap_area = (rect1 & rect2).area();

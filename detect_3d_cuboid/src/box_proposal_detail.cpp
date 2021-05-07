@@ -637,13 +637,10 @@ void detect_3d_cuboid::detect_cuboid(const cv::Mat &rgb_img, const Matrix4d &tra
 
 				cuboid *sample_obj = new cuboid();
 
-				change_2d_corner_to_3d_object(all_box_corners_2d_one_objH.block(2 * raw_cube_ind, 0, 2, 8), all_configs_error_one_objH.row(raw_cube_ind).head<3>(),
-											  ground_plane_sensor, cam_pose.transToWolrd, cam_pose.invK, cam_pose.projectionMatrix, *sample_obj);
+				
+				
 				
 				#ifdef at3dcv_size
-				// sample_obj->print_cuboid();
-				if ((sample_obj->scale.array() < 0).any())
-					continue; // scale should be positive
 					
 				// LL: Added by Leander
 				// - Check if class name is in dic.
@@ -654,15 +651,24 @@ void detect_3d_cuboid::detect_cuboid(const cv::Mat &rgb_img, const Matrix4d &tra
 
 				if(iter != sample_obj->obj_class_scales.end())
 				{
-				    sample_obj->mrcnn_obj_scale = iter->second;
+					change_2d_corner_to_3d_object(all_box_corners_2d_one_objH.block(2 * raw_cube_ind, 0, 2, 8), all_configs_error_one_objH.row(raw_cube_ind).head<3>(),
+							  ground_plane_sensor, cam_pose.transToWolrd, cam_pose.invK, cam_pose.projectionMatrix, *sample_obj, iter->second);
+				    sample_obj->mrcnn_obj_scale = sample_obj->scale;
 				}
 				else
 				{
 					// if the detected class has no scale assigned in obj_class_scales
+					change_2d_corner_to_3d_object(all_box_corners_2d_one_objH.block(2 * raw_cube_ind, 0, 2, 8), all_configs_error_one_objH.row(raw_cube_ind).head<3>(),
+							  ground_plane_sensor, cam_pose.transToWolrd, cam_pose.invK, cam_pose.projectionMatrix, *sample_obj);
     				sample_obj->mrcnn_obj_scale = sample_obj -> scale;
+					
 				}
 				// LL: Added by Leander
+				#else
+				change_2d_corner_to_3d_object(all_box_corners_2d_one_objH.block(2 * raw_cube_ind, 0, 2, 8), all_configs_error_one_objH.row(raw_cube_ind).head<3>(),
+							  ground_plane_sensor, cam_pose.transToWolrd, cam_pose.invK, cam_pose.projectionMatrix, *sample_obj);
 				#endif
+				
 		
 				sample_obj->rect_detect_2d = Vector4d(left_x_raw, top_y_raw, obj_width_raw, obj_height_raw);
 				sample_obj->edge_distance_error = all_configs_error_one_objH(raw_cube_ind, 4); // record the original error
