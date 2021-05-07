@@ -130,7 +130,8 @@ public:
     ObjDetectionHelper mCurrentObjDetection;
     std::vector<vector<float > > mCurrentBBoxes;
 
-    void CheckMovingKeyPoints(Eigen::MatrixXd mCurrentBBoxes, std::vector<std::string> classes);
+    void CheckMovingObjects(Eigen::MatrixXd mCurrentBBoxes, std::vector<std::string> classes);
+    std::vector<bool> objectsAreMoving;
 
 public:
     // by me, detect_3d_cuboid needs raw image
