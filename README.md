@@ -1,4 +1,16 @@
-## AT3DCV: ObjectSLAM
+# AT3DCV: ObjectSLAM
+
+This repository is an extension of [Shichao Yang's](https://shichaoy.github.io./) CubeSLAM implementation which in turn is based on **CubeSLAM: Monocular 3D Object SLAM**, IEEE Transactions on Robotics 2019, S. Yang, S. Scherer  [**PDF**](https://arxiv.org/abs/1806.00557).
+It is the result of a collective effort by Ezgi Cakir, Andy Chen, and Leander Lauenburg during the cause of the practical course Advanced Topics of 3D computer vision. In addition to cleaning up, streamlining, and dockerizing CubeSLAM, we improved the work by adding dynamic object filtering, object class-dependent scaling, and embedding stream enrichments.
+
+## Architecture for 3D dense map reconstruction
+
+![3D dense map architecture](./resources/architecture/architecture_dense_map.png)
+
+
+The project is written in C++ and based on ROS nodes. For a quick and easy installation we provide a Docker based setup as explained in the 'Quick Start' section.
+
+
 ## Quick Start
 1. Download this repo: https://github.com/ct2034/docker-ubuntu-vnc-desktop
 2. Change the Dockerfile with the Dockerfile uploaded here
@@ -24,8 +36,6 @@
 8. Terminal one run: `roslaunch orb_object_slam xxxx.launch` and wait for two windows to pop up
 9. Terminal two run: `rosbag play /mnt/datasets/freiburg3_walking_xyz/rgbd_dataset_freiburg3_walking_xyz.bag --clock -r 0.5 `
 
-This repository is an extension of [Shichao Yang's](https://shichaoy.github.io./) CubeSLAM implementation which in turn is based on **CubeSLAM: Monocular 3D Object SLAM**, IEEE Transactions on Robotics 2019, S. Yang, S. Scherer  [**PDF**](https://arxiv.org/abs/1806.00557).
-It is the result of a collective effort by Ezgi Cakir, Andy Chen, and Leander Lauenburg during the cause of the practical course Advanced Topics of 3D computer vision.
 
  ## Installation
 
