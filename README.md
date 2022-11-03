@@ -1,61 +1,31 @@
 # AT3DCV: ObjectSLAM
 
 This repository is an extension of [Shichao Yang's](https://shichaoy.github.io./) CubeSLAM implementation which in turn is based on **CubeSLAM: Monocular 3D Object SLAM**, IEEE Transactions on Robotics 2019, S. Yang, S. Scherer  [**PDF**](https://arxiv.org/abs/1806.00557).
-It is the result of a collective effort by Ezgi Cakir, Andy Chen, and Leander Lauenburg during the cause of the practical course Advanced Topics of 3D computer vision. In addition to cleaning up, streamlining, and dockerizing CubeSLAM, we improved the work by adding dynamic object filtering, object class-dependent scaling, and embedding stream enrichments.
+It is the result of a collective effort by Andy Chen, Ezgi Cakir, and Leander Lauenburg during the cause of the practical course Advanced Topics of 3D computer vision. In addition to cleaning up, streamlining, and dockerizing CubeSLAM, we improved the work by adding dynamic object filtering, object class-dependent scaling, and embedding stream enrichments.
 
 ## Architecture for 3D dense map reconstruction
 
 ![3D dense map architecture](./resources/architecture/architecture_dense_map.png)
 
+ ## Installation
 
 The project is written in C++ and based on ROS nodes. For a quick and easy installation we provide a Docker based setup as explained in the 'Quick Start' section.
 
-
-## Quick Start
-1. Download this repo: https://github.com/ct2034/docker-ubuntu-vnc-desktop
-2. Change the Dockerfile with the Dockerfile uploaded here
-3. Open terminal and go to the folder where the Dockerfile is located
-4. sudo docker build -t at3dcv_2020 .
-5. `docker run -it --rm -p 6080:80 -v ~/at3dcv/:/mnt/ at3dcv_2020:latest`
-6. Browse to http://127.0.0.1:6080/
-7. In the docker image open Terminal
-8. cd cube_slam_ws
-9.  `source /opt/ros/kinetic/setup.bash`
-10. `catkin_make -j1`
-11. `source devel/setup.bash`
-12. `roslaunch orb_object_slam object_slam_example.launch > roslaunch.log`
-
-## Start ROS
-1. download the `ORBvoc.txt` file from the original ORB Slam 2 Vocabulary folder or from our now updated master branch.
-2. copy the file to your Vocabulary folder with in the orb_object_slam folder with in your mounted objectslam folder.
-3. download the whole `seq7` data folder from here: https://drive.google.com/drive/folders/1FrBdmYxrrM6XeBe_vIXCuBTfZeCMgApL
-4. copy the `seq7` folder to a folder with in your mounted volume.
-5. Edit the path of the parameter `base_data_folder` with in the mono.launch file to point to the `seq7` folder
-6. Change `ORBvoc.bin` to `ORBvoc.txt` with in the mono.launch file (fifth line).
-7. Open two terminals and in all three source the setup fill: `source <path_to_cu  be_slam>/devel/setup.bash`
-8. Terminal one run: `roslaunch orb_object_slam xxxx.launch` and wait for two windows to pop up
-9. Terminal two run: `rosbag play /mnt/datasets/freiburg3_walking_xyz/rgbd_dataset_freiburg3_walking_xyz.bag --clock -r 0.5 `
-
-
- ## Installation
-
- The project is written in C++ and based on ROS nodes. For a quick and easy installation we provide a Docker based setup
-
  ### Quick Start
 
-1. Clone this[https://gitlab.lrz.de/ge39gol/objectslam] repo to \</your_path\>/cubeslam/src/objectslam/.
+1. Clone this repo to `<your_path>/cubeslam/src/objectslam/`.
 2. Clone the [Docker Ubuntu VNC repo](https://github.com/ct2034/docker-ubuntu-vnc-desktop).
 3. Replace the Dockerfile in the Docker Ubuntu VNC repo with the docker file provided in this repo.
 4. Open a terminal, navigate to the Docker Ubuntu VNC repo and run `sudo docker build -t at3dcv_2020`.
 5. After the image is build, run `sudo docker run -it --rm -p 6080:80 -v </your_path>/cubeslam/src/objectslam/:/mnt/ at3dcv_2020:latest`.
 6. Now open your browser and go to `http://127.0.0.1:6080/`.
 7. Accessing the Ubuntu instance via your browser open a terminal and run:
-	1. soure /opt/ros/kinetic/setup.bash
-	2. cd /mnt/cubeslam/src
-	3. run bash build.sh
-	4. catkin_init_workspace
-	5. source /mnt/cubeslam/devel/setup.bash
-	6. echo "source /mnt/cubeslam/devel/setup.bash" >> ~/.bashrc
+	1. `soure /opt/ros/kinetic/setup.bash`
+	2. `cd /mnt/cubeslam/src`
+	3. `run bash build.sh`
+	4. `catkin_init_workspace`
+	5. `source /mnt/cubeslam/devel/setup.bash`
+	6. `echo "source /mnt/cubeslam/devel/setup.bash" >> ~/.bashrc`
 
 ## Running the examples
 
@@ -71,11 +41,11 @@ The project is written in C++ and based on ROS nodes. For a quick and easy insta
 	1. For mono: roslaunch `orb_object_slam tum_mono.launch`
 	2. For RGB-D: roslaunch `orb_object_slam tum_rgbd.launch`
 
-## The Data
+## Data
 
 The whole data collection can be found [here]https://drive.google.com/file/d/15_6ugaKt5t7rSIzpFhDgqXrkb48qv3Mt/view?usp=sharing.
 
-### The Video Sequents 
+### Video Sequences
 
 One of the main contributions of this repo is the generalization of the original CubeSLAM repo to be used with an arbitrary data set. This means, that the original repo was largely hard coded for the use of the Kitti sequence `2011_09_30_drive_0027`.
 
@@ -83,12 +53,12 @@ For the example we choose the data set `freiburg3_walking_xyz`. We choose this s
 The data set can be found at the [Dataset Download](https://vision.in.tum.de/data/datasets/rgbd-dataset/download) side of the chair of Computer Vision at TUM. We use the provided ROS bag-file to feed the data to the pipeline. The bag-file is already included in the data collection.
 
 
-### The Bounding Boxes and Edge Detections
+### Bounding Boxes and Edge Detections
 
 One of the main contributions of the original Paper is a method for the proposal of 3D cuboids, based one bounding boxes and edges detected in each frame. However, the relevant code in the original repo is not used and instead the author provided a text file that holds the optimal 3D cuboids for the frames of the names Kitti sequence.
 Therefore, we reversed engineered the format of the data needed for the calculation of the 3D cuboid proposals. We acquired the bounding boxes using Mask-RCNN and the edges using LSD edged detection. The bounding boxes as well as the detected edges are included in the data collection.
 
-#### Format Bounding boxes
+### Format Bounding boxes
 
 For each frame there is a file of the following format:
 
@@ -99,7 +69,7 @@ Object_class_obj_3 x_top_right_corner_obj_3 y_top_right_corner_obj_3 width_objec
 ...
 ```
 
-#### Format Edges
+### Format Edges
 
 For each frame there is a file of the following format:
 
