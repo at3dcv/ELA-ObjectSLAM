@@ -43,7 +43,7 @@ The project is written in C++ and based on ROS nodes. For a quick and easy insta
 
 ## Data
 
-The whole data collection can be found [here]https://drive.google.com/file/d/15_6ugaKt5t7rSIzpFhDgqXrkb48qv3Mt/view?usp=sharing.
+The whole data collection can be found [here](https://drive.google.com/file/d/15_6ugaKt5t7rSIzpFhDgqXrkb48qv3Mt/view?usp=sharing).
 
 ### Video Sequences
 
